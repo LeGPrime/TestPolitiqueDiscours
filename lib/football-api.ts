@@ -3,6 +3,10 @@ import axios from 'axios'
 const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY
 const RAPIDAPI_HOST = process.env.RAPIDAPI_HOST
 
+if (!RAPIDAPI_KEY || !RAPIDAPI_HOST) {
+  console.warn('⚠️ Variables API-Sports manquantes dans .env')
+}
+
 const apiSports = axios.create({
   baseURL: `https://${RAPIDAPI_HOST}/v3`,
   headers: {
@@ -13,7 +17,7 @@ const apiSports = axios.create({
 
 // Tracking des requêtes pour respecter le quota FREE
 let dailyRequestCount = 0
-const MAX_DAILY_REQUESTS = 95 // Garde 5 en sécurité
+const MAX_DAILY_REQUESTS = 95 // Garde 5 en sécurité sur 100
 
 export interface APISportsMatch {
   fixture: {
@@ -21,15 +25,20 @@ export interface APISportsMatch {
     date: string
     status: {
       short: string
+      long: string
     }
     venue?: {
+      id: number
       name: string
+      city: string
     }
   }
   league: {
     id: number
     name: string
+    country: string
     logo: string
+    season: number
   }
   teams: {
     home: {
@@ -48,6 +57,10 @@ export interface APISportsMatch {
     away: number | null
   }
   score: {
+    halftime: {
+      home: number | null
+      away: number | null
+    }
     fulltime: {
       home: number | null
       away: number | null
@@ -55,15 +68,19 @@ export interface APISportsMatch {
   }
 }
 
-// IDs des compétitions principales
+// IDs des compétitions principales API-Sports
 export const LEAGUES = {
-  PREMIER_LEAGUE: 39,
-  LIGUE_1: 61,
-  BUNDESLIGA: 78,
-  SERIE_A: 135,
-  LA_LIGA: 140,
-  CHAMPIONS_LEAGUE: 2,
-  EUROPA_LEAGUE: 3
+  PREMIER_LEAGUE: 39,        // Premier League
+  LIGUE_1: 61,              // Ligue 1
+  BUNDESLIGA: 78,           // Bundesliga
+  SERIE_A: 135,             // Serie A
+  LA_LIGA: 140,             // La Liga
+  CHAMPIONS_LEAGUE: 2,      // UEFA Champions League
+  EUROPA_LEAGUE: 3,         // UEFA Europa League
+  MLS: 253,                 // MLS
+  LIGUE_ARABE: 307,         // Saudi Pro League
+  EURO: 4,                  // Euro Championship
+  WORLD_CUP: 1,             // FIFA World Cup
 }
 
 class APISportsService {
@@ -75,55 +92,81 @@ class APISportsService {
 
     try {
       console.log(`🔍 API Request ${dailyRequestCount + 1}/${MAX_DAILY_REQUESTS}: ${endpoint}`)
+      console.log(`📋 Params:`, params)
+      
       const response = await apiSports.get(endpoint, { params })
       
       dailyRequestCount++
       console.log(`✅ Requête réussie. Quota: ${dailyRequestCount}/${MAX_DAILY_REQUESTS}`)
+      console.log(`📊 ${response.data.response?.length || 0} résultats reçus`)
       
       return response.data.response
     } catch (error: any) {
-      console.error(`❌ Erreur API:`, error.response?.status, error.response?.data)
+      console.error(`❌ Erreur API:`, {
+        status: error.response?.status,
+        message: error.response?.data?.message || error.message,
+        endpoint,
+        params
+      })
       throw error
     }
   }
 
-  // Récupérer matchs finis d'une date
+  // Récupérer matchs finis d'une date (format: YYYY-MM-DD)
   async getFinishedMatchesByDate(date: string): Promise<APISportsMatch[]> {
+    const leagueIds = Object.values(LEAGUES).join('-')
+    
     return this.makeRequest('/fixtures', {
       date: date,
       status: 'FT',
-      league: Object.values(LEAGUES).join(',')
+      league: leagueIds,
+      timezone: 'Europe/Paris'
     })
   }
 
-  // Récupérer matchs d'une compétition pour une saison
+  // Récupérer matchs d'une saison complète
   async getSeasonMatches(leagueId: number, season: number): Promise<APISportsMatch[]> {
     return this.makeRequest('/fixtures', {
       league: leagueId,
       season: season,
-      status: 'FT'
+      status: 'FT',
+      timezone: 'Europe/Paris'
     })
   }
 
-  // Récupérer matchs d'une compétition pour un mois spécifique
-  async getMonthlyMatches(leagueId: number, season: number, startDate: string, endDate: string): Promise<APISportsMatch[]> {
-    return this.makeRequest('/fixtures', {
-      league: leagueId,
-      season: season,
-      from: startDate,
-      to: endDate,
-      status: 'FT'
-    })
+  // Récupérer matchs d'aujourd'hui
+  async getTodayMatches(): Promise<APISportsMatch[]> {
+    const today = new Date().toISOString().split('T')[0]
+    return this.getFinishedMatchesByDate(today)
   }
 
-  // Rechercher matchs par équipe
-  async searchMatchesByTeam(teamName: string, limit: number = 20): Promise<APISportsMatch[]> {
-    // Pour économiser les requêtes, on cherche d'abord dans notre base
-    console.log(`�� Recherche "${teamName}" (économie de quota)`)
-    return []
+  // Récupérer matchs d'hier (pour import quotidien)
+  async getYesterdayMatches(): Promise<APISportsMatch[]> {
+    const yesterday = new Date()
+    yesterday.setDate(yesterday.getDate() - 1)
+    const dateStr = yesterday.toISOString().split('T')[0]
+    return this.getFinishedMatchesByDate(dateStr)
   }
 
-  // Reset du compteur quotidien (à minuit)
+  // Test de connexion API
+  async testConnection(): Promise<boolean> {
+    try {
+      console.log('🧪 Test de connexion API-Sports...')
+      
+      // Test simple : récupérer les ligues disponibles
+      const response = await this.makeRequest('/leagues', {
+        current: true
+      })
+      
+      console.log(`✅ Connexion OK ! ${response.length} ligues disponibles`)
+      return true
+    } catch (error) {
+      console.error('❌ Test de connexion échoué:', error)
+      return false
+    }
+  }
+
+  // Reset du compteur quotidien (à appeler à minuit)
   resetDailyCount() {
     dailyRequestCount = 0
     console.log('🔄 Compteur quotidien remis à zéro')
