@@ -1,0 +1,18 @@
+name: 🔄 Auto-Sync Sports
+
+on:
+  schedule:
+    # Toutes les 2 heures pendant la journée
+    - cron: '0 8,10,12,14,16,18,20,22 * * *'
+  
+  workflow_dispatch:
+
+jobs:
+  auto-sync:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 🔄 Sync nouveaux matchs
+        run: |
+          curl -X POST "${{ secrets.VERCEL_URL }}/api/cron/auto-sync" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"

@@ -2,9 +2,10 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
-  "/": "pages/index.js",
   "/api/auth/[...nextauth]": "pages/api/auth/[...nextauth].js",
-  "/api/import/historical": "pages/api/import/historical.js",
   "/api/matches": "pages/api/matches.js",
-  "/admin/import": "pages/admin/import.js"
+  "/api/match-details/[id]": "pages/api/match-details/[id].js",
+  "/": "pages/index.js",
+  "/top-matches": "pages/top-matches.js",
+  "/friends": "pages/friends.js"
 }

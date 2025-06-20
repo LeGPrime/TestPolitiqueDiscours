@@ -1,0 +1,41 @@
+name: 📅 Import Quotidien Multi-Sports
+
+on:
+  schedule:
+    # Tous les jours à 6h du matin (UTC)
+    - cron: '0 6 * * *'
+  
+  # Permettre déclenchement manuel
+  workflow_dispatch:
+
+jobs:
+  import-matches:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📅 Import quotidien des matchs
+        run: |
+          echo "🚀 Démarrage import quotidien FootRate..."
+          
+          response=$(curl -s -w "%{http_code}" \
+            -X POST "${{ secrets.VERCEL_URL }}/api/cron/daily-import" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json")
+          
+          http_code="${response: -3}"
+          body="${response%???}"
+          
+          if [ "$http_code" -eq 200 ]; then
+            echo "✅ Import quotidien réussi !"
+            echo "$body"
+          else
+            echo "❌ Erreur import (HTTP $http_code)"
+            echo "$body"
+            exit 1
+          fi
+          
+      - name: 📊 Résumé
+        run: |
+          echo "🎯 Import FootRate terminé"
+          echo "📅 $(date)"
+          echo "🏆 Nouveaux matchs disponibles pour notation !"

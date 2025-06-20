@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useSession, signIn, signOut } from 'next-auth/react'
-import { Star, Trophy, LogOut, RefreshCw, Search, Users, Calendar, Filter } from 'lucide-react'
+import { Star, Trophy, LogOut, RefreshCw, Search, Users, Calendar, Filter, BarChart3 } from 'lucide-react'
 import axios from 'axios'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
@@ -152,7 +152,7 @@ export default function Home() {
             </div>
             
             <div className="flex items-center space-x-6">
-              {/* Navigation - CORRIGÉE */}
+              {/* Navigation */}
               <nav className="hidden md:flex space-x-6">
                 {navigationItems.map((item) => {
                   const Icon = item.icon
@@ -192,7 +192,7 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Content - reste identique */}
+      {/* Content */}
       <main className="max-w-7xl mx-auto px-4 py-8">
         <div className="mb-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
@@ -297,7 +297,7 @@ export default function Home() {
   )
 }
 
-// Composant MatchCard - reste identique
+// Composant MatchCard avec bouton détails
 function MatchCard({ match, onRate, currentUserId }: {
   match: Match
   onRate: (matchId: string, rating: number, comment?: string) => void
@@ -380,6 +380,15 @@ function MatchCard({ match, onRate, currentUserId }: {
               {match.totalRatings} note{match.totalRatings > 1 ? 's' : ''}
             </span>
           </div>
+          
+          {/* 🆕 NOUVEAU BOUTON DÉTAILS COMPLETS */}
+          <Link
+            href={`/match/${match.id}`}
+            className="flex items-center space-x-1 px-3 py-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors text-sm font-medium"
+          >
+            <BarChart3 className="w-4 h-4" />
+            <span>Détails complets</span>
+          </Link>
         </div>
 
         {!match.canRate ? (
