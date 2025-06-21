@@ -8,13 +8,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (req.method === 'GET') {
     try {
-      const { q, type = 'all' } = req.query
+      const { q, type = 'all', sport } = req.query
 
       if (!q || typeof q !== 'string' || q.length < 2) {
         return res.status(400).json({ error: 'La recherche doit contenir au moins 2 caractères' })
       }
 
-      console.log(`🔍 Recherche locale pour: "${q}"`)
+      console.log(`🔍 Recherche locale pour: "${q}" (sport: ${sport || 'all'})`)
 
       const results: any = {
         matches: [],
@@ -23,14 +23,38 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       // Rechercher des matchs dans notre base uniquement
       if (type === 'all' || type === 'matches') {
+        // Construire le filtre sport
+        let sportFilter = {}
+        
+        if (sport && sport !== 'all') {
+          if (sport === 'football') {
+            sportFilter = {
+              competition: {
+                in: ['Premier League', 'La Liga', 'Serie A', 'Bundesliga', 'Ligue 1', 'Champions League', 'Europa League']
+              }
+            }
+          } else if (sport === 'basketball') {
+            sportFilter = {
+              competition: {
+                in: ['NBA', 'EuroLeague', 'WNBA', 'NBA Playoffs', 'FIBA World Cup']
+              }
+            }
+          }
+        }
+
         const dbMatches = await prisma.match.findMany({
           where: {
-            OR: [
-              { homeTeam: { contains: q, mode: 'insensitive' } },
-              { awayTeam: { contains: q, mode: 'insensitive' } },
-              { competition: { contains: q, mode: 'insensitive' } }
-            ],
-            status: 'FINISHED'
+            AND: [
+              {
+                OR: [
+                  { homeTeam: { contains: q, mode: 'insensitive' } },
+                  { awayTeam: { contains: q, mode: 'insensitive' } },
+                  { competition: { contains: q, mode: 'insensitive' } }
+                ]
+              },
+              { status: 'FINISHED' },
+              sportFilter // 🆕 Filtre sport ajouté
+            ]
           },
           include: {
             ratings: {
@@ -60,10 +84,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           avgRating: match.avgRating,
           totalRatings: match.totalRatings,
           ratings: match.ratings,
-          canRate: true
+          canRate: true,
+          sport: getSportFromCompetition(match.competition) // 🆕 Détecter le sport
         }))
 
-        console.log(`✅ ${results.matches.length} matchs trouvés`)
+        console.log(`✅ ${results.matches.length} matchs trouvés (sport: ${sport || 'all'})`)
       }
 
       // Rechercher des utilisateurs (inchangé)
@@ -145,4 +170,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.setHeader('Allow', ['GET'])
     res.status(405).end(`Method ${req.method} Not Allowed`)
   }
+}
+
+// 🆕 Fonction pour détecter le sport depuis la compétition
+function getSportFromCompetition(competition: string): 'football' | 'basketball' {
+  const basketballCompetitions = ['NBA', 'EuroLeague', 'WNBA', 'FIBA']
+  
+  if (basketballCompetitions.some(comp => competition.includes(comp))) {
+    return 'basketball'
+  }
+  
+  return 'football'
 }
