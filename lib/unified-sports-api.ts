@@ -7,7 +7,7 @@ const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY
 const SPORT_APIS = {
   football: 'api-football-v1.p.rapidapi.com',     // ⚽ Football
   basketball: 'api-basketball.p.rapidapi.com',   // 🏀 Basketball  
-  mma: 'mma-stats.p.rapidapi.com',              // 🥊 MMA/UFC
+  mma: 'ufc-data1.p.rapidapi.com',              // 🥊 MMA/UFC
   rugby: 'api-rugby.p.rapidapi.com',            // 🏉 Rugby
   f1: 'api-formula-1.p.rapidapi.com'            // 🏎️ Formule 1
 }
