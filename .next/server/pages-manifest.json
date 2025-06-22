@@ -2,10 +2,12 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
-  "/api/player-ratings": "pages/api/player-ratings.js",
-  "/match/[id]": "pages/match/[id].js",
-  "/api/match-details/[id]": "pages/api/match-details/[id].js",
+  "/api/auth/[...nextauth]": "pages/api/auth/[...nextauth].js",
+  "/admin/sports-dashboard": "pages/admin/sports-dashboard.js",
   "/api/matches": "pages/api/matches.js",
+  "/api/import-all-sports": "pages/api/import-all-sports.js",
   "/": "pages/index.js",
-  "/api/auth/[...nextauth]": "pages/api/auth/[...nextauth].js"
+  "/api/match-details/[id]": "pages/api/match-details/[id].js",
+  "/api/player-ratings": "pages/api/player-ratings.js",
+  "/match/[id]": "pages/match/[id].js"
 }

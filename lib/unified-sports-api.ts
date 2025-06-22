@@ -3,14 +3,16 @@ import { prisma } from './prisma'
 
 const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY
 
-// 3 APIs SPORTS avec la même clé RapidAPI !
-const API_HOSTS = {
-  football: 'api-football-v1.p.rapidapi.com',     // API-FOOTBALL
-  basketball: 'api-basketball.p.rapidapi.com',   // API-BASKETBALL  
-  tennis: 'api-tennis.p.rapidapi.com'            // API-TENNIS (pas dans ta capture mais existe)
+// 🏆 APIs SPORTS COMPLÈTES - RapidAPI
+const SPORT_APIS = {
+  football: 'api-football-v1.p.rapidapi.com',     // ⚽ Football
+  basketball: 'api-basketball.p.rapidapi.com',   // 🏀 Basketball  
+  mma: 'mma-stats.p.rapidapi.com',              // 🥊 MMA/UFC
+  rugby: 'api-rugby.p.rapidapi.com',            // 🏉 Rugby
+  f1: 'api-formula-1.p.rapidapi.com'            // 🏎️ Formule 1
 }
 
-// IDs des compétitions principales
+// 🏆 COMPÉTITIONS PRINCIPALES PAR SPORT
 const SPORT_LEAGUES = {
   football: {
     'Premier League': 39,
@@ -19,43 +21,59 @@ const SPORT_LEAGUES = {
     'Bundesliga': 78,
     'Ligue 1': 61,
     'Champions League': 2,
-    'Europa League': 3
+    'Europa League': 3,
+    'Euro 2024': 4,
+    'World Cup': 1
   },
   basketball: {
     'NBA': 12,
     'EuroLeague': 120,
-    'FIBA World Cup': 15
+    'WNBA': 2,
+    'NBA Playoffs': 12, // Même ID mais saison playoffs
+    'EuroCup': 121
   },
-  tennis: {
-    'ATP Tour': 'atp',
-    'WTA Tour': 'wta',
-    'Grand Slams': 'gs'
+  mma: {
+    'UFC': 1,
+    'Bellator': 2,
+    'ONE Championship': 3,
+    'PFL': 4
+  },
+  rugby: {
+    'Six Nations': 1,
+    'Rugby World Cup': 2,
+    'Top 14': 3,
+    'Premiership': 4,
+    'URC': 5
+  },
+  f1: {
+    'Formula 1': 1  // Une seule série principale
   }
 }
 
 interface UnifiedMatch {
   externalId: string
-  sport: 'football' | 'basketball' | 'tennis'
+  sport: 'football' | 'basketball' | 'mma' | 'rugby' | 'f1'
   competition: string
   homeTeam: string
   awayTeam: string
-  homeScore: number
-  awayScore: number
+  homeScore: number | string
+  awayScore: number | string
   date: Date
   status: string
   venue?: string
   season: string
+  // Données enrichies par sport
+  details?: any
 }
 
 class UnifiedSportsAPI {
 
-  // 🌍 REQUÊTE UNIFIÉE vers les 3 APIs
-  private async makeRequest(sport: keyof typeof API_HOSTS, endpoint: string, params: any = {}) {
+  // 🌍 REQUÊTE UNIFIÉE vers toutes les APIs
+  private async makeRequest(sport: keyof typeof SPORT_APIS, endpoint: string, params: any = {}) {
     try {
-      const host = API_HOSTS[sport]
+      const host = SPORT_APIS[sport]
       const url = new URL(`https://${host}${endpoint}`)
       
-      // Ajouter les paramètres à l'URL
       Object.entries(params).forEach(([key, value]) => {
         url.searchParams.append(key, String(value))
       })
@@ -74,24 +92,24 @@ class UnifiedSportsAPI {
       const data = await response.json()
       return data.response || data.results || data
     } catch (error) {
-      console.error(`❌ Erreur API ${sport} (${API_HOSTS[sport]}):`, error)
+      console.error(`❌ Erreur API ${sport} (${SPORT_APIS[sport]}):`, error)
       return []
     }
   }
 
-  // ⚽ FOOTBALL COMPLET - Toutes les saisons
+  // ⚽ FOOTBALL COMPLET - Toutes les données
   async importAllFootball(): Promise<number> {
     let total = 0
-    console.log('⚽ Import COMPLET Football...')
+    console.log('⚽ Import COMPLET Football 2024-2025...')
 
     for (const [competitionName, leagueId] of Object.entries(SPORT_LEAGUES.football)) {
       console.log(`📊 Import ${competitionName}...`)
       
-      // Import des 3 dernières saisons
-      for (const season of [2021, 2022, 2023, 2024]) {
+      for (const season of [2024, 2025]) {
         try {
           console.log(`  📅 Saison ${season}...`)
           
+          // 🎯 Récupérer TOUS les matchs avec détails complets
           const fixtures = await this.makeRequest('football', '/v3/fixtures', {
             league: leagueId,
             season: season,
@@ -99,8 +117,15 @@ class UnifiedSportsAPI {
           })
 
           let imported = 0
-          for (const fixture of fixtures.slice(0, 50)) { // Limiter pour économiser quota
+          for (const fixture of fixtures.slice(0, 100)) { // Limite pour éviter le spam
             try {
+              // 📊 Récupérer les détails complets du match
+              const [events, lineups, statistics] = await Promise.all([
+                this.makeRequest('football', '/v3/fixtures/events', { fixture: fixture.fixture.id }),
+                this.makeRequest('football', '/v3/fixtures/lineups', { fixture: fixture.fixture.id }),
+                this.makeRequest('football', '/v3/fixtures/statistics', { fixture: fixture.fixture.id })
+              ])
+
               const match: UnifiedMatch = {
                 externalId: `football_${leagueId}_${fixture.fixture.id}`,
                 sport: 'football',
@@ -112,21 +137,30 @@ class UnifiedSportsAPI {
                 date: new Date(fixture.fixture.date),
                 status: 'FINISHED',
                 venue: fixture.fixture.venue?.name,
-                season: season.toString()
+                season: season.toString(),
+                details: {
+                  referee: fixture.fixture.referee,
+                  attendance: fixture.fixture.status?.attendance,
+                  events: events || [],
+                  lineups: lineups || [],
+                  statistics: statistics || [],
+                  logos: {
+                    home: fixture.teams.home.logo,
+                    away: fixture.teams.away.logo
+                  }
+                }
               }
 
               const saved = await this.saveMatch(match)
               if (saved) imported++
             } catch (error) {
-              console.error(`Erreur match:`, error)
+              console.error(`Erreur match football:`, error)
             }
           }
 
-          console.log(`    ✅ ${imported} matchs importés`)
+          console.log(`    ✅ ${imported} matchs football importés`)
           total += imported
-
-          // Pause pour respecter les limites
-          await this.sleep(1000)
+          await this.sleep(2000) // Pause API
         } catch (error) {
           console.error(`❌ Erreur ${competitionName} ${season}:`, error)
         }
@@ -136,119 +170,180 @@ class UnifiedSportsAPI {
     return total
   }
 
-  // 🏀 BASKETBALL COMPLET
+  // 🏀 BASKETBALL COMPLET - CORRIGÉ avec vraie API
   async importAllBasketball(): Promise<number> {
     let total = 0
-    console.log('🏀 Import COMPLET Basketball...')
+    console.log('🏀 Import COMPLET Basketball NBA 2024-2025...')
 
-    for (const [competitionName, leagueId] of Object.entries(SPORT_LEAGUES.basketball)) {
-      console.log(`📊 Import ${competitionName}...`)
-      
-      for (const season of ['2022-2023', '2023-2024']) {
-        try {
-          console.log(`  📅 Saison ${season}...`)
-          
-          const games = await this.makeRequest('basketball', '/v1/games', {
-            league: leagueId,
-            season: season
-          })
+    // Utiliser les vraies données NBA
+    const seasons = ['2023-2024', '2024-2025']
+    
+    for (const season of seasons) {
+      try {
+        console.log(`  📅 NBA Saison ${season}...`)
+        
+        // 🎯 Requête avec la vraie structure API
+        const games = await this.makeRequest('basketball', '/games', {
+          league: 12, // NBA ID confirmé
+          season: season
+        })
 
-          let imported = 0
-          for (const game of games.slice(0, 30)) { // Limiter
-            try {
-              if (game.status?.short === 'FT') {
-                const match: UnifiedMatch = {
-                  externalId: `basketball_${leagueId}_${game.id}`,
-                  sport: 'basketball',
-                  competition: competitionName,
-                  homeTeam: game.teams?.home?.name || 'Home',
-                  awayTeam: game.teams?.away?.name || 'Away',
-                  homeScore: game.scores?.home?.total || 0,
-                  awayScore: game.scores?.away?.total || 0,
-                  date: new Date(game.date),
-                  status: 'FINISHED',
-                  venue: game.venue,
-                  season: season
+        console.log(`    📊 ${games.length} matchs NBA trouvés pour ${season}`)
+
+        let imported = 0
+        for (const game of games) {
+          try {
+            // Vérifier que le match est terminé
+            if (game.status?.short === 'FT') {
+              const match: UnifiedMatch = {
+                externalId: `basketball_nba_${game.id}`,
+                sport: 'basketball',
+                competition: 'NBA',
+                homeTeam: game.teams?.home?.name || 'Home',
+                awayTeam: game.teams?.away?.name || 'Away',
+                homeScore: game.scores?.home?.total || 0,
+                awayScore: game.scores?.away?.total || 0,
+                date: new Date(game.date),
+                status: 'FINISHED',
+                venue: game.venue || 'NBA Arena',
+                season: season,
+                details: {
+                  // 📊 Quarters détaillés
+                  quarters: {
+                    q1: {
+                      home: game.scores?.home?.quarter_1 || 0,
+                      away: game.scores?.away?.quarter_1 || 0
+                    },
+                    q2: {
+                      home: game.scores?.home?.quarter_2 || 0,
+                      away: game.scores?.away?.quarter_2 || 0
+                    },
+                    q3: {
+                      home: game.scores?.home?.quarter_3 || 0,
+                      away: game.scores?.away?.quarter_3 || 0
+                    },
+                    q4: {
+                      home: game.scores?.home?.quarter_4 || 0,
+                      away: game.scores?.away?.quarter_4 || 0
+                    },
+                    overtime: game.scores?.home?.over_time ? {
+                      home: game.scores.home.over_time,
+                      away: game.scores.away.over_time
+                    } : null
+                  },
+                  // 🏀 Logos des équipes
+                  logos: {
+                    home: game.teams?.home?.logo,
+                    away: game.teams?.away?.logo
+                  },
+                  // ⏰ Infos du match
+                  gameTime: game.time,
+                  timestamp: game.timestamp,
+                  leagueInfo: {
+                    name: game.league?.name,
+                    logo: game.league?.logo,
+                    country: game.league?.country?.name
+                  }
                 }
-
-                const saved = await this.saveMatch(match)
-                if (saved) imported++
               }
-            } catch (error) {
-              console.error(`Erreur match basketball:`, error)
-            }
-          }
 
-          console.log(`    ✅ ${imported} matchs importés`)
-          total += imported
-          await this.sleep(1500)
-        } catch (error) {
-          console.error(`❌ Erreur ${competitionName} ${season}:`, error)
+              const saved = await this.saveMatch(match)
+              if (saved) {
+                imported++
+                console.log(`      ✅ ${game.teams.home.name} ${game.scores.home.total}-${game.scores.away.total} ${game.teams.away.name}`)
+              }
+            }
+          } catch (error) {
+            console.error(`Erreur match basketball ${game.id}:`, error)
+          }
         }
+
+        console.log(`    ✅ ${imported} matchs NBA importés pour ${season}`)
+        total += imported
+        
+        // Pause entre saisons
+        await this.sleep(3000)
+      } catch (error) {
+        console.error(`❌ Erreur NBA ${season}:`, error)
       }
     }
 
+    console.log(`🏀 Basketball terminé: ${total} matchs NBA importés`)
     return total
   }
 
-  // 🎾 TENNIS COMPLET
-  async importAllTennis(): Promise<number> {
-    let total = 0
-    console.log('🎾 Import COMPLET Tennis...')
 
-    // ATP et WTA
-    for (const tour of ['atp', 'wta']) {
-      console.log(`📊 Import ${tour.toUpperCase()}...`)
+  // 🥊 MMA COMPLET
+  async importAllMMA(): Promise<number> {
+    let total = 0
+    console.log('🥊 Import COMPLET MMA 2024-2025...')
+
+    for (const [organizationName, orgId] of Object.entries(SPORT_LEAGUES.mma)) {
+      console.log(`📊 Import ${organizationName}...`)
       
-      for (const year of [2023, 2024]) {
+      for (const year of [2024, 2025]) {
         try {
           console.log(`  📅 Année ${year}...`)
           
-          // Récupérer les tournois récents
-          const matches = await this.makeRequest('tennis', '/v1/matches', {
-            tour: tour,
-            year: year,
-            limit: 50
+          const events = await this.makeRequest('mma', '/v1/events', {
+            organization: orgId,
+            year: year
           })
 
           let imported = 0
-          for (const match of matches) {
+          for (const event of events.slice(0, 30)) {
             try {
-              if (match.status === 'finished') {
-                const unifiedMatch: UnifiedMatch = {
-                  externalId: `tennis_${tour}_${match.id || Date.now()}_${Math.random()}`,
-                  sport: 'tennis',
-                  competition: `${tour.toUpperCase()} Tour`,
-                  homeTeam: match.player1?.name || match.players?.[0]?.name || 'Player 1',
-                  awayTeam: match.player2?.name || match.players?.[1]?.name || 'Player 2',
-                  homeScore: match.sets_player1 || match.score?.[0] || 0,
-                  awayScore: match.sets_player2 || match.score?.[1] || 0,
-                  date: new Date(match.date || `${year}-06-15`),
-                  status: 'FINISHED',
-                  venue: match.tournament?.name || match.venue,
-                  season: year.toString()
-                }
+              // Récupérer détails des combats
+              const fights = await this.makeRequest('mma', '/v1/fights', {
+                event: event.id
+              })
 
-                const saved = await this.saveMatch(unifiedMatch)
-                if (saved) imported++
+              for (const fight of fights.slice(0, 5)) { // Top 5 combats par event
+                if (fight.status === 'finished') {
+                  const match: UnifiedMatch = {
+                    externalId: `mma_${orgId}_${fight.id}`,
+                    sport: 'mma',
+                    competition: organizationName,
+                    homeTeam: fight.fighter1?.name || 'Fighter 1',
+                    awayTeam: fight.fighter2?.name || 'Fighter 2',
+                    homeScore: fight.result?.winner === 1 ? 'W' : 'L',
+                    awayScore: fight.result?.winner === 2 ? 'W' : 'L',
+                    date: new Date(event.date),
+                    status: 'FINISHED',
+                    venue: event.venue,
+                    season: year.toString(),
+                    details: {
+                      weightClass: fight.weightClass,
+                      method: fight.result?.method,
+                      round: fight.result?.round,
+                      time: fight.result?.time,
+                      referee: fight.referee,
+                      titleFight: fight.titleFight || false,
+                      fighter1: {
+                        ...fight.fighter1,
+                        record: fight.fighter1?.record
+                      },
+                      fighter2: {
+                        ...fight.fighter2,
+                        record: fight.fighter2?.record
+                      }
+                    }
+                  }
+
+                  const saved = await this.saveMatch(match)
+                  if (saved) imported++
+                }
               }
             } catch (error) {
-              console.error(`Erreur match tennis:`, error)
+              console.error(`Erreur event MMA:`, error)
             }
           }
 
-          console.log(`    ✅ ${imported} matchs importés`)
+          console.log(`    ✅ ${imported} combats MMA importés`)
           total += imported
-          await this.sleep(2000)
+          await this.sleep(3000)
         } catch (error) {
-          console.error(`❌ Erreur tennis ${tour} ${year}:`, error)
-          
-          // Fallback avec vrais matchs si API échoue
-          const fallbackMatches = this.getTennisFallback(tour, year)
-          for (const match of fallbackMatches) {
-            const saved = await this.saveMatch(match)
-            if (saved) total++
-          }
+          console.error(`❌ Erreur ${organizationName} ${year}:`, error)
         }
       }
     }
@@ -256,30 +351,183 @@ class UnifiedSportsAPI {
     return total
   }
 
-  // 🚀 IMPORT COMPLET DE TOUT
-  async importEverything(): Promise<{ football: number, basketball: number, tennis: number, total: number }> {
-    console.log('🚀 IMPORT COMPLET - TOUS LES SPORTS')
-    console.log('⏱️  Cela peut prendre 10-15 minutes...')
+  // 🏉 RUGBY COMPLET
+  async importAllRugby(): Promise<number> {
+    let total = 0
+    console.log('🏉 Import COMPLET Rugby 2024-2025...')
+
+    for (const [competitionName, leagueId] of Object.entries(SPORT_LEAGUES.rugby)) {
+      console.log(`📊 Import ${competitionName}...`)
+      
+      for (const season of [2024, 2025]) {
+        try {
+          console.log(`  📅 Saison ${season}...`)
+          
+          const fixtures = await this.makeRequest('rugby', '/v1/fixtures', {
+            league: leagueId,
+            season: season,
+            status: 'FT'
+          })
+
+          let imported = 0
+          for (const fixture of fixtures.slice(0, 40)) {
+            try {
+              // Récupérer détails match rugby
+              const matchDetails = await this.makeRequest('rugby', '/v1/fixtures/details', {
+                id: fixture.id
+              })
+
+              const match: UnifiedMatch = {
+                externalId: `rugby_${leagueId}_${fixture.id}`,
+                sport: 'rugby',
+                competition: competitionName,
+                homeTeam: fixture.teams?.home?.name || 'Home',
+                awayTeam: fixture.teams?.away?.name || 'Away',
+                homeScore: fixture.scores?.home || 0,
+                awayScore: fixture.scores?.away || 0,
+                date: new Date(fixture.date),
+                status: 'FINISHED',
+                venue: fixture.venue,
+                season: season.toString(),
+                details: {
+                  halftimeScore: fixture.halftime || {},
+                  tries: matchDetails?.tries || [],
+                  conversions: matchDetails?.conversions || [],
+                  penalties: matchDetails?.penalties || [],
+                  cards: matchDetails?.cards || [],
+                  referee: fixture.referee,
+                  attendance: fixture.attendance,
+                  weather: fixture.weather
+                }
+              }
+
+              const saved = await this.saveMatch(match)
+              if (saved) imported++
+            } catch (error) {
+              console.error(`Erreur match rugby:`, error)
+            }
+          }
+
+          console.log(`    ✅ ${imported} matchs rugby importés`)
+          total += imported
+          await this.sleep(2500)
+        } catch (error) {
+          console.error(`❌ Erreur ${competitionName} ${season}:`, error)
+        }
+      }
+    }
+
+    return total
+  }
+
+  // 🏎️ FORMULE 1 COMPLÈTE
+  async importAllF1(): Promise<number> {
+    let total = 0
+    console.log('🏎️ Import COMPLET Formule 1 2024-2025...')
+
+    for (const season of [2024, 2025]) {
+      try {
+        console.log(`📅 Saison F1 ${season}...`)
+        
+        // Récupérer toutes les courses
+        const races = await this.makeRequest('f1', '/v1/races', {
+          season: season
+        })
+
+        let imported = 0
+        for (const race of races) {
+          try {
+            // Récupérer résultats détaillés
+            const [results, qualifying, practices] = await Promise.all([
+              this.makeRequest('f1', '/v1/races/results', { race: race.id }),
+              this.makeRequest('f1', '/v1/qualifying', { race: race.id }),
+              this.makeRequest('f1', '/v1/practice', { race: race.id })
+            ])
+
+            if (results.length > 0) {
+              const winner = results[0]
+              const podium = results.slice(0, 3)
+
+              const match: UnifiedMatch = {
+                externalId: `f1_${season}_${race.id}`,
+                sport: 'f1',
+                competition: 'Formula 1',
+                homeTeam: winner.driver?.name || 'Winner',
+                awayTeam: 'Field', // Le reste du plateau
+                homeScore: '1st', // Position
+                awayScore: `${results.length}`, // Nombre total participants
+                date: new Date(race.date),
+                status: 'FINISHED',
+                venue: race.circuit?.name,
+                season: season.toString(),
+                details: {
+                  grandPrix: race.name,
+                  circuit: race.circuit,
+                  laps: race.laps,
+                  distance: race.distance,
+                  podium: podium.map((r: any) => ({
+                    position: r.position,
+                    driver: r.driver?.name,
+                    team: r.team?.name,
+                    time: r.time,
+                    points: r.points
+                  })),
+                  fullResults: results.slice(0, 20), // Top 20
+                  qualifying: qualifying || [],
+                  practices: practices || [],
+                  fastestLap: race.fastestLap,
+                  weather: race.weather
+                }
+              }
+
+              const saved = await this.saveMatch(match)
+              if (saved) imported++
+            }
+          } catch (error) {
+            console.error(`Erreur course F1:`, error)
+          }
+        }
+
+        console.log(`    ✅ ${imported} courses F1 importées`)
+        total += imported
+        await this.sleep(3000)
+      } catch (error) {
+        console.error(`❌ Erreur F1 ${season}:`, error)
+      }
+    }
+
+    return total
+  }
+
+  // 🚀 IMPORT COMPLET DE TOUS LES SPORTS
+  async importEverything(): Promise<{ football: number, basketball: number, mma: number, rugby: number, f1: number, total: number }> {
+    console.log('🚀 IMPORT COMPLET - TOUS LES SPORTS 2024-2025')
+    console.log('⏱️  Temps estimé : 20-30 minutes...')
+    console.log('🏆 Football + Basketball + MMA + Rugby + F1')
 
     const startTime = Date.now()
 
-    // Import en parallèle pour aller plus vite
-    const [football, basketball, tennis] = await Promise.all([
+    // Import en parallèle pour optimiser
+    const [football, basketball, mma, rugby, f1] = await Promise.all([
       this.importAllFootball(),
-      this.importAllBasketball(), 
-      this.importAllTennis()
+      this.importAllBasketball(),
+      this.importAllMMA(),
+      this.importAllRugby(),
+      this.importAllF1()
     ])
 
-    const total = football + basketball + tennis
+    const total = football + basketball + mma + rugby + f1
     const duration = Math.round((Date.now() - startTime) / 1000)
 
     console.log(`\n🎉 IMPORT TERMINÉ en ${duration}s !`)
     console.log(`⚽ Football: ${football} matchs`)
     console.log(`🏀 Basketball: ${basketball} matchs`)
-    console.log(`🎾 Tennis: ${tennis} matchs`)
-    console.log(`📊 TOTAL: ${total} matchs`)
+    console.log(`🥊 MMA: ${mma} combats`)
+    console.log(`🏉 Rugby: ${rugby} matchs`)
+    console.log(`🏎️ F1: ${f1} courses`)
+    console.log(`📊 TOTAL: ${total} événements`)
 
-    return { football, basketball, tennis, total }
+    return { football, basketball, mma, rugby, f1, total }
   }
 
   // 💾 SAUVEGARDER UN MATCH
@@ -304,15 +552,17 @@ class UnifiedSportsAPI {
           apiMatchId: Math.floor(Math.random() * 900000) + 100000,
           homeTeam: match.homeTeam,
           awayTeam: match.awayTeam,
-          homeScore: match.homeScore,
-          awayScore: match.awayScore,
+          homeScore: typeof match.homeScore === 'number' ? match.homeScore : 0,
+          awayScore: typeof match.awayScore === 'number' ? match.awayScore : 0,
           date: match.date,
           status: match.status,
           competition: match.competition,
           season: match.season,
           venue: match.venue,
-          homeTeamLogo: this.getTeamLogo(match.homeTeam),
-          awayTeamLogo: this.getTeamLogo(match.awayTeam),
+          homeTeamLogo: match.details?.logos?.home || this.getDefaultLogo(match.homeTeam),
+          awayTeamLogo: match.details?.logos?.away || this.getDefaultLogo(match.awayTeam),
+          // Stocker les détails en JSON si besoin
+          // details: JSON.stringify(match.details)
         }
       })
 
@@ -322,48 +572,61 @@ class UnifiedSportsAPI {
     }
   }
 
-  // Fallback tennis avec vrais résultats
-  private getTennisFallback(tour: string, year: number): UnifiedMatch[] {
-    const realMatches = [
-      { p1: 'Carlos Alcaraz', p2: 'Novak Djokovic', s1: 2, s2: 1, tournament: 'ATP Finals' },
-      { p1: 'Jannik Sinner', p2: 'Daniil Medvedev', s1: 2, s2: 0, tournament: 'ATP Masters' },
-      { p1: 'Iga Swiatek', p2: 'Coco Gauff', s1: 2, s2: 0, tournament: 'WTA Finals' },
-      { p1: 'Aryna Sabalenka', p2: 'Elena Rybakina', s1: 2, s2: 1, tournament: 'WTA 1000' },
-      { p1: 'Alexander Zverev', p2: 'Stefanos Tsitsipas', s1: 2, s2: 1, tournament: 'ATP 500' }
-    ]
-
-    return realMatches.map((match, i) => ({
-      externalId: `tennis_fallback_${tour}_${year}_${i}`,
-      sport: 'tennis' as const,
-      competition: `${tour.toUpperCase()} Tour`,
-      homeTeam: match.p1,
-      awayTeam: match.p2,
-      homeScore: match.s1,
-      awayScore: match.s2,
-      date: new Date(year, Math.floor(Math.random() * 12), Math.floor(Math.random() * 28) + 1),
-      status: 'FINISHED',
-      venue: match.tournament,
-      season: year.toString()
-    }))
-  }
-
-  private getTeamLogo(teamName: string): string {
-    const logos: { [key: string]: string } = {
-      'Real Madrid': 'https://crests.football-data.org/86.png',
-      'Barcelona': 'https://crests.football-data.org/81.png',
-      'Arsenal': 'https://crests.football-data.org/57.png',
-      'Manchester City': 'https://crests.football-data.org/65.png',
-      'Liverpool': 'https://crests.football-data.org/64.png',
-      'Chelsea': 'https://crests.football-data.org/61.png',
-      'Paris Saint-Germain': 'https://crests.football-data.org/524.png',
-      'Bayern Munich': 'https://crests.football-data.org/5.png'
-    }
-    
-    return logos[teamName] || `https://via.placeholder.com/50x50/007ACC/ffffff?text=${teamName.charAt(0)}`
+  private getDefaultLogo(teamName: string): string {
+    return `https://via.placeholder.com/50x50/007ACC/ffffff?text=${teamName.charAt(0)}`
   }
 
   private async sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms))
+  }
+
+  // 🔄 IMPORT QUOTIDIEN AUTOMATIQUE (dernières 24h)
+  async importRecentFinished(): Promise<{ imported: number, sports: string[] }> {
+    console.log('🔄 Import automatique des dernières 24h...')
+    
+    const yesterday = new Date()
+    yesterday.setDate(yesterday.getDate() - 1)
+    
+    let totalImported = 0
+    const sportsImported: string[] = []
+
+    // Vérifier chaque sport
+    try {
+      // Football récent
+      const footballRecent = await this.makeRequest('football', '/v3/fixtures', {
+        date: yesterday.toISOString().split('T')[0],
+        status: 'FT'
+      })
+      
+      for (const match of footballRecent.slice(0, 20)) {
+        const unified: UnifiedMatch = {
+          externalId: `auto_football_${match.fixture.id}`,
+          sport: 'football',
+          competition: match.league.name,
+          homeTeam: match.teams.home.name,
+          awayTeam: match.teams.away.name,
+          homeScore: match.goals.home || 0,
+          awayScore: match.goals.away || 0,
+          date: new Date(match.fixture.date),
+          status: 'FINISHED',
+          venue: match.fixture.venue?.name,
+          season: '2024'
+        }
+        
+        if (await this.saveMatch(unified)) {
+          totalImported++
+          if (!sportsImported.includes('football')) sportsImported.push('football')
+        }
+      }
+
+      // Même logique pour autres sports...
+      // Basketball, MMA, Rugby, F1 récents
+      
+    } catch (error) {
+      console.error('❌ Erreur import automatique:', error)
+    }
+
+    return { imported: totalImported, sports: sportsImported }
   }
 }
 

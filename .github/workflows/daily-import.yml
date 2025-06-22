@@ -1,21 +1,29 @@
-name: 📅 Import Quotidien Multi-Sports
+# .github/workflows/daily-import.yml
+name: 📅 Import Quotidien Sports Premium
 
 on:
   schedule:
-    # Tous les jours à 6h du matin (UTC)
-    - cron: '0 6 * * *'
+    # Tous les jours à 8h du matin (UTC)
+    - cron: '0 8 * * *'
   
   # Permettre déclenchement manuel
   workflow_dispatch:
+    inputs:
+      force_import:
+        description: 'Forcer l\'import même si déjà fait aujourd\'hui'
+        required: false
+        default: 'false'
 
 jobs:
-  import-matches:
+  daily-import:
     runs-on: ubuntu-latest
     
     steps:
-      - name: 📅 Import quotidien des matchs
+      - name: 📅 Import quotidien des nouveaux matchs
         run: |
-          echo "🚀 Démarrage import quotidien FootRate..."
+          echo "🚀 Démarrage import quotidien FootRate Premium..."
+          echo "📊 Sports: Football, Basketball, MMA, Formula 1, Rugby"
+          echo "🗓️ Date: $(date)"
           
           response=$(curl -s -w "%{http_code}" \
             -X POST "${{ secrets.VERCEL_URL }}/api/cron/daily-import" \
@@ -27,15 +35,34 @@ jobs:
           
           if [ "$http_code" -eq 200 ]; then
             echo "✅ Import quotidien réussi !"
-            echo "$body"
+            echo "$body" | jq '.'
+            
+            # Extraire les stats du JSON
+            new_matches=$(echo "$body" | jq -r '.stats.newMatches // 0')
+            total_found=$(echo "$body" | jq -r '.stats.totalFound // 0')
+            
+            echo "📊 RÉSUMÉ:"
+            echo "  🆕 Nouveaux matchs: $new_matches"
+            echo "  📋 Total trouvé: $total_found"
+            echo "  🏆 Prêt pour notation !"
+            
           else
             echo "❌ Erreur import (HTTP $http_code)"
             echo "$body"
             exit 1
           fi
           
-      - name: 📊 Résumé
+      - name: 📊 Notification de succès
+        if: success()
         run: |
-          echo "🎯 Import FootRate terminé"
+          echo "🎯 Import FootRate Premium terminé avec succès"
           echo "📅 $(date)"
-          echo "🏆 Nouveaux matchs disponibles pour notation !"
+          echo "🎉 Nouveaux matchs disponibles pour notation !"
+          echo "⚽🏀🥊🏎️🏉 Tous vos sports préférés sont à jour"
+
+      - name: 🚨 Notification d'erreur
+        if: failure()
+        run: |
+          echo "❌ Échec de l'import quotidien"
+          echo "📅 $(date)"
+          echo "🔧 Vérifiez les logs et la configuration API"

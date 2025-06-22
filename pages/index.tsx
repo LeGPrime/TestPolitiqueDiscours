@@ -8,10 +8,11 @@ import { useRouter } from 'next/router'
 interface Match {
   id: string
   apiId?: number
+  sport: 'football' | 'basketball' | 'mma' | 'rugby' | 'f1'
   homeTeam: string
   awayTeam: string
-  homeScore?: number
-  awayScore?: number
+  homeScore?: number | string
+  awayScore?: number | string
   date: string
   competition: string
   venue?: string
@@ -20,6 +21,7 @@ interface Match {
   avgRating: number
   totalRatings: number
   canRate: boolean
+  details?: any
   ratings: Array<{
     id: string
     rating: number
@@ -35,29 +37,32 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [filter, setFilter] = useState<'recent' | 'today'>('recent')
+  const [sportFilter, setSportFilter] = useState<'all' | 'football' | 'basketball' | 'mma' | 'rugby' | 'f1'>('all')
   const [searchTerm, setSearchTerm] = useState('')
+  const [stats, setStats] = useState<any>(null)
 
   useEffect(() => {
     if (session) {
       fetchMatches()
     }
-  }, [session, filter])
+  }, [session, filter, sportFilter])
 
   const fetchMatches = async () => {
     try {
       setRefreshing(true)
       const params = new URLSearchParams({
         type: filter,
+        sport: sportFilter,
         days: '14'
       })
       
       if (searchTerm) {
-        params.append('type', 'search')
         params.append('search', searchTerm)
       }
 
       const response = await axios.get(`/api/matches?${params}`)
       setMatches(response.data.matches)
+      setStats(response.data.stats)
     } catch (error) {
       console.error('Erreur chargement matchs:', error)
     } finally {
@@ -70,7 +75,7 @@ export default function Home() {
     try {
       await axios.post('/api/ratings', { matchId, rating, comment })
       fetchMatches()
-      alert('Match noté avec succès! 🎉')
+      alert('Événement noté avec succès! 🎉')
     } catch (error) {
       console.error('Erreur notation:', error)
       alert('Erreur lors de la notation')
@@ -92,6 +97,16 @@ export default function Home() {
     { href: '/top-matches', label: 'Top', icon: Trophy, active: false },
   ]
 
+  // Sports disponibles
+  const sports = [
+    { id: 'all', name: 'Tous', emoji: '🏆', color: 'text-gray-600' },
+    { id: 'football', name: 'Football', emoji: '⚽', color: 'text-green-600' },
+    { id: 'basketball', name: 'Basketball', emoji: '🏀', color: 'text-orange-600' },
+    { id: 'mma', name: 'MMA', emoji: '🥊', color: 'text-red-600' },
+    { id: 'rugby', name: 'Rugby', emoji: '🏉', color: 'text-purple-600' },
+    { id: 'f1', name: 'F1', emoji: '🏎️', color: 'text-blue-600' }
+  ]
+
   if (!session) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
@@ -100,9 +115,9 @@ export default function Home() {
             <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-green-500 rounded-xl flex items-center justify-center mx-auto mb-6">
               <Trophy className="w-8 h-8 text-white" />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">GFoot</h1>
-            <p className="text-lg text-gray-600 mb-2">Application du Goat</p>
-            <p className="text-sm text-gray-500 mb-8">Notez et découvrez les meilleurs matchs ⚽</p>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">SportRate</h1>
+            <p className="text-lg text-gray-600 mb-2">Letterboxd du Sport</p>
+            <p className="text-sm text-gray-500 mb-8">⚽🏀🥊🏉🏎️ Notez tous vos événements sportifs</p>
             
             <div className="space-y-3">
               <Link
@@ -146,8 +161,8 @@ export default function Home() {
                 <Trophy className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">GFoot</h1>
-                <p className="text-xs text-gray-500">Application du Goat</p>
+                <h1 className="text-2xl font-bold text-gray-900">SportRate</h1>
+                <p className="text-xs text-gray-500">Letterboxd du Sport</p>
               </div>
             </div>
             
@@ -175,6 +190,12 @@ export default function Home() {
               
               <div className="flex items-center space-x-3">
                 <Link 
+                  href="/admin/sports-dashboard"
+                  className="text-xs text-purple-600 hover:text-purple-700 font-medium"
+                >
+                  ⚙️ Admin
+                </Link>
+                <Link 
                   href="/profile"
                   className="text-sm text-gray-700 hover:text-blue-600 font-medium"
                 >
@@ -197,11 +218,12 @@ export default function Home() {
         <div className="mb-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
             <div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">Matchs à noter</h2>
-              <p className="text-gray-600">Découvrez et notez les derniers matchs de football</p>
+              <h2 className="text-3xl font-bold text-gray-900 mb-2">Événements à noter</h2>
+              <p className="text-gray-600">⚽🏀🥊🏉🏎️ Tous vos sports favoris en un endroit</p>
             </div>
             
             <div className="flex items-center space-x-4 mt-4 md:mt-0">
+              {/* Filtre période */}
               <div className="flex bg-gray-100 rounded-lg p-1">
                 <button
                   onClick={() => setFilter('recent')}
@@ -233,12 +255,43 @@ export default function Home() {
             </div>
           </div>
 
+          {/* Filtres Sports */}
+          <div className="mb-6">
+            <div className="flex flex-wrap gap-2">
+              {sports.map((sport) => (
+                <button
+                  key={sport.id}
+                  onClick={() => setSportFilter(sport.id as any)}
+                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                    sportFilter === sport.id
+                      ? 'bg-blue-500 text-white shadow-md'
+                      : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
+                  }`}
+                >
+                  <span className="text-lg">{sport.emoji}</span>
+                  <span className="font-medium">{sport.name}</span>
+                  {stats?.bySport && (
+                    <span className={`text-xs px-2 py-1 rounded-full ${
+                      sportFilter === sport.id ? 'bg-white/20' : 'bg-gray-100'
+                    }`}>
+                      {sport.id === 'all' 
+                        ? stats.total
+                        : stats.bySport.find((s: any) => s.sport === sport.id)?.count || 0
+                      }
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Barre de recherche */}
           <form onSubmit={handleSearch} className="flex max-w-md">
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Rechercher une équipe..."
+              placeholder="Rechercher une équipe, fighter, pilote..."
               className="flex-1 px-4 py-2 border border-gray-300 rounded-l-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
             <button
@@ -253,19 +306,19 @@ export default function Home() {
         {loading ? (
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Chargement des matchs depuis l'API Football...</p>
-            <p className="text-sm text-gray-500 mt-2">Cela peut prendre quelques secondes</p>
+            <p className="text-gray-600">Chargement des événements multi-sports...</p>
+            <p className="text-sm text-gray-500 mt-2">Football, Basketball, MMA, Rugby, F1...</p>
           </div>
         ) : matches.length === 0 ? (
           <div className="text-center py-12">
             <Trophy className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-xl font-medium text-gray-900 mb-2">
-              {searchTerm ? 'Aucun match trouvé' : 'Aucun match disponible'}
+              {searchTerm ? 'Aucun événement trouvé' : 'Aucun événement disponible'}
             </h3>
             <p className="text-gray-600 mb-4">
               {searchTerm 
-                ? `Aucun match trouvé pour "${searchTerm}"`
-                : 'Les matchs apparaîtront ici une fois terminés'
+                ? `Aucun événement trouvé pour "${searchTerm}" en ${sportFilter === 'all' ? 'tous sports' : sportFilter}`
+                : 'Les événements apparaîtront ici une fois terminés'
               }
             </p>
             {searchTerm && (
@@ -276,9 +329,17 @@ export default function Home() {
                 }}
                 className="text-blue-600 hover:text-blue-700"
               >
-                Voir tous les matchs
+                Voir tous les événements
               </button>
             )}
+            <div className="mt-6">
+              <Link
+                href="/admin/sports-dashboard"
+                className="inline-flex items-center space-x-2 text-purple-600 hover:text-purple-700 font-medium"
+              >
+                <span>⚙️ Importer des données</span>
+              </Link>
+            </div>
           </div>
         ) : (
           <div className="grid gap-6">
@@ -297,7 +358,7 @@ export default function Home() {
   )
 }
 
-// Composant MatchCard avec bouton détails
+// Composant MatchCard adapté multi-sports
 function MatchCard({ match, onRate, currentUserId }: {
   match: Match
   onRate: (matchId: string, rating: number, comment?: string) => void
@@ -318,10 +379,34 @@ function MatchCard({ match, onRate, currentUserId }: {
     }
   }
 
+  // Emoji par sport
+  const getSportEmoji = (sport: string) => {
+    const emojis = {
+      football: '⚽',
+      basketball: '🏀',
+      mma: '🥊',
+      rugby: '🏉',
+      f1: '🏎️'
+    }
+    return emojis[sport as keyof typeof emojis] || '🏆'
+  }
+
+  // Formatage du score selon le sport
+  const formatScore = (homeScore: any, awayScore: any, sport: string) => {
+    if (sport === 'mma') {
+      return `${homeScore} vs ${awayScore}` // W vs L
+    }
+    if (sport === 'f1') {
+      return `P${homeScore}` // Position
+    }
+    return `${homeScore ?? '?'} - ${awayScore ?? '?'}`
+  }
+
   return (
     <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow p-6">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-2">
+          <span className="text-lg">{getSportEmoji(match.sport)}</span>
           <span className="text-sm font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded">
             {match.competition}
           </span>
@@ -347,7 +432,7 @@ function MatchCard({ match, onRate, currentUserId }: {
         
         <div className="mx-6 text-center">
           <div className="text-3xl font-bold text-gray-900">
-            {match.homeScore ?? '?'} - {match.awayScore ?? '?'}
+            {formatScore(match.homeScore, match.awayScore, match.sport)}
           </div>
           <div className="text-sm text-green-600 font-medium">Terminé</div>
         </div>
@@ -381,19 +466,18 @@ function MatchCard({ match, onRate, currentUserId }: {
             </span>
           </div>
           
-          {/* 🆕 NOUVEAU BOUTON DÉTAILS COMPLETS */}
           <Link
             href={`/match/${match.id}`}
             className="flex items-center space-x-1 px-3 py-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors text-sm font-medium"
           >
             <BarChart3 className="w-4 h-4" />
-            <span>Détails complets</span>
+            <span>Détails</span>
           </Link>
         </div>
 
         {!match.canRate ? (
           <div className="text-sm text-gray-500 italic">
-            Ce match ne peut pas encore être noté
+            Cet événement ne peut pas encore être noté
           </div>
         ) : userRating ? (
           <div className="bg-blue-50 rounded-lg p-4">
@@ -421,7 +505,7 @@ function MatchCard({ match, onRate, currentUserId }: {
                 onClick={() => setShowRatingForm(true)}
                 className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
               >
-                ⭐ Noter ce match
+                ⭐ Noter cet événement
               </button>
             ) : (
               <div className="space-y-4 bg-gray-50 rounded-lg p-4">
@@ -449,7 +533,7 @@ function MatchCard({ match, onRate, currentUserId }: {
                     onChange={(e) => setComment(e.target.value)}
                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     rows={3}
-                    placeholder="Qu'avez-vous pensé de ce match ? ⚽"
+                    placeholder={`Qu'avez-vous pensé de cet événement ${getSportEmoji(match.sport)} ?`}
                   />
                 </div>
                 

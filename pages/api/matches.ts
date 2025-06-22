@@ -4,13 +4,25 @@ import { prisma } from '../../lib/prisma'
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'GET') {
     try {
-      const { type = 'recent', search, days = '14' } = req.query
+      const { 
+        type = 'recent', 
+        search, 
+        days = '14', 
+        sport = 'all',  // 🆕 FILTRE SPORT
+        limit = '50' 
+      } = req.query
 
       console.log(`📊 Recherche dans la base de données locale...`)
+      console.log(`🏆 Sport: ${sport}, Type: ${type}`)
 
-      // Récupérer tous les matchs de notre base de données
+      // Construire le filtre de base
       const whereClause: any = {
         status: 'FINISHED'
+      }
+
+      // 🆕 FILTRE PAR SPORT
+      if (sport && sport !== 'all') {
+        whereClause.sport = sport.toString().toUpperCase()
       }
 
       // Filtrer par recherche si nécessaire
@@ -50,15 +62,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           }
         },
         orderBy: { date: 'desc' },
-        take: 50
+        take: parseInt(limit as string)
       })
 
-      console.log(`✅ Trouvé ${dbMatches.length} matchs dans la base locale`)
+      console.log(`✅ Trouvé ${dbMatches.length} événements dans la base locale`)
 
-      // Convertir au format attendu
+      // Convertir au format attendu avec support multi-sports
       const formattedMatches = dbMatches.map(match => ({
         id: match.id,
         apiId: match.apiMatchId,
+        sport: match.sport.toLowerCase(), // 🆕 SPORT AJOUTÉ
         homeTeam: match.homeTeam,
         awayTeam: match.awayTeam,
         homeScore: match.homeScore,
@@ -72,10 +85,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         avgRating: match.avgRating,
         totalRatings: match.totalRatings,
         ratings: match.ratings,
-        canRate: true
+        canRate: true,
+        // 🆕 DÉTAILS ENRICHIS PAR SPORT
+        details: match.details || null
       }))
 
-      res.status(200).json({ matches: formattedMatches })
+      // 🆕 STATISTIQUES PAR SPORT
+      const sportStats = await prisma.match.groupBy({
+        by: ['sport'],
+        _count: {
+          id: true
+        },
+        where: { status: 'FINISHED' }
+      })
+
+      res.status(200).json({ 
+        matches: formattedMatches,
+        stats: {
+          total: formattedMatches.length,
+          bySport: sportStats.map(stat => ({
+            sport: stat.sport.toLowerCase(),
+            count: stat._count.id
+          }))
+        }
+      })
     } catch (error) {
       console.error('Erreur API matchs:', error)
       res.status(500).json({ error: 'Erreur serveur' })
