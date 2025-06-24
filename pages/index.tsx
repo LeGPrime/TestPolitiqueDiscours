@@ -190,7 +190,7 @@ export default function Home() {
               
               <div className="flex items-center space-x-3">
                 <Link 
-                  href="/admin/sports-dashboard"
+                  href="/admin/sports-dashboard-2025"
                   className="text-xs text-purple-600 hover:text-purple-700 font-medium"
                 >
                   ⚙️ Admin

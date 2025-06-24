@@ -2,10 +2,10 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
-  "/": "pages/index.js",
-  "/api/import-new-sports": "pages/api/import-new-sports.js",
-  "/api/matches": "pages/api/matches.js",
-  "/match/[id]": "pages/match/[id].js",
   "/api/auth/[...nextauth]": "pages/api/auth/[...nextauth].js",
-  "/admin/sports-dashboard": "pages/admin/sports-dashboard.js"
+  "/match/[id]": "pages/match/[id].js",
+  "/": "pages/index.js",
+  "/api/matches": "pages/api/matches.js",
+  "/api/import-sports-2025": "pages/api/import-sports-2025.js",
+  "/admin/sports-dashboard-2025": "pages/admin/sports-dashboard-2025.js"
 }
