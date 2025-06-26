@@ -1,4 +1,4 @@
-// pages/api/profile.ts - Version ultra-safe
+// pages/api/profile.ts - Version avec notations de joueurs
 import { NextApiRequest, NextApiResponse } from 'next'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '../../lib/auth'
@@ -20,7 +20,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       
       console.log('🎯 Recherche utilisateur:', targetUserId)
 
-      // Récupérer l'utilisateur avec SEULEMENT les colonnes qui existent à coup sûr
+      // Récupérer l'utilisateur avec TOUTES ses notations
       const user = await prisma.user.findUnique({
         where: { id: targetUserId },
         select: {
@@ -31,7 +31,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           bio: true,
           image: true,
           createdAt: true,
-          // Ne pas inclure location et favoriteClub pour l'instant
+          // Notations de matchs
           ratings: {
             include: {
               match: true
@@ -39,9 +39,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             orderBy: { createdAt: 'desc' },
             take: 20
           },
+          // 🆕 Notations de joueurs
+          playerRatings: {
+            include: {
+              player: true,
+              match: {
+                select: {
+                  id: true,
+                  homeTeam: true,
+                  awayTeam: true,
+                  competition: true,
+                  date: true,
+                  homeScore: true,
+                  awayScore: true
+                }
+              }
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 50
+          },
           _count: {
             select: {
               ratings: true,
+              playerRatings: true, // 🆕 Compter les notations de joueurs
               sentFriendships: { where: { status: 'ACCEPTED' } },
               receivedFriendships: { where: { status: 'ACCEPTED' } }
             }
@@ -55,6 +75,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       console.log('✅ Utilisateur trouvé:', user.name)
+      console.log(`📊 ${user.ratings.length} notations de matchs, ${user.playerRatings.length} notations de joueurs`)
 
       // Essayer de récupérer les nouvelles colonnes séparément (optionnel)
       let location = null
@@ -75,10 +96,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         console.log('⚠️ Colonnes location/favorite_club pas encore disponibles')
       }
 
-      // Calculer les statistiques
+      // Calculer les statistiques COMPLÈTES
       const totalRatings = user.ratings.length
+      const totalPlayerRatings = user.playerRatings.length
       const avgRating = totalRatings > 0 
         ? user.ratings.reduce((sum, r) => sum + r.rating, 0) / totalRatings 
+        : 0
+      const avgPlayerRating = totalPlayerRatings > 0 
+        ? user.playerRatings.reduce((sum, r) => sum + r.rating, 0) / totalPlayerRatings 
         : 0
 
       // Top matchs
@@ -87,7 +112,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .sort((a, b) => b.rating - a.rating)
         .slice(0, 10)
 
-      // Répartition des notes
+      // 🆕 Top joueurs notés
+      const topPlayerRatings = user.playerRatings
+        .filter(r => r.rating >= 8)
+        .sort((a, b) => b.rating - a.rating)
+        .slice(0, 10)
+
+      // Répartition des notes DE MATCHS
       const ratingDistribution = Array.from({ length: 5 }, (_, i) => {
         const rating = i + 1
         const count = user.ratings.filter(r => r.rating === rating).length
@@ -95,6 +126,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           rating, 
           count, 
           percentage: totalRatings > 0 ? (count / totalRatings) * 100 : 0 
+        }
+      })
+
+      // 🆕 Répartition des notes DE JOUEURS (sur 10)
+      const playerRatingDistribution = Array.from({ length: 10 }, (_, i) => {
+        const rating = i + 1
+        const count = user.playerRatings.filter(r => r.rating === rating).length
+        return { 
+          rating, 
+          count, 
+          percentage: totalPlayerRatings > 0 ? (count / totalPlayerRatings) * 100 : 0 
         }
       })
 
@@ -108,11 +150,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const favoriteCompetition = Object.entries(competitionCounts)
         .sort(([,a], [,b]) => b - a)[0]?.[0] || null
 
+      // 🆕 Joueur le mieux noté
+      const bestRatedPlayer = user.playerRatings.length > 0 
+        ? user.playerRatings.reduce((best, current) => 
+            current.rating > best.rating ? current : best
+          )
+        : null
+
       // Activité récente
       const sixMonthsAgo = new Date()
       sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
       
       const recentActivity = user.ratings
+        .filter(r => new Date(r.createdAt) > sixMonthsAgo)
+        .length
+      
+      const recentPlayerActivity = user.playerRatings
         .filter(r => new Date(r.createdAt) > sixMonthsAgo)
         .length
 
@@ -145,12 +198,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const stats = {
         totalRatings,
+        totalPlayerRatings, // 🆕
         avgRating: Number(avgRating.toFixed(1)),
+        avgPlayerRating: Number(avgPlayerRating.toFixed(1)), // 🆕
         totalFriends: user._count.sentFriendships + user._count.receivedFriendships,
         favoriteCompetition,
+        bestRatedPlayer, // 🆕
         recentActivity,
+        recentPlayerActivity, // 🆕
         topMatches,
+        topPlayerRatings, // 🆕
         ratingDistribution,
+        playerRatingDistribution, // 🆕
         totalTeamsFollowed: followedTeams.length,
         favoriteSports: []
       }
@@ -169,10 +228,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         },
         stats,
         recentRatings: user.ratings.slice(0, 10),
+        recentPlayerRatings: user.playerRatings.slice(0, 10), // 🆕
         followedTeams
       }
 
-      console.log('✅ Profil construit avec succès')
+      console.log('✅ Profil complet construit avec succès')
+      console.log(`📊 Stats: ${totalRatings} notes matchs, ${totalPlayerRatings} notes joueurs`)
       res.status(200).json(profileData)
 
     } else if (req.method === 'PUT') {

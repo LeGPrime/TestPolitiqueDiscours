@@ -355,7 +355,8 @@ export default function ProfilePage() {
             <div className="flex space-x-8 px-6">
               {[
                 { id: 'overview', label: 'Vue d\'ensemble', icon: Activity },
-                { id: 'ratings', label: 'Dernières notes', icon: Star },
+                { id: 'ratings', label: 'Notes matchs', icon: Star },
+                { id: 'player-ratings', label: 'Notes joueurs', icon: Users },
                 { id: 'teams', label: 'Équipes suivies', icon: Heart },
                 { id: 'stats', label: 'Statistiques', icon: BarChart3 }
               ].map((tab) => {
@@ -539,6 +540,205 @@ export default function ProfilePage() {
                 )}
               </div>
             )}
+
+{/* Player Ratings Tab */}
+{activeTab === 'player-ratings' && (
+  <div className="space-y-6">
+    <div className="flex items-center justify-between">
+      <h3 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
+        <Users className="w-5 h-5 text-purple-500" />
+        <span>Notations de joueurs ({profile.stats.totalPlayerRatings || 0})</span>
+      </h3>
+      {profile.stats.totalPlayerRatings > (profile.recentPlayerRatings?.length || 0) && (
+        <span className="text-blue-600 text-sm font-medium">
+          Affichage des {profile.recentPlayerRatings?.length || 0} plus récentes
+        </span>
+      )}
+    </div>
+
+    {/* Statistiques rapides */}
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-4 text-center border border-purple-200">
+        <div className="text-2xl font-bold text-purple-600">{profile.stats.totalPlayerRatings || 0}</div>
+        <div className="text-sm text-purple-700">Joueurs notés</div>
+      </div>
+      <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4 text-center border border-blue-200">
+        <div className="text-2xl font-bold text-blue-600">
+          {profile.stats.avgPlayerRating > 0 ? profile.stats.avgPlayerRating.toFixed(1) : '—'}
+        </div>
+        <div className="text-sm text-blue-700">Note moyenne</div>
+      </div>
+      <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-4 text-center border border-green-200">
+        <div className="text-2xl font-bold text-green-600">
+          {profile.stats.bestRatedPlayer ? profile.stats.bestRatedPlayer.rating : '—'}
+        </div>
+        <div className="text-sm text-green-700">Meilleure note</div>
+      </div>
+      <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-xl p-4 text-center border border-yellow-200">
+        <div className="text-2xl font-bold text-yellow-600">{profile.stats.recentPlayerActivity || 0}</div>
+        <div className="text-sm text-yellow-700">Notes récentes</div>
+      </div>
+    </div>
+
+    {/* Meilleur joueur noté */}
+    {profile.stats.bestRatedPlayer && (
+      <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl p-6 border border-yellow-200">
+        <div className="flex items-center space-x-4">
+          <div className="w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center shadow-lg">
+            <Trophy className="w-8 h-8 text-white" />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-lg font-semibold text-yellow-900 mb-1">
+              🏆 Votre joueur le mieux noté
+            </h3>
+            <div className="text-2xl font-bold text-yellow-800">
+              {profile.stats.bestRatedPlayer.player.name}
+            </div>
+            <div className="text-sm text-yellow-700 flex items-center space-x-4 mt-2">
+              <span className="flex items-center">
+                <Star className="w-4 h-4 mr-1" />
+                {profile.stats.bestRatedPlayer.rating}/10
+              </span>
+              <span>
+                {profile.stats.bestRatedPlayer.match.homeTeam} vs {profile.stats.bestRatedPlayer.match.awayTeam}
+              </span>
+              <span>
+                {new Date(profile.stats.bestRatedPlayer.createdAt).toLocaleDateString('fr-FR')}
+              </span>
+            </div>
+            {profile.stats.bestRatedPlayer.comment && (
+              <div className="mt-2 bg-white bg-opacity-50 rounded-lg p-3">
+                <p className="text-yellow-800 italic">"{profile.stats.bestRatedPlayer.comment}"</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Répartition des notes de joueurs */}
+    {profile.stats.playerRatingDistribution && profile.stats.playerRatingDistribution.some((d: any) => d.count > 0) && (
+      <div className="bg-white rounded-xl p-6 border border-gray-200">
+        <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center space-x-2">
+          <BarChart3 className="w-5 h-5 text-blue-500" />
+          <span>Répartition des notes joueurs (sur 10)</span>
+        </h3>
+        
+        <div className="space-y-3">
+          {profile.stats.playerRatingDistribution.filter((dist: any) => dist.count > 0).map((dist: any) => (
+            <div key={dist.rating} className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2 w-16">
+                <span className="text-sm font-medium w-8">{dist.rating}/10</span>
+              </div>
+              <div className="flex-1">
+                <div className="bg-gray-200 rounded-full h-3 overflow-hidden">
+                  <div 
+                    className={`h-full transition-all duration-700 rounded-full ${
+                      dist.rating >= 8 ? 'bg-gradient-to-r from-green-400 to-emerald-500' :
+                      dist.rating >= 6 ? 'bg-gradient-to-r from-blue-400 to-cyan-500' :
+                      dist.rating >= 4 ? 'bg-gradient-to-r from-yellow-400 to-orange-500' :
+                      'bg-gradient-to-r from-red-400 to-pink-500'
+                    }`}
+                    style={{ width: `${dist.percentage}%` }}
+                  />
+                </div>
+              </div>
+              <div className="text-sm text-gray-600 w-20 text-right font-medium">
+                {dist.count} ({dist.percentage.toFixed(1)}%)
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
+
+    {/* Liste des notations récentes */}
+    {profile.recentPlayerRatings && profile.recentPlayerRatings.length > 0 ? (
+      <div className="space-y-4">
+        <h4 className="text-lg font-semibold text-gray-900">Dernières notations de joueurs</h4>
+        {profile.recentPlayerRatings.map((rating: any) => (
+          <div key={rating.id} className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+            {/* Header avec info du match */}
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex-1">
+                <div className="flex items-center space-x-3 mb-2">
+                  <span className="text-sm font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                    {rating.match.competition}
+                  </span>
+                  <span className="text-sm text-gray-500">
+                    {new Date(rating.createdAt).toLocaleDateString('fr-FR')}
+                  </span>
+                </div>
+                <h4 className="text-lg font-semibold text-gray-900 mb-1">
+                  {rating.match.homeTeam} {rating.match.homeScore ?? '?'} - {rating.match.awayScore ?? '?'} {rating.match.awayTeam}
+                </h4>
+                <p className="text-sm text-gray-600">
+                  📅 {new Date(rating.match.date).toLocaleDateString('fr-FR')}
+                </p>
+              </div>
+            </div>
+
+            {/* Détails de la notation du joueur */}
+            <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center text-white font-bold">
+                    {rating.player.number || '⚽'}
+                  </div>
+                  <div>
+                    <h5 className="font-semibold text-purple-900">{rating.player.name}</h5>
+                    <p className="text-sm text-purple-700">{rating.player.position || 'Joueur'}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-2xl font-bold text-purple-600">{rating.rating}/10</div>
+                  <div className="text-sm text-purple-500">
+                    {rating.rating >= 8 ? '🔥 Excellent' :
+                     rating.rating >= 6 ? '👍 Bon' :
+                     rating.rating >= 4 ? '😐 Correct' :
+                     '👎 Décevant'}
+                  </div>
+                </div>
+              </div>
+              
+              {rating.comment && (
+                <div className="bg-white bg-opacity-50 rounded-lg p-3">
+                  <p className="text-purple-800 italic">"{rating.comment}"</p>
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    ) : (
+      <div className="text-center py-12">
+        <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-gray-900 mb-2">Aucune notation de joueur</h3>
+        <p className="text-gray-600 mb-4">
+          {isOwnProfile 
+            ? 'Vous n\'avez pas encore noté de joueurs'
+            : 'Cet utilisateur n\'a pas encore noté de joueurs'
+          }
+        </p>
+        {isOwnProfile && (
+          <div className="space-y-2 text-sm text-gray-500">
+            <p>💡 Pour noter des joueurs :</p>
+            <p>1. Allez sur la page d'un match terminé</p>
+            <p>2. Cliquez sur l'onglet "Compositions"</p>
+            <p>3. Cliquez sur un joueur pour le noter</p>
+            <Link
+              href="/"
+              className="text-blue-600 hover:text-blue-700 font-medium"
+            >
+              Découvrir des matchs →
+            </Link>
+          </div>
+        )}
+      </div>
+    )}
+  </div>
+)}
+
 
             {/* Teams Tab */}
             {activeTab === 'teams' && (

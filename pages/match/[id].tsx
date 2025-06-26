@@ -8,6 +8,7 @@ import {
   BarChart3, Activity, Trophy, Flag
 } from 'lucide-react'
 import axios from 'axios'
+import EnhancedLineupsTab from '../../components/EnhancedLineupsTab'
 
 interface MatchDetails {
   match: {
@@ -140,24 +141,76 @@ export default function MatchDetailsPage() {
   }
 
   const ratePlayer = async (playerId: string, rating: number, comment?: string) => {
-    try {
-      await axios.post('/api/player-ratings', {
-        playerId,
-        matchId: id,
-        rating,
-        comment
-      })
-      
-      // Recharger les notations des joueurs
+  try {
+    console.log('🎯 Notation joueur:', { playerId, rating, comment, matchId: id })
+
+    const response = await axios.post('/api/player-ratings', {
+      playerId,
+      matchId: id,
+      rating,
+      comment
+    })
+
+    console.log('✅ Réponse API:', response.data)
+
+    if (response.data.success) {
+      // Recharger TOUTES les notations des joueurs
       const ratingsResponse = await axios.get(`/api/player-ratings?matchId=${id}`)
-      setPlayerRatings(ratingsResponse.data.ratings || [])
+      if (ratingsResponse.data.success) {
+        setPlayerRatings(ratingsResponse.data.ratings || [])
+        console.log(`📊 ${ratingsResponse.data.ratings?.length || 0} notations rechargées`)
+      }
       
-      alert('Joueur noté avec succès ! ⭐')
-    } catch (error) {
-      console.error('Erreur notation joueur:', error)
-      alert('Erreur lors de la notation')
+      // Notification de succès avec le message de l'API
+      const notification = document.createElement('div')
+      notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 max-w-sm'
+      notification.innerHTML = `
+        <div class="flex items-center space-x-2">
+          <div class="text-xl">⭐</div>
+          <div>
+            <div class="font-semibold">${response.data.message || 'Joueur noté !'}</div>
+            <div class="text-sm opacity-90">Moyenne: ${response.data.avgRating}/10 (${response.data.totalRatings} votes)</div>
+          </div>
+        </div>
+      `
+      document.body.appendChild(notification)
+      
+      setTimeout(() => {
+        if (document.body.contains(notification)) {
+          document.body.removeChild(notification)
+        }
+      }, 4000)
+      
+    } else {
+      throw new Error(response.data.error || 'Erreur inconnue')
     }
+
+  } catch (error: any) {
+    console.error('❌ Erreur notation joueur:', error)
+    
+    // Notification d'erreur détaillée
+    const notification = document.createElement('div')
+    notification.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 max-w-sm'
+    notification.innerHTML = `
+      <div class="flex items-center space-x-2">
+        <div class="text-xl">❌</div>
+        <div>
+          <div class="font-semibold">Erreur de notation</div>
+          <div class="text-sm opacity-90">${error.response?.data?.error || error.message || 'Erreur inconnue'}</div>
+        </div>
+      </div>
+    `
+    document.body.appendChild(notification)
+    
+    setTimeout(() => {
+      if (document.body.contains(notification)) {
+        document.body.removeChild(notification)
+      }
+    }, 5000)
+    
+    throw error
   }
+}
 
   if (loading) {
     return (
@@ -350,16 +403,23 @@ export default function MatchDetailsPage() {
             )}
             
             {activeTab === 'lineups' && (
-              <TacticalFormationView 
-                lineups={lineups} 
-                matchId={id as string}
-                playerRatings={playerRatings}
-                onRatePlayer={ratePlayer}
-                currentUserId={session?.user?.id}
-                homeTeam={match.homeTeam}
-                awayTeam={match.awayTeam}
-              />
-            )}
+  <EnhancedLineupsTab 
+    lineups={{
+      home: {
+        ...lineups.home,
+        teamName: match.homeTeam
+      },
+      away: {
+        ...lineups.away,
+        teamName: match.awayTeam
+      }
+    }}
+    matchId={id as string}
+    playerRatings={playerRatings}
+    onRatePlayer={ratePlayer}
+    currentUserId={session?.user?.id}
+  />
+)}
             
             {activeTab === 'stats' && (
               <StatsTab statistics={statistics} homeTeam={match.homeTeam} awayTeam={match.awayTeam} />
