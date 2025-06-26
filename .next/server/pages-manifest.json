@@ -3,13 +3,7 @@
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
   "/": "pages/index.js",
-  "/api/matches": "pages/api/matches.js",
-  "/api/match-details/[id]": "pages/api/match-details/[id].js",
-  "/match/[id]": "pages/match/[id].js",
-  "/api/profile": "pages/api/profile.js",
-  "/api/teams": "pages/api/teams.js",
   "/api/auth/[...nextauth]": "pages/api/auth/[...nextauth].js",
-  "/api/player-ratings": "pages/api/player-ratings.js",
-  "/profile": "pages/profile.js",
-  "/api/ratings": "pages/api/ratings.js"
+  "/api/matches": "pages/api/matches.js",
+  "/auth/signin": "pages/auth/signin.js"
 }
