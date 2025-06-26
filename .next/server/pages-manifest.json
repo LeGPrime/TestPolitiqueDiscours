@@ -2,10 +2,14 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
-  "/api/auth/[...nextauth]": "pages/api/auth/[...nextauth].js",
-  "/match/[id]": "pages/match/[id].js",
-  "/": "pages/index.js",
   "/api/matches": "pages/api/matches.js",
-  "/api/import-sports-2025": "pages/api/import-sports-2025.js",
-  "/admin/sports-dashboard-2025": "pages/admin/sports-dashboard-2025.js"
+  "/api/teams": "pages/api/teams.js",
+  "/profile": "pages/profile.js",
+  "/": "pages/index.js",
+  "/api/profile": "pages/api/profile.js",
+  "/api/player-ratings": "pages/api/player-ratings.js",
+  "/api/auth/[...nextauth]": "pages/api/auth/[...nextauth].js",
+  "/api/match-details/[id]": "pages/api/match-details/[id].js",
+  "/api/ratings": "pages/api/ratings.js",
+  "/match/[id]": "pages/match/[id].js"
 }
