@@ -9,6 +9,7 @@ import {
   Calendar, MapPin, Award, SortAsc, SortDesc
 } from 'lucide-react'
 import axios from 'axios'
+import ThemeToggle from '../components/ThemeToggle'
 
 interface Match {
   id: string

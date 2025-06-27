@@ -15,6 +15,7 @@ import {
   MessageCircle
 } from 'lucide-react'
 import axios from 'axios'
+import ThemeToggle from '../components/ThemeToggle'
 
 interface Friend {
   id: string

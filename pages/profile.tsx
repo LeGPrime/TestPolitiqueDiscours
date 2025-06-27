@@ -10,6 +10,7 @@ import {
   Plus, X, Check
 } from 'lucide-react'
 import axios from 'axios'
+import ThemeToggle from '../components/ThemeToggle'
 
 interface UserProfile {
   user: {
@@ -25,15 +26,22 @@ interface UserProfile {
   }
   stats: {
     totalRatings: number
+    totalPlayerRatings: number
     avgRating: number
+    avgPlayerRating: number
     totalFriends: number
     favoriteCompetition?: string
+    bestRatedPlayer?: any
     recentActivity: number
+    recentPlayerActivity: number
     topMatches: any[]
+    topPlayerRatings: any[]
     ratingDistribution: any[]
+    playerRatingDistribution: any[]
     joinDate: string
   }
   recentRatings: any[]
+  recentPlayerRatings: any[]
   followedTeams: any[]
 }
 
@@ -57,7 +65,7 @@ export default function ProfilePage() {
   const [teams, setTeams] = useState<Team[]>([])
   const [loading, setLoading] = useState(true)
   const [editMode, setEditMode] = useState(false)
-  const [activeTab, setActiveTab] = useState<'overview' | 'ratings' | 'teams' | 'stats'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'ratings' | 'player-ratings' | 'teams' | 'stats'>('overview')
   const [teamSearchQuery, setTeamSearchQuery] = useState('')
   const [teamSportFilter, setTeamSportFilter] = useState<'all' | 'football' | 'basketball'>('all')
   const [showTeamSearch, setShowTeamSearch] = useState(false)
@@ -155,10 +163,10 @@ export default function ProfilePage() {
 
   if (!session) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Connexion requise</h1>
-          <Link href="/auth/signin" className="text-blue-600 hover:text-blue-700">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Connexion requise</h1>
+          <Link href="/auth/signin" className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300">
             Se connecter
           </Link>
         </div>
@@ -168,10 +176,10 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Chargement du profil...</p>
+          <p className="text-gray-600 dark:text-gray-300">Chargement du profil...</p>
         </div>
       </div>
     )
@@ -179,10 +187,10 @@ export default function ProfilePage() {
 
   if (!profile) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Profil non trouvé</h1>
-          <Link href="/" className="text-blue-600 hover:text-blue-700">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Profil non trouvé</h1>
+          <Link href="/" className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300">
             Retour à l'accueil
           </Link>
         </div>
@@ -191,9 +199,9 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b sticky top-0 z-50">
+      <header className="bg-white dark:bg-slate-800 shadow-sm border-b border-gray-200 dark:border-slate-700 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
@@ -201,8 +209,8 @@ export default function ProfilePage() {
                 <Trophy className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">SportRate</h1>
-                <p className="text-xs text-gray-500">Profil Utilisateur</p>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">SportRate</h1>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Profil Utilisateur</p>
               </div>
             </div>
             
@@ -216,8 +224,8 @@ export default function ProfilePage() {
                       href={item.href}
                       className={`flex items-center space-x-1 px-3 py-2 rounded-lg transition-colors ${
                         item.active 
-                          ? 'text-blue-600 bg-blue-50 font-medium' 
-                          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                          ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 font-medium' 
+                          : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-slate-700'
                       }`}
                     >
                       <Icon className="w-4 h-4" />
@@ -228,15 +236,16 @@ export default function ProfilePage() {
               </nav>
               
               <div className="flex items-center space-x-3">
+                <ThemeToggle />
                 <Link 
                   href="/admin/sports-dashboard-2025"
-                  className="text-xs text-purple-600 hover:text-purple-700 font-medium"
+                  className="text-xs text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 font-medium"
                 >
                   ⚙️ Admin
                 </Link>
                 <button
                   onClick={() => signOut()}
-                  className="flex items-center space-x-1 text-gray-600 hover:text-gray-800 p-2 rounded-lg hover:bg-gray-100"
+                  className="flex items-center space-x-1 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700"
                 >
                   <LogOut className="w-4 h-4" />
                 </button>
@@ -249,7 +258,7 @@ export default function ProfilePage() {
       {/* Content */}
       <main className="max-w-7xl mx-auto px-4 py-8">
         {/* Header Profil */}
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-8">
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg overflow-hidden mb-8 border border-gray-200 dark:border-slate-700">
           <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 h-32"></div>
           <div className="relative px-8 pb-8">
             {/* Photo de profil */}
@@ -258,10 +267,10 @@ export default function ProfilePage() {
                 <img
                   src={profile.user.image}
                   alt={profile.user.name || 'User'}
-                  className="w-32 h-32 rounded-full border-4 border-white shadow-xl"
+                  className="w-32 h-32 rounded-full border-4 border-white dark:border-slate-800 shadow-xl"
                 />
               ) : (
-                <div className="w-32 h-32 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full border-4 border-white shadow-xl flex items-center justify-center">
+                <div className="w-32 h-32 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full border-4 border-white dark:border-slate-800 shadow-xl flex items-center justify-center">
                   <span className="text-4xl font-bold text-white">
                     {(profile.user.name || profile.user.username || 'U')[0].toUpperCase()}
                   </span>
@@ -271,18 +280,18 @@ export default function ProfilePage() {
               <div className="flex-1 pt-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h1 className="text-3xl font-bold text-gray-900">
+                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
                       {profile.user.name || profile.user.username}
                     </h1>
                     {profile.user.username && profile.user.name && (
-                      <p className="text-gray-600">@{profile.user.username}</p>
+                      <p className="text-gray-600 dark:text-gray-400">@{profile.user.username}</p>
                     )}
                   </div>
                   
                   {isOwnProfile && (
                     <button
                       onClick={() => setEditMode(!editMode)}
-                      className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                      className="flex items-center space-x-2 px-4 py-2 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
                     >
                       <Edit3 className="w-4 h-4" />
                       <span>Modifier</span>
@@ -297,12 +306,12 @@ export default function ProfilePage() {
               <div className="space-y-4">
                 {profile.user.bio && (
                   <div>
-                    <h3 className="font-semibold text-gray-900 mb-2">Bio</h3>
-                    <p className="text-gray-700">{profile.user.bio}</p>
+                    <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Bio</h3>
+                    <p className="text-gray-700 dark:text-gray-300">{profile.user.bio}</p>
                   </div>
                 )}
                 
-                <div className="flex flex-wrap gap-4 text-sm text-gray-600">
+                <div className="flex flex-wrap gap-4 text-sm text-gray-600 dark:text-gray-400">
                   {profile.user.location && (
                     <div className="flex items-center space-x-1">
                       <MapPin className="w-4 h-4" />
@@ -321,7 +330,7 @@ export default function ProfilePage() {
                   )}
                 </div>
               </div>
-
+              
               {/* Stats rapides */}
               <div className="md:col-span-2">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
