@@ -30,7 +30,8 @@ const WORKING_SPORTS_CONFIG = {
       
       // 🌏 INTERNATIONAL
       'Nations League': 5,
-      'World Cup Qualifiers': 14
+      'World Cup': 15
+      'Euro' : 4
     }
   },
   basketball: {

@@ -2,8 +2,18 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
-  "/": "pages/index.js",
   "/api/auth/[...nextauth]": "pages/api/auth/[...nextauth].js",
   "/api/matches": "pages/api/matches.js",
-  "/auth/signin": "pages/auth/signin.js"
+  "/api/match-details/[id]": "pages/api/match-details/[id].js",
+  "/api/player-ratings": "pages/api/player-ratings.js",
+  "/search": "pages/search.js",
+  "/friends": "pages/friends.js",
+  "/api/friends": "pages/api/friends.js",
+  "/api/top-matches": "pages/api/top-matches.js",
+  "/top-matches": "pages/top-matches.js",
+  "/api/profile": "pages/api/profile.js",
+  "/api/teams": "pages/api/teams.js",
+  "/profile": "pages/profile.js",
+  "/match/[id]": "pages/match/[id].js",
+  "/": "pages/index.js"
 }

@@ -161,8 +161,8 @@ export default function Home() {
                 <Trophy className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">SportRate</h1>
-                <p className="text-xs text-gray-500">Letterboxd du Sport</p>
+                <h1 className="text-2xl font-bold text-gray-900">Sporating</h1>
+                <p className="text-xs text-gray-500">Ton œil sur le jeu.</p>
               </div>
             </div>
             
