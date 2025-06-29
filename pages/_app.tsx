@@ -4,6 +4,8 @@ import Head from 'next/head'
 import { Toaster } from 'react-hot-toast'
 import { ThemeProvider } from '../lib/theme-context'
 import '../styles/globals.css'
+import ThemeToggle from '../components/ThemeToggle'
+
 
 function FootRateApp({ Component, pageProps: { session, ...pageProps } }: AppProps) {
   return (

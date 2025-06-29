@@ -4,6 +4,8 @@ import { Star, Trophy, LogOut, RefreshCw, Search, Users, Calendar, Filter, BarCh
 import axios from 'axios'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
+import ThemeToggle from '../components/ThemeToggle'
+
 
 interface Match {
   id: string

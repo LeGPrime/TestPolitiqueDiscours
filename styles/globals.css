@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Variables CSS pour le mode sombre */
+/* Variables CSS pour le mode clair (par défaut) */
 :root {
   --background: 255 255 255;
   --foreground: 15 23 42;
@@ -21,7 +21,8 @@
   --ring: 37 99 235;
 }
 
-[data-theme="dark"] {
+/* Variables CSS pour le mode sombre */
+.dark {
   --background: 2 6 23;
   --foreground: 248 250 252;
   --card: 15 23 42;
@@ -39,7 +40,6 @@
   --ring: 59 130 246;
 }
 
-/* Classes utilitaires pour le mode sombre */
 @layer base {
   * {
     @apply border-border;
@@ -47,46 +47,8 @@
   
   body {
     @apply bg-background text-foreground;
-    background-color: rgb(var(--background));
-    color: rgb(var(--foreground));
+    font-feature-settings: "rlig" 1, "calt" 1;
   }
-}
-
-/* Classes CSS personnalisées pour le mode sombre */
-.bg-card {
-  background-color: rgb(var(--card));
-}
-
-.text-card-foreground {
-  color: rgb(var(--card-foreground));
-}
-
-.bg-primary {
-  background-color: rgb(var(--primary));
-}
-
-.text-primary-foreground {
-  color: rgb(var(--primary-foreground));
-}
-
-.bg-secondary {
-  background-color: rgb(var(--secondary));
-}
-
-.text-secondary-foreground {
-  color: rgb(var(--secondary-foreground));
-}
-
-.bg-muted {
-  background-color: rgb(var(--muted));
-}
-
-.text-muted-foreground {
-  color: rgb(var(--muted-foreground));
-}
-
-.border-border {
-  border-color: rgb(var(--border));
 }
 
 /* Custom scrollbar - compatible mode sombre */
@@ -95,17 +57,17 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: rgb(var(--muted));
+  @apply bg-muted;
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgb(var(--muted-foreground) / 0.4);
+  @apply bg-muted-foreground/40;
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgb(var(--muted-foreground) / 0.6);
+  @apply bg-muted-foreground/60;
 }
 
 /* Transitions fluides pour le changement de thème */

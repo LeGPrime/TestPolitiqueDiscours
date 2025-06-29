@@ -1,4 +1,3 @@
-// components/ThemeToggle.tsx
 import { Moon, Sun } from 'lucide-react'
 import { useTheme } from '../lib/theme-context'
 
@@ -8,7 +7,7 @@ export default function ThemeToggle() {
   return (
     <button
       onClick={toggleTheme}
-      className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+      className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors border border-gray-200 dark:border-gray-700"
       aria-label={`Passer en mode ${theme === 'light' ? 'sombre' : 'clair'}`}
     >
       {theme === 'light' ? (

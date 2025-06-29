@@ -1,0 +1,112 @@
+/*
+ * ATTENTION: An "eval-source-map" devtool has been used.
+ * This devtool is neither made for production nor for readable output files.
+ * It uses "eval()" calls to create a separate source file with attached SourceMaps in the browser devtools.
+ * If you are trying to read the output file, select a different devtool (https://webpack.js.org/configuration/devtool/)
+ * or disable the default devtool with "devtool: false".
+ * If you are looking for production-ready output files, see mode: "production" (https://webpack.js.org/configuration/mode/).
+ */
+(() => {
+var exports = {};
+exports.id = "pages/_app";
+exports.ids = ["pages/_app"];
+exports.modules = {
+
+/***/ "./lib/theme-context.tsx":
+/*!*******************************!*\
+  !*** ./lib/theme-context.tsx ***!
+  \*******************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+eval("__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpack_require__.d(__webpack_exports__, {\n/* harmony export */   ThemeProvider: () => (/* binding */ ThemeProvider),\n/* harmony export */   useTheme: () => (/* binding */ useTheme)\n/* harmony export */ });\n/* harmony import */ var react_jsx_dev_runtime__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! react/jsx-dev-runtime */ \"react/jsx-dev-runtime\");\n/* harmony import */ var react_jsx_dev_runtime__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(react_jsx_dev_runtime__WEBPACK_IMPORTED_MODULE_0__);\n/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! react */ \"react\");\n/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_1__);\n/* __next_internal_client_entry_do_not_use__ ThemeProvider,useTheme auto */ \n\nconst ThemeContext = /*#__PURE__*/ (0,react__WEBPACK_IMPORTED_MODULE_1__.createContext)(undefined);\nfunction ThemeProvider({ children }) {\n    const [theme, setTheme] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(\"light\");\n    const [mounted, setMounted] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(false);\n    // Charger le thème depuis localStorage au démarrage\n    (0,react__WEBPACK_IMPORTED_MODULE_1__.useEffect)(()=>{\n        const savedTheme = localStorage.getItem(\"theme\");\n        if (savedTheme) {\n            setTheme(savedTheme);\n        } else if (window.matchMedia(\"(prefers-color-scheme: dark)\").matches) {\n            setTheme(\"dark\");\n        }\n        setMounted(true);\n    }, []);\n    // Appliquer le thème au document\n    (0,react__WEBPACK_IMPORTED_MODULE_1__.useEffect)(()=>{\n        if (mounted) {\n            const root = window.document.documentElement;\n            // Supprimer les anciennes classes\n            root.classList.remove(\"light\", \"dark\");\n            // Ajouter la nouvelle classe\n            root.classList.add(theme);\n            // Sauvegarder dans localStorage\n            localStorage.setItem(\"theme\", theme);\n        }\n    }, [\n        theme,\n        mounted\n    ]);\n    const toggleTheme = ()=>{\n        setTheme((prev)=>prev === \"light\" ? \"dark\" : \"light\");\n    };\n    // Éviter le flash pendant l'hydratation\n    if (!mounted) {\n        return /*#__PURE__*/ (0,react_jsx_dev_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxDEV)(\"div\", {\n            style: {\n                visibility: \"hidden\"\n            },\n            children: children\n        }, void 0, false, {\n            fileName: \"/Users/macg/Desktop/footapp/lib/theme-context.tsx\",\n            lineNumber: 51,\n            columnNumber: 12\n        }, this);\n    }\n    return /*#__PURE__*/ (0,react_jsx_dev_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxDEV)(ThemeContext.Provider, {\n        value: {\n            theme,\n            toggleTheme\n        },\n        children: children\n    }, void 0, false, {\n        fileName: \"/Users/macg/Desktop/footapp/lib/theme-context.tsx\",\n        lineNumber: 55,\n        columnNumber: 5\n    }, this);\n}\nfunction useTheme() {\n    const context = (0,react__WEBPACK_IMPORTED_MODULE_1__.useContext)(ThemeContext);\n    if (context === undefined) {\n        throw new Error(\"useTheme must be used within a ThemeProvider\");\n    }\n    return context;\n}\n//# sourceURL=[module]\n//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiLi9saWIvdGhlbWUtY29udGV4dC50c3giLCJtYXBwaW5ncyI6Ijs7Ozs7Ozs7OztBQUU2RTtBQVM3RSxNQUFNSyw2QkFBZUosb0RBQWFBLENBQStCSztBQUUxRCxTQUFTQyxjQUFjLEVBQUVDLFFBQVEsRUFBaUM7SUFDdkUsTUFBTSxDQUFDQyxPQUFPQyxTQUFTLEdBQUdOLCtDQUFRQSxDQUFRO0lBQzFDLE1BQU0sQ0FBQ08sU0FBU0MsV0FBVyxHQUFHUiwrQ0FBUUEsQ0FBQztJQUV2QyxvREFBb0Q7SUFDcERELGdEQUFTQSxDQUFDO1FBQ1IsTUFBTVUsYUFBYUMsYUFBYUMsT0FBTyxDQUFDO1FBQ3hDLElBQUlGLFlBQVk7WUFDZEgsU0FBU0c7UUFDWCxPQUFPLElBQUlHLE9BQU9DLFVBQVUsQ0FBQyxnQ0FBZ0NDLE9BQU8sRUFBRTtZQUNwRVIsU0FBUztRQUNYO1FBQ0FFLFdBQVc7SUFDYixHQUFHLEVBQUU7SUFFTCxpQ0FBaUM7SUFDakNULGdEQUFTQSxDQUFDO1FBQ1IsSUFBSVEsU0FBUztZQUNYLE1BQU1RLE9BQU9ILE9BQU9JLFFBQVEsQ0FBQ0MsZUFBZTtZQUU1QyxrQ0FBa0M7WUFDbENGLEtBQUtHLFNBQVMsQ0FBQ0MsTUFBTSxDQUFDLFNBQVM7WUFFL0IsNkJBQTZCO1lBQzdCSixLQUFLRyxTQUFTLENBQUNFLEdBQUcsQ0FBQ2Y7WUFFbkIsZ0NBQWdDO1lBQ2hDSyxhQUFhVyxPQUFPLENBQUMsU0FBU2hCO1FBQ2hDO0lBQ0YsR0FBRztRQUFDQTtRQUFPRTtLQUFRO0lBRW5CLE1BQU1lLGNBQWM7UUFDbEJoQixTQUFTaUIsQ0FBQUEsT0FBUUEsU0FBUyxVQUFVLFNBQVM7SUFDL0M7SUFFQSx3Q0FBd0M7SUFDeEMsSUFBSSxDQUFDaEIsU0FBUztRQUNaLHFCQUFPLDhEQUFDaUI7WUFBSUMsT0FBTztnQkFBRUMsWUFBWTtZQUFTO3NCQUFJdEI7Ozs7OztJQUNoRDtJQUVBLHFCQUNFLDhEQUFDSCxhQUFhMEIsUUFBUTtRQUFDQyxPQUFPO1lBQUV2QjtZQUFPaUI7UUFBWTtrQkFDaERsQjs7Ozs7O0FBR1A7QUFFTyxTQUFTeUI7SUFDZCxNQUFNQyxVQUFVaEMsaURBQVVBLENBQUNHO0lBQzNCLElBQUk2QixZQUFZNUIsV0FBVztRQUN6QixNQUFNLElBQUk2QixNQUFNO0lBQ2xCO0lBQ0EsT0FBT0Q7QUFDVCIsInNvdXJjZXMiOlsid2VicGFjazovL2Zvb3RyYXRlLy4vbGliL3RoZW1lLWNvbnRleHQudHN4Pzc4MTEiXSwic291cmNlc0NvbnRlbnQiOlsiJ3VzZSBjbGllbnQnXG5cbmltcG9ydCBSZWFjdCwgeyBjcmVhdGVDb250ZXh0LCB1c2VDb250ZXh0LCB1c2VFZmZlY3QsIHVzZVN0YXRlIH0gZnJvbSAncmVhY3QnXG5cbnR5cGUgVGhlbWUgPSAnbGlnaHQnIHwgJ2RhcmsnXG5cbmludGVyZmFjZSBUaGVtZUNvbnRleHRUeXBlIHtcbiAgdGhlbWU6IFRoZW1lXG4gIHRvZ2dsZVRoZW1lOiAoKSA9PiB2b2lkXG59XG5cbmNvbnN0IFRoZW1lQ29udGV4dCA9IGNyZWF0ZUNvbnRleHQ8VGhlbWVDb250ZXh0VHlwZSB8IHVuZGVmaW5lZD4odW5kZWZpbmVkKVxuXG5leHBvcnQgZnVuY3Rpb24gVGhlbWVQcm92aWRlcih7IGNoaWxkcmVuIH06IHsgY2hpbGRyZW46IFJlYWN0LlJlYWN0Tm9kZSB9KSB7XG4gIGNvbnN0IFt0aGVtZSwgc2V0VGhlbWVdID0gdXNlU3RhdGU8VGhlbWU+KCdsaWdodCcpXG4gIGNvbnN0IFttb3VudGVkLCBzZXRNb3VudGVkXSA9IHVzZVN0YXRlKGZhbHNlKVxuXG4gIC8vIENoYXJnZXIgbGUgdGjDqG1lIGRlcHVpcyBsb2NhbFN0b3JhZ2UgYXUgZMOpbWFycmFnZVxuICB1c2VFZmZlY3QoKCkgPT4ge1xuICAgIGNvbnN0IHNhdmVkVGhlbWUgPSBsb2NhbFN0b3JhZ2UuZ2V0SXRlbSgndGhlbWUnKSBhcyBUaGVtZVxuICAgIGlmIChzYXZlZFRoZW1lKSB7XG4gICAgICBzZXRUaGVtZShzYXZlZFRoZW1lKVxuICAgIH0gZWxzZSBpZiAod2luZG93Lm1hdGNoTWVkaWEoJyhwcmVmZXJzLWNvbG9yLXNjaGVtZTogZGFyayknKS5tYXRjaGVzKSB7XG4gICAgICBzZXRUaGVtZSgnZGFyaycpXG4gICAgfVxuICAgIHNldE1vdW50ZWQodHJ1ZSlcbiAgfSwgW10pXG5cbiAgLy8gQXBwbGlxdWVyIGxlIHRow6htZSBhdSBkb2N1bWVudFxuICB1c2VFZmZlY3QoKCkgPT4ge1xuICAgIGlmIChtb3VudGVkKSB7XG4gICAgICBjb25zdCByb290ID0gd2luZG93LmRvY3VtZW50LmRvY3VtZW50RWxlbWVudFxuICAgICAgXG4gICAgICAvLyBTdXBwcmltZXIgbGVzIGFuY2llbm5lcyBjbGFzc2VzXG4gICAgICByb290LmNsYXNzTGlzdC5yZW1vdmUoJ2xpZ2h0JywgJ2RhcmsnKVxuICAgICAgXG4gICAgICAvLyBBam91dGVyIGxhIG5vdXZlbGxlIGNsYXNzZVxuICAgICAgcm9vdC5jbGFzc0xpc3QuYWRkKHRoZW1lKVxuICAgICAgXG4gICAgICAvLyBTYXV2ZWdhcmRlciBkYW5zIGxvY2FsU3RvcmFnZVxuICAgICAgbG9jYWxTdG9yYWdlLnNldEl0ZW0oJ3RoZW1lJywgdGhlbWUpXG4gICAgfVxuICB9LCBbdGhlbWUsIG1vdW50ZWRdKVxuXG4gIGNvbnN0IHRvZ2dsZVRoZW1lID0gKCkgPT4ge1xuICAgIHNldFRoZW1lKHByZXYgPT4gcHJldiA9PT0gJ2xpZ2h0JyA/ICdkYXJrJyA6ICdsaWdodCcpXG4gIH1cblxuICAvLyDDiXZpdGVyIGxlIGZsYXNoIHBlbmRhbnQgbCdoeWRyYXRhdGlvblxuICBpZiAoIW1vdW50ZWQpIHtcbiAgICByZXR1cm4gPGRpdiBzdHlsZT17eyB2aXNpYmlsaXR5OiAnaGlkZGVuJyB9fT57Y2hpbGRyZW59PC9kaXY+XG4gIH1cblxuICByZXR1cm4gKFxuICAgIDxUaGVtZUNvbnRleHQuUHJvdmlkZXIgdmFsdWU9e3sgdGhlbWUsIHRvZ2dsZVRoZW1lIH19PlxuICAgICAge2NoaWxkcmVufVxuICAgIDwvVGhlbWVDb250ZXh0LlByb3ZpZGVyPlxuICApXG59XG5cbmV4cG9ydCBmdW5jdGlvbiB1c2VUaGVtZSgpIHtcbiAgY29uc3QgY29udGV4dCA9IHVzZUNvbnRleHQoVGhlbWVDb250ZXh0KVxuICBpZiAoY29udGV4dCA9PT0gdW5kZWZpbmVkKSB7XG4gICAgdGhyb3cgbmV3IEVycm9yKCd1c2VUaGVtZSBtdXN0IGJlIHVzZWQgd2l0aGluIGEgVGhlbWVQcm92aWRlcicpXG4gIH1cbiAgcmV0dXJuIGNvbnRleHRcbn0iXSwibmFtZXMiOlsiUmVhY3QiLCJjcmVhdGVDb250ZXh0IiwidXNlQ29udGV4dCIsInVzZUVmZmVjdCIsInVzZVN0YXRlIiwiVGhlbWVDb250ZXh0IiwidW5kZWZpbmVkIiwiVGhlbWVQcm92aWRlciIsImNoaWxkcmVuIiwidGhlbWUiLCJzZXRUaGVtZSIsIm1vdW50ZWQiLCJzZXRNb3VudGVkIiwic2F2ZWRUaGVtZSIsImxvY2FsU3RvcmFnZSIsImdldEl0ZW0iLCJ3aW5kb3ciLCJtYXRjaE1lZGlhIiwibWF0Y2hlcyIsInJvb3QiLCJkb2N1bWVudCIsImRvY3VtZW50RWxlbWVudCIsImNsYXNzTGlzdCIsInJlbW92ZSIsImFkZCIsInNldEl0ZW0iLCJ0b2dnbGVUaGVtZSIsInByZXYiLCJkaXYiLCJzdHlsZSIsInZpc2liaWxpdHkiLCJQcm92aWRlciIsInZhbHVlIiwidXNlVGhlbWUiLCJjb250ZXh0IiwiRXJyb3IiXSwic291cmNlUm9vdCI6IiJ9\n//# sourceURL=webpack-internal:///./lib/theme-context.tsx\n");
+
+/***/ }),
+
+/***/ "./pages/_app.tsx":
+/*!************************!*\
+  !*** ./pages/_app.tsx ***!
+  \************************/
+/***/ ((module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+eval("__webpack_require__.a(module, async (__webpack_handle_async_dependencies__, __webpack_async_result__) => { try {\n__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpack_require__.d(__webpack_exports__, {\n/* harmony export */   \"default\": () => (__WEBPACK_DEFAULT_EXPORT__)\n/* harmony export */ });\n/* harmony import */ var react_jsx_dev_runtime__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! react/jsx-dev-runtime */ \"react/jsx-dev-runtime\");\n/* harmony import */ var react_jsx_dev_runtime__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(react_jsx_dev_runtime__WEBPACK_IMPORTED_MODULE_0__);\n/* harmony import */ var next_auth_react__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! next-auth/react */ \"next-auth/react\");\n/* harmony import */ var next_auth_react__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(next_auth_react__WEBPACK_IMPORTED_MODULE_1__);\n/* harmony import */ var next_head__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! next/head */ \"next/head\");\n/* harmony import */ var next_head__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(next_head__WEBPACK_IMPORTED_MODULE_2__);\n/* harmony import */ var react_hot_toast__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! react-hot-toast */ \"react-hot-toast\");\n/* harmony import */ var _lib_theme_context__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../lib/theme-context */ \"./lib/theme-context.tsx\");\n/* harmony import */ var _styles_globals_css__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../styles/globals.css */ \"./styles/globals.css\");\n/* harmony import */ var _styles_globals_css__WEBPACK_IMPORTED_MODULE_5___default = /*#__PURE__*/__webpack_require__.n(_styles_globals_css__WEBPACK_IMPORTED_MODULE_5__);\nvar __webpack_async_dependencies__ = __webpack_handle_async_dependencies__([react_hot_toast__WEBPACK_IMPORTED_MODULE_3__]);\nreact_hot_toast__WEBPACK_IMPORTED_MODULE_3__ = (__webpack_async_dependencies__.then ? (await __webpack_async_dependencies__)() : __webpack_async_dependencies__)[0];\n\n\n\n\n\n\nfunction FootRateApp({ Component, pageProps: { session, ...pageProps } }) {\n    return /*#__PURE__*/ (0,react_jsx_dev_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxDEV)(_lib_theme_context__WEBPACK_IMPORTED_MODULE_4__.ThemeProvider, {\n        children: /*#__PURE__*/ (0,react_jsx_dev_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxDEV)(next_auth_react__WEBPACK_IMPORTED_MODULE_1__.SessionProvider, {\n            session: session,\n            children: [\n                /*#__PURE__*/ (0,react_jsx_dev_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxDEV)((next_head__WEBPACK_IMPORTED_MODULE_2___default()), {\n                    children: [\n                        /*#__PURE__*/ (0,react_jsx_dev_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxDEV)(\"title\", {\n                            children: \"FootRate - Le Letterboxd du football\"\n                        }, void 0, false, {\n                            fileName: \"/Users/macg/Desktop/footapp/pages/_app.tsx\",\n                            lineNumber: 15,\n                            columnNumber: 11\n                        }, this),\n                        /*#__PURE__*/ (0,react_jsx_dev_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxDEV)(\"meta\", {\n                            name: \"description\",\n                            content: \"Notez et d\\xe9couvrez les meilleurs matchs de football\"\n                        }, void 0, false, {\n                            fileName: \"/Users/macg/Desktop/footapp/pages/_app.tsx\",\n                            lineNumber: 16,\n                            columnNumber: 11\n                        }, this),\n                        /*#__PURE__*/ (0,react_jsx_dev_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxDEV)(\"meta\", {\n                            name: \"viewport\",\n                            content: \"width=device-width, initial-scale=1\"\n                        }, void 0, false, {\n                            fileName: \"/Users/macg/Desktop/footapp/pages/_app.tsx\",\n                            lineNumber: 17,\n                            columnNumber: 11\n                        }, this),\n                        /*#__PURE__*/ (0,react_jsx_dev_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxDEV)(\"link\", {\n                            rel: \"icon\",\n                            href: \"/favicon.ico\"\n                        }, void 0, false, {\n                            fileName: \"/Users/macg/Desktop/footapp/pages/_app.tsx\",\n                            lineNumber: 18,\n                            columnNumber: 11\n                        }, this)\n                    ]\n                }, void 0, true, {\n                    fileName: \"/Users/macg/Desktop/footapp/pages/_app.tsx\",\n                    lineNumber: 14,\n                    columnNumber: 9\n                }, this),\n                /*#__PURE__*/ (0,react_jsx_dev_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxDEV)(Component, {\n                    ...pageProps\n                }, void 0, false, {\n                    fileName: \"/Users/macg/Desktop/footapp/pages/_app.tsx\",\n                    lineNumber: 21,\n                    columnNumber: 9\n                }, this),\n                /*#__PURE__*/ (0,react_jsx_dev_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxDEV)(react_hot_toast__WEBPACK_IMPORTED_MODULE_3__.Toaster, {\n                    position: \"top-right\",\n                    toastOptions: {\n                        duration: 4000,\n                        style: {\n                            background: \"rgb(var(--card))\",\n                            color: \"rgb(var(--card-foreground))\",\n                            borderRadius: \"8px\",\n                            border: \"1px solid rgb(var(--border))\"\n                        }\n                    }\n                }, void 0, false, {\n                    fileName: \"/Users/macg/Desktop/footapp/pages/_app.tsx\",\n                    lineNumber: 23,\n                    columnNumber: 9\n                }, this)\n            ]\n        }, void 0, true, {\n            fileName: \"/Users/macg/Desktop/footapp/pages/_app.tsx\",\n            lineNumber: 13,\n            columnNumber: 7\n        }, this)\n    }, void 0, false, {\n        fileName: \"/Users/macg/Desktop/footapp/pages/_app.tsx\",\n        lineNumber: 12,\n        columnNumber: 5\n    }, this);\n}\n/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (FootRateApp);\n\n__webpack_async_result__();\n} catch(e) { __webpack_async_result__(e); } });//# sourceURL=[module]\n//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiLi9wYWdlcy9fYXBwLnRzeCIsIm1hcHBpbmdzIjoiOzs7Ozs7Ozs7Ozs7Ozs7Ozs7QUFBaUQ7QUFFckI7QUFDYTtBQUNXO0FBQ3RCO0FBSTlCLFNBQVNJLFlBQVksRUFBRUMsU0FBUyxFQUFFQyxXQUFXLEVBQUVDLE9BQU8sRUFBRSxHQUFHRCxXQUFXLEVBQVk7SUFDaEYscUJBQ0UsOERBQUNILDZEQUFhQTtrQkFDWiw0RUFBQ0gsNERBQWVBO1lBQUNPLFNBQVNBOzs4QkFDeEIsOERBQUNOLGtEQUFJQTs7c0NBQ0gsOERBQUNPO3NDQUFNOzs7Ozs7c0NBQ1AsOERBQUNDOzRCQUFLQyxNQUFLOzRCQUFjQyxTQUFROzs7Ozs7c0NBQ2pDLDhEQUFDRjs0QkFBS0MsTUFBSzs0QkFBV0MsU0FBUTs7Ozs7O3NDQUM5Qiw4REFBQ0M7NEJBQUtDLEtBQUk7NEJBQU9DLE1BQUs7Ozs7Ozs7Ozs7Ozs4QkFHeEIsOERBQUNUO29CQUFXLEdBQUdDLFNBQVM7Ozs7Ozs4QkFFeEIsOERBQUNKLG9EQUFPQTtvQkFDTmEsVUFBUztvQkFDVEMsY0FBYzt3QkFDWkMsVUFBVTt3QkFDVkMsT0FBTzs0QkFDTEMsWUFBWTs0QkFDWkMsT0FBTzs0QkFDUEMsY0FBYzs0QkFDZEMsUUFBUTt3QkFDVjtvQkFDRjs7Ozs7Ozs7Ozs7Ozs7Ozs7QUFLVjtBQUVBLGlFQUFlbEIsV0FBV0EsRUFBQSIsInNvdXJjZXMiOlsid2VicGFjazovL2Zvb3RyYXRlLy4vcGFnZXMvX2FwcC50c3g/MmZiZSJdLCJzb3VyY2VzQ29udGVudCI6WyJpbXBvcnQgeyBTZXNzaW9uUHJvdmlkZXIgfSBmcm9tICduZXh0LWF1dGgvcmVhY3QnXG5pbXBvcnQgeyBBcHBQcm9wcyB9IGZyb20gJ25leHQvYXBwJ1xuaW1wb3J0IEhlYWQgZnJvbSAnbmV4dC9oZWFkJ1xuaW1wb3J0IHsgVG9hc3RlciB9IGZyb20gJ3JlYWN0LWhvdC10b2FzdCdcbmltcG9ydCB7IFRoZW1lUHJvdmlkZXIgfSBmcm9tICcuLi9saWIvdGhlbWUtY29udGV4dCdcbmltcG9ydCAnLi4vc3R5bGVzL2dsb2JhbHMuY3NzJ1xuaW1wb3J0IFRoZW1lVG9nZ2xlIGZyb20gJy4uL2NvbXBvbmVudHMvVGhlbWVUb2dnbGUnXG5cblxuZnVuY3Rpb24gRm9vdFJhdGVBcHAoeyBDb21wb25lbnQsIHBhZ2VQcm9wczogeyBzZXNzaW9uLCAuLi5wYWdlUHJvcHMgfSB9OiBBcHBQcm9wcykge1xuICByZXR1cm4gKFxuICAgIDxUaGVtZVByb3ZpZGVyPlxuICAgICAgPFNlc3Npb25Qcm92aWRlciBzZXNzaW9uPXtzZXNzaW9ufT5cbiAgICAgICAgPEhlYWQ+XG4gICAgICAgICAgPHRpdGxlPkZvb3RSYXRlIC0gTGUgTGV0dGVyYm94ZCBkdSBmb290YmFsbDwvdGl0bGU+XG4gICAgICAgICAgPG1ldGEgbmFtZT1cImRlc2NyaXB0aW9uXCIgY29udGVudD1cIk5vdGV6IGV0IGTDqWNvdXZyZXogbGVzIG1laWxsZXVycyBtYXRjaHMgZGUgZm9vdGJhbGxcIiAvPlxuICAgICAgICAgIDxtZXRhIG5hbWU9XCJ2aWV3cG9ydFwiIGNvbnRlbnQ9XCJ3aWR0aD1kZXZpY2Utd2lkdGgsIGluaXRpYWwtc2NhbGU9MVwiIC8+XG4gICAgICAgICAgPGxpbmsgcmVsPVwiaWNvblwiIGhyZWY9XCIvZmF2aWNvbi5pY29cIiAvPlxuICAgICAgICA8L0hlYWQ+XG4gICAgICAgIFxuICAgICAgICA8Q29tcG9uZW50IHsuLi5wYWdlUHJvcHN9IC8+XG4gICAgICAgIFxuICAgICAgICA8VG9hc3RlclxuICAgICAgICAgIHBvc2l0aW9uPVwidG9wLXJpZ2h0XCJcbiAgICAgICAgICB0b2FzdE9wdGlvbnM9e3tcbiAgICAgICAgICAgIGR1cmF0aW9uOiA0MDAwLFxuICAgICAgICAgICAgc3R5bGU6IHtcbiAgICAgICAgICAgICAgYmFja2dyb3VuZDogJ3JnYih2YXIoLS1jYXJkKSknLFxuICAgICAgICAgICAgICBjb2xvcjogJ3JnYih2YXIoLS1jYXJkLWZvcmVncm91bmQpKScsXG4gICAgICAgICAgICAgIGJvcmRlclJhZGl1czogJzhweCcsXG4gICAgICAgICAgICAgIGJvcmRlcjogJzFweCBzb2xpZCByZ2IodmFyKC0tYm9yZGVyKSknLFxuICAgICAgICAgICAgfSxcbiAgICAgICAgICB9fVxuICAgICAgICAvPlxuICAgICAgPC9TZXNzaW9uUHJvdmlkZXI+XG4gICAgPC9UaGVtZVByb3ZpZGVyPlxuICApXG59XG5cbmV4cG9ydCBkZWZhdWx0IEZvb3RSYXRlQXBwIl0sIm5hbWVzIjpbIlNlc3Npb25Qcm92aWRlciIsIkhlYWQiLCJUb2FzdGVyIiwiVGhlbWVQcm92aWRlciIsIkZvb3RSYXRlQXBwIiwiQ29tcG9uZW50IiwicGFnZVByb3BzIiwic2Vzc2lvbiIsInRpdGxlIiwibWV0YSIsIm5hbWUiLCJjb250ZW50IiwibGluayIsInJlbCIsImhyZWYiLCJwb3NpdGlvbiIsInRvYXN0T3B0aW9ucyIsImR1cmF0aW9uIiwic3R5bGUiLCJiYWNrZ3JvdW5kIiwiY29sb3IiLCJib3JkZXJSYWRpdXMiLCJib3JkZXIiXSwic291cmNlUm9vdCI6IiJ9\n//# sourceURL=webpack-internal:///./pages/_app.tsx\n");
+
+/***/ }),
+
+/***/ "./styles/globals.css":
+/*!****************************!*\
+  !*** ./styles/globals.css ***!
+  \****************************/
+/***/ (() => {
+
+
+
+/***/ }),
+
+/***/ "next-auth/react":
+/*!**********************************!*\
+  !*** external "next-auth/react" ***!
+  \**********************************/
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("next-auth/react");
+
+/***/ }),
+
+/***/ "next/head":
+/*!****************************!*\
+  !*** external "next/head" ***!
+  \****************************/
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("next/head");
+
+/***/ }),
+
+/***/ "react":
+/*!************************!*\
+  !*** external "react" ***!
+  \************************/
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("react");
+
+/***/ }),
+
+/***/ "react/jsx-dev-runtime":
+/*!****************************************!*\
+  !*** external "react/jsx-dev-runtime" ***!
+  \****************************************/
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("react/jsx-dev-runtime");
+
+/***/ }),
+
+/***/ "react-hot-toast":
+/*!**********************************!*\
+  !*** external "react-hot-toast" ***!
+  \**********************************/
+/***/ ((module) => {
+
+"use strict";
+module.exports = import("react-hot-toast");;
+
+/***/ })
+
+};
+;
+
+// load runtime
+var __webpack_require__ = require("../webpack-runtime.js");
+__webpack_require__.C(exports);
+var __webpack_exec__ = (moduleId) => (__webpack_require__(__webpack_require__.s = moduleId))
+var __webpack_exports__ = (__webpack_exec__("./pages/_app.tsx"));
+module.exports = __webpack_exports__;
+
+})();
