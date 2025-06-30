@@ -5,6 +5,7 @@ import axios from 'axios'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import ThemeToggle from '../components/ThemeToggle'
+import Navbar from '../components/Navbar'
 
 
 interface Match {
@@ -155,65 +156,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-green-500 rounded-lg flex items-center justify-center">
-                <Trophy className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Sporating</h1>
-                <p className="text-xs text-gray-500">Ton œil sur le jeu.</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-6">
-              {/* Navigation */}
-              <nav className="hidden md:flex space-x-6">
-                {navigationItems.map((item) => {
-                  const Icon = item.icon
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={`flex items-center space-x-1 px-3 py-2 rounded-lg transition-colors ${
-                        item.active 
-                          ? 'text-blue-600 bg-blue-50 font-medium' 
-                          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                      }`}
-                    >
-                      <Icon className="w-4 h-4" />
-                      <span>{item.label}</span>
-                    </Link>
-                  )
-                })}
-              </nav>
-              
-              <div className="flex items-center space-x-3">
-                <Link 
-                  href="/admin/sports-dashboard-2025"
-                  className="text-xs text-purple-600 hover:text-purple-700 font-medium"
-                >
-                  ⚙️ Admin
-                </Link>
-                <Link 
-                  href="/profile"
-                  className="text-sm text-gray-700 hover:text-blue-600 font-medium"
-                >
-                  👋 {session.user?.name?.split(' ')[0] || 'Profil'}
-                </Link>
-                <button
-                  onClick={() => signOut()}
-                  className="flex items-center space-x-1 text-gray-600 hover:text-gray-800 p-2 rounded-lg hover:bg-gray-100"
-                >
-                  <LogOut className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
+      <Navbar activeTab="home" />
 
       {/* Content */}
       <main className="max-w-7xl mx-auto px-4 py-8">

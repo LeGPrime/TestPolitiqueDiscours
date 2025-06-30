@@ -1,4 +1,4 @@
-// pages/api/profile.ts - Version avec notations de joueurs
+// pages/api/profile.ts - Version améliorée avec stats par sport
 import { NextApiRequest, NextApiResponse } from 'next'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '../../lib/auth'
@@ -34,10 +34,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           // Notations de matchs
           ratings: {
             include: {
-              match: true
+              match: {
+                select: {
+                  id: true,
+                  homeTeam: true,
+                  awayTeam: true,
+                  competition: true,
+                  date: true,
+                  homeScore: true,
+                  awayScore: true,
+                  venue: true,
+                  sport: true
+                }
+              }
             },
             orderBy: { createdAt: 'desc' },
-            take: 20
+            take: 50
           },
           // 🆕 Notations de joueurs
           playerRatings: {
@@ -51,7 +63,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                   competition: true,
                   date: true,
                   homeScore: true,
-                  awayScore: true
+                  awayScore: true,
+                  sport: true
                 }
               }
             },
@@ -61,7 +74,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           _count: {
             select: {
               ratings: true,
-              playerRatings: true, // 🆕 Compter les notations de joueurs
+              playerRatings: true,
               sentFriendships: { where: { status: 'ACCEPTED' } },
               receivedFriendships: { where: { status: 'ACCEPTED' } }
             }
@@ -96,7 +109,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         console.log('⚠️ Colonnes location/favorite_club pas encore disponibles')
       }
 
-      // Calculer les statistiques COMPLÈTES
+      // 🆕 Calculer les statistiques COMPLÈTES et PAR SPORT
       const totalRatings = user.ratings.length
       const totalPlayerRatings = user.playerRatings.length
       const avgRating = totalRatings > 0 
@@ -105,6 +118,72 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const avgPlayerRating = totalPlayerRatings > 0 
         ? user.playerRatings.reduce((sum, r) => sum + r.rating, 0) / totalPlayerRatings 
         : 0
+
+      // 🆕 STATS PAR SPORT
+      const getSportFromCompetition = (competition: string): string => {
+        const basketballCompetitions = ['NBA', 'EuroLeague', 'WNBA', 'FIBA']
+        const mmaCompetitions = ['UFC', 'Bellator', 'ONE', 'PFL']
+        const rugbyCompetitions = ['Six Nations', 'Top 14', 'Premiership', 'URC']
+        const f1Competitions = ['Formula 1', 'F1', 'Monaco GP', 'British GP']
+        
+        if (basketballCompetitions.some(comp => competition.includes(comp))) return 'basketball'
+        if (mmaCompetitions.some(comp => competition.includes(comp))) return 'mma'
+        if (rugbyCompetitions.some(comp => competition.includes(comp))) return 'rugby'
+        if (f1Competitions.some(comp => competition.includes(comp))) return 'f1'
+        
+        return 'football'
+      }
+
+      // Grouper les notations par sport
+      const ratingsBySport: { [sport: string]: any[] } = {}
+      const playerRatingsBySport: { [sport: string]: any[] } = {}
+
+      user.ratings.forEach(rating => {
+        const sport = rating.match.sport ? rating.match.sport.toLowerCase() : getSportFromCompetition(rating.match.competition)
+        if (!ratingsBySport[sport]) ratingsBySport[sport] = []
+        ratingsBySport[sport].push(rating)
+      })
+
+      user.playerRatings.forEach(rating => {
+        const sport = rating.match.sport ? rating.match.sport.toLowerCase() : getSportFromCompetition(rating.match.competition)
+        if (!playerRatingsBySport[sport]) playerRatingsBySport[sport] = []
+        playerRatingsBySport[sport].push(rating)
+      })
+
+      // Calculer les stats par sport
+      const statsBySport: { [sport: string]: any } = {}
+      
+      const allSports = ['football', 'basketball', 'mma', 'rugby', 'f1']
+      allSports.forEach(sport => {
+        const sportRatings = ratingsBySport[sport] || []
+        const sportPlayerRatings = playerRatingsBySport[sport] || []
+        
+        const sportAvgRating = sportRatings.length > 0
+          ? sportRatings.reduce((sum, r) => sum + r.rating, 0) / sportRatings.length
+          : 0
+        
+        const sportAvgPlayerRating = sportPlayerRatings.length > 0
+          ? sportPlayerRatings.reduce((sum, r) => sum + r.rating, 0) / sportPlayerRatings.length
+          : 0
+
+        // Compétition préférée pour ce sport
+        const competitionCounts: Record<string, number> = {}
+        sportRatings.forEach(rating => {
+          const comp = rating.match.competition
+          competitionCounts[comp] = (competitionCounts[comp] || 0) + 1
+        })
+        
+        const favoriteCompetition = Object.entries(competitionCounts)
+          .sort(([,a], [,b]) => b - a)[0]?.[0] || null
+
+        statsBySport[sport] = {
+          totalRatings: sportRatings.length,
+          avgRating: Number(sportAvgRating.toFixed(1)),
+          totalPlayerRatings: sportPlayerRatings.length,
+          avgPlayerRating: Number(sportAvgPlayerRating.toFixed(1)),
+          favoriteCompetition
+        }
+      })
 
       // Top matchs
       const topMatches = user.ratings
@@ -140,7 +219,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
       })
 
-      // Compétition préférée
+      // Compétition préférée (globale)
       const competitionCounts: Record<string, number> = {}
       user.ratings.forEach(rating => {
         const comp = rating.match.competition
@@ -198,20 +277,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const stats = {
         totalRatings,
-        totalPlayerRatings, // 🆕
+        totalPlayerRatings,
         avgRating: Number(avgRating.toFixed(1)),
-        avgPlayerRating: Number(avgPlayerRating.toFixed(1)), // 🆕
+        avgPlayerRating: Number(avgPlayerRating.toFixed(1)),
         totalFriends: user._count.sentFriendships + user._count.receivedFriendships,
         favoriteCompetition,
-        bestRatedPlayer, // 🆕
+        bestRatedPlayer,
         recentActivity,
-        recentPlayerActivity, // 🆕
+        recentPlayerActivity,
         topMatches,
-        topPlayerRatings, // 🆕
+        topPlayerRatings,
         ratingDistribution,
-        playerRatingDistribution, // 🆕
+        playerRatingDistribution,
         totalTeamsFollowed: followedTeams.length,
-        favoriteSports: []
+        favoriteSports: [],
+        // 🆕 STATS PAR SPORT
+        statsBySport
       }
 
       const profileData = {
@@ -228,44 +309,102 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         },
         stats,
         recentRatings: user.ratings.slice(0, 10),
-        recentPlayerRatings: user.playerRatings.slice(0, 10), // 🆕
+        recentPlayerRatings: user.playerRatings.slice(0, 10),
         followedTeams
       }
 
       console.log('✅ Profil complet construit avec succès')
       console.log(`📊 Stats: ${totalRatings} notes matchs, ${totalPlayerRatings} notes joueurs`)
+      console.log(`🏆 Stats par sport calculées pour ${Object.keys(statsBySport).length} sports`)
       res.status(200).json(profileData)
 
     } else if (req.method === 'PUT') {
-      // Mise à jour safe
+      // 🆕 Mise à jour améliorée du profil
       const { name, username, bio, location, favoriteClub } = req.body
 
-      // Mise à jour des colonnes de base
-      const updatedUser = await prisma.user.update({
-        where: { id: session.user.id },
-        data: { name, username, bio },
-        select: {
-          id: true,
-          name: true,
-          username: true,
-          bio: true,
-          email: true,
-          image: true
-        }
-      })
+      console.log('💾 Mise à jour profil:', { name, username, bio, location, favoriteClub })
 
-      // Essayer de mettre à jour les nouvelles colonnes
       try {
-        await prisma.$queryRaw`
-          UPDATE users 
-          SET location = ${location}, favorite_club = ${favoriteClub}
-          WHERE id = ${session.user.id}
-        `
-      } catch (error) {
-        console.log('⚠️ Colonnes location/favorite_club pas disponibles pour la mise à jour')
-      }
+        // Mise à jour des colonnes de base avec validation
+        const updateData: any = {}
+        
+        if (name !== undefined) updateData.name = name.trim().slice(0, 100) // Limite à 100 caractères
+        if (username !== undefined) {
+          // Validation username: alphanumerique + underscore, 3-30 caractères
+          const cleanUsername = username.trim().toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 30)
+          if (cleanUsername.length >= 3) {
+            // Vérifier l'unicité du username
+            const existingUser = await prisma.user.findFirst({
+              where: { 
+                username: cleanUsername,
+                id: { not: session.user.id }
+              }
+            })
+            
+            if (existingUser) {
+              return res.status(400).json({ 
+                error: 'Ce nom d\'utilisateur est déjà pris',
+                field: 'username'
+              })
+            }
+            
+            updateData.username = cleanUsername
+          }
+        }
+        if (bio !== undefined) updateData.bio = bio.trim().slice(0, 200) // Limite à 200 caractères
 
-      res.status(200).json({ user: updatedUser })
+        const updatedUser = await prisma.user.update({
+          where: { id: session.user.id },
+          data: updateData,
+          select: {
+            id: true,
+            name: true,
+            username: true,
+            bio: true,
+            email: true,
+            image: true
+          }
+        })
+
+        // Essayer de mettre à jour les nouvelles colonnes
+        if (location !== undefined || favoriteClub !== undefined) {
+          try {
+            const locationValue = location?.trim().slice(0, 100) || null
+            const favoriteClubValue = favoriteClub?.trim().slice(0, 100) || null
+            
+            await prisma.$queryRaw`
+              UPDATE users 
+              SET location = ${locationValue}, favorite_club = ${favoriteClubValue}
+              WHERE id = ${session.user.id}
+            `
+            console.log('✅ Colonnes étendues mises à jour')
+          } catch (error) {
+            console.log('⚠️ Colonnes location/favorite_club pas disponibles pour la mise à jour')
+          }
+        }
+
+        console.log('✅ Profil mis à jour avec succès')
+        res.status(200).json({ 
+          user: updatedUser,
+          message: 'Profil mis à jour avec succès !'
+        })
+        
+      } catch (error: any) {
+        console.error('❌ Erreur mise à jour profil:', error)
+        
+        if (error.code === 'P2002' && error.meta?.target?.includes('username')) {
+          return res.status(400).json({ 
+            error: 'Ce nom d\'utilisateur est déjà pris',
+            field: 'username'
+          })
+        }
+        
+        res.status(500).json({ 
+          error: 'Erreur lors de la mise à jour du profil',
+          details: error.message
+        })
+      }
+      
     } else {
       res.setHeader('Allow', ['GET', 'PUT'])
       res.status(405).end(`Method ${req.method} Not Allowed`)

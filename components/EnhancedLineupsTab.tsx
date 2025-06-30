@@ -90,12 +90,62 @@ export default function EnhancedLineupsTab({
   }
 
   const enhancedOnRatePlayer = async (player: any, rating: number, comment?: string) => {
+    if (!currentUserId) {
+      console.error('❌ currentUserId non défini')
+      return
+    }
+
     try {
       const playerId = getPlayerId(player)
+      console.log('🎯 Notation en cours:', { playerId, rating, currentUserId })
+      
+      // ✅ MISE À JOUR LOCALE IMMÉDIATE (sans attendre l'API)
+      setLocalPlayerRatings(prevRatings => {
+        console.log('📊 Ratings avant:', prevRatings.length)
+        
+        // Filtrer les anciennes notes de ce joueur par cet utilisateur
+        const newRatings = prevRatings.filter(r => 
+          !(r.playerId === playerId && r.userId === currentUserId)
+        )
+        
+        // Ajouter la nouvelle note
+        const newRating = {
+          id: `local_${Date.now()}`,
+          userId: currentUserId,
+          playerId: playerId,
+          rating: rating,
+          comment: comment || null,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          user: {
+            id: currentUserId,
+            name: 'Vous',
+            username: null,
+            image: null
+          },
+          player: {
+            id: playerId,
+            name: player.player?.name || player.player || player.name || 'Joueur',
+            position: player.position || player.player?.pos,
+            number: player.number || player.player?.number,
+            team: activeTeam === 'home' ? lineups.home.teamName : lineups.away.teamName,
+            sport: 'FOOTBALL'
+          }
+        }
+        
+        const finalRatings = [...newRatings, newRating]
+        console.log('📊 Ratings après:', finalRatings.length, 'nouvelle note:', newRating.rating)
+        return finalRatings
+      })
+
+      // ✅ APPEL API EN ARRIÈRE-PLAN (juste pour sauvegarder)
       await onRatePlayer(playerId, rating, comment)
-      await loadPlayerRatings()
+      console.log('✅ Sauvegarde API réussie')
+      
     } catch (error) {
-      console.error('Erreur notation joueur:', error)
+      console.error('❌ Erreur notation:', error)
+      // En cas d'erreur, recharger les vraies données
+      loadPlayerRatings()
       throw error
     }
   }
@@ -260,7 +310,7 @@ export default function EnhancedLineupsTab({
         />
       )}
 
-      {/* Statistiques des notations */}
+      {/* Statistiques des notations améliorées */}
       {localPlayerRatings.length > 0 && (
         <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
           <h4 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-3">
@@ -324,141 +374,240 @@ function TacticalView({
   awayTeam
 }: any) {
   return (
-    <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-green-600 to-emerald-700 p-6 text-white">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <Trophy className="w-8 h-8" />
-            <div>
-              <h3 className="text-2xl font-bold">
-                {activeTeam === 'home' ? homeTeam : awayTeam}
-              </h3>
-              <p className="text-green-100">Formation {currentLineup.formation}</p>
+    <div className="bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-100">
+      {/* Header moderne */}
+      <div className="bg-gradient-to-br from-emerald-500 via-green-600 to-teal-700 p-8 text-white relative overflow-hidden">
+        <div className="absolute inset-0 bg-black/10"></div>
+        <div className="relative z-10">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-6">
+              <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
+                <Trophy className="w-9 h-9 text-white" />
+              </div>
+              <div>
+                <h3 className="text-3xl font-bold mb-1">
+                  {activeTeam === 'home' ? homeTeam : awayTeam}
+                </h3>
+                <div className="flex items-center space-x-4">
+                  <span className="bg-white/20 px-4 py-1 rounded-full text-sm font-medium">
+                    Formation {currentLineup.formation}
+                  </span>
+                  <span className="bg-white/20 px-4 py-1 rounded-full text-sm">
+                    11 titulaires
+                  </span>
+                </div>
+              </div>
             </div>
-          </div>
-          <div className="text-right">
-            <div className="text-lg font-bold">Vue Tactique</div>
-            <div className="text-green-200 text-sm">Cliquez sur un joueur pour le noter</div>
+            
+            <div className="text-right">
+              <div className="text-xl font-bold mb-1">Vue Tactique</div>
+              <div className="text-emerald-100 text-sm opacity-90">
+                Cliquez sur un joueur pour le noter ⭐
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Terrain de football moderne */}
-      <div className="relative overflow-hidden">
-        <div className="bg-gradient-to-b from-green-400 via-green-500 to-green-600 relative" style={{ aspectRatio: '3/2', minHeight: '600px' }}>
-          {/* Texture de pelouse */}
-          <div className="absolute inset-0 opacity-20">
-            <div className="w-full h-full" style={{
-              backgroundImage: `repeating-linear-gradient(
-                0deg,
-                transparent,
-                transparent 15px,
-                rgba(255,255,255,0.1) 15px,
-                rgba(255,255,255,0.1) 17px
-              )`
-            }}></div>
-          </div>
+      {/* Terrain de football correct et bien cadré */}
+      <div className="relative bg-gradient-to-b from-emerald-400 via-green-500 to-emerald-600 overflow-hidden" style={{ aspectRatio: '3/2', minHeight: '600px' }}>
+        {/* Texture pelouse subtile */}
+        <div className="absolute inset-0 opacity-15">
+          <div className="w-full h-full" style={{
+            backgroundImage: `repeating-linear-gradient(
+              90deg,
+              transparent,
+              transparent 20px,
+              rgba(255,255,255,0.1) 20px,
+              rgba(255,255,255,0.1) 22px
+            )`
+          }}></div>
+        </div>
 
-          {/* Lignes du terrain détaillées */}
-          <div className="absolute inset-0 opacity-30">
-            {/* Ligne médiane */}
-            <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-white transform -translate-y-0.5"></div>
-            
-            {/* Cercle central */}
-            <div className="absolute top-1/2 left-1/2 w-32 h-32 border-2 border-white rounded-full transform -translate-x-1/2 -translate-y-1/2"></div>
-            <div className="absolute top-1/2 left-1/2 w-2 h-2 bg-white rounded-full transform -translate-x-1/2 -translate-y-1/2"></div>
-            
-            {/* Surface de réparation haute */}
-            <div className="absolute top-4 left-1/2 w-44 h-20 border-2 border-white transform -translate-x-1/2"></div>
-            <div className="absolute top-4 left-1/2 w-20 h-8 border-2 border-white transform -translate-x-1/2"></div>
-            
-            {/* Surface de réparation basse */}
-            <div className="absolute bottom-4 left-1/2 w-44 h-20 border-2 border-white transform -translate-x-1/2"></div>
-            <div className="absolute bottom-4 left-1/2 w-20 h-8 border-2 border-white transform -translate-x-1/2"></div>
-            
-            {/* Buts */}
-            <div className="absolute top-0 left-1/2 w-12 h-2 bg-white transform -translate-x-1/2"></div>
-            <div className="absolute bottom-0 left-1/2 w-12 h-2 bg-white transform -translate-x-1/2"></div>
-          </div>
+        {/* Lignes du terrain de football CORRECTES */}
+        <div className="absolute inset-0 opacity-60">
+          {/* Contour du terrain */}
+          <div className="absolute inset-4 border-2 border-white"></div>
+          
+          {/* Ligne médiane horizontale */}
+          <div className="absolute top-1/2 left-4 right-4 h-0.5 bg-white"></div>
+          
+          {/* Cercle central */}
+          <div className="absolute top-1/2 left-1/2 w-16 h-16 border-2 border-white rounded-full transform -translate-x-1/2 -translate-y-1/2"></div>
+          <div className="absolute top-1/2 left-1/2 w-1 h-1 bg-white rounded-full transform -translate-x-1/2 -translate-y-1/2"></div>
+          
+          {/* Surface de réparation HAUT */}
+          <div className="absolute top-4 left-1/2 w-32 h-12 border-2 border-white transform -translate-x-1/2 border-t-0"></div>
+          {/* Surface de but HAUT */}
+          <div className="absolute top-4 left-1/2 w-16 h-5 border-2 border-white transform -translate-x-1/2 border-t-0"></div>
+          
+          {/* Surface de réparation BAS */}
+          <div className="absolute bottom-4 left-1/2 w-32 h-12 border-2 border-white transform -translate-x-1/2 border-b-0"></div>
+          {/* Surface de but BAS */}
+          <div className="absolute bottom-4 left-1/2 w-16 h-5 border-2 border-white transform -translate-x-1/2 border-b-0"></div>
+          
+          {/* Point de penalty HAUT */}
+          <div className="absolute top-12 left-1/2 w-1 h-1 bg-white rounded-full transform -translate-x-1/2"></div>
+          {/* Point de penalty BAS */}
+          <div className="absolute bottom-12 left-1/2 w-1 h-1 bg-white rounded-full transform -translate-x-1/2"></div>
+        </div>
 
-          {/* Positionnement des joueurs */}
-          <div className="absolute inset-0 p-8">
-            <div className="relative w-full h-full flex flex-col justify-between">
-              {/* Formation tactique */}
-              <div className="flex-1 flex flex-col justify-between py-8">
-                {playerLines.map((line, lineIndex) => (
-                  <div key={lineIndex} className="flex justify-center">
-                    <div className={`flex ${
-                      line.length === 1 ? 'justify-center' :
-                      line.length === 2 ? 'justify-between max-w-md' :
-                      line.length === 3 ? 'justify-between max-w-lg' :
-                      line.length === 4 ? 'justify-between max-w-xl' :
-                      'justify-between max-w-2xl'
-                    } w-full px-4`}>
-                      {line.map((player, playerIndex) => (
-                        <PlayerTacticalCard
-                          key={`${lineIndex}-${playerIndex}`}
-                          player={player}
-                          playerStats={getPlayerStats(player)}
-                          userRating={getUserRatingForPlayer(player)}
-                          activeTeam={activeTeam}
-                          onSelect={onPlayerSelect}
-                          showRatingsOverlay={showRatingsOverlay}
-                        />
-                      ))}
-                    </div>
-                  </div>
+        {/* Positionnement des joueurs SIMPLIFIÉ ET CENTRÉ */}
+        <div className="absolute inset-0 flex flex-col justify-between p-8">
+          
+          {/* Ligne 1: Gardien (tout en haut) */}
+          <div className="flex justify-center">
+            {playerLines[0] && playerLines[0][0] && (
+              <PlayerTacticalCard
+                player={playerLines[0][0]}
+                playerStats={getPlayerStats(playerLines[0][0])}
+                userRating={getUserRatingForPlayer(playerLines[0][0])}
+                activeTeam={activeTeam}
+                onSelect={onPlayerSelect}
+                showRatingsOverlay={showRatingsOverlay}
+              />
+            )}
+          </div>
+          
+          {/* Ligne 2: Défenseurs */}
+          <div className="flex justify-center">
+            <div className="flex space-x-6">
+              {playerLines[1] && playerLines[1].map((player, index) => (
+                <PlayerTacticalCard
+                  key={index}
+                  player={player}
+                  playerStats={getPlayerStats(player)}
+                  userRating={getUserRatingForPlayer(player)}
+                  activeTeam={activeTeam}
+                  onSelect={onPlayerSelect}
+                  showRatingsOverlay={showRatingsOverlay}
+                />
+              ))}
+            </div>
+          </div>
+          
+          {/* Ligne 3: Milieux */}
+          <div className="flex justify-center">
+            <div className="flex space-x-6">
+              {playerLines[2] && playerLines[2].map((player, index) => (
+                <PlayerTacticalCard
+                  key={index}
+                  player={player}
+                  playerStats={getPlayerStats(player)}
+                  userRating={getUserRatingForPlayer(player)}
+                  activeTeam={activeTeam}
+                  onSelect={onPlayerSelect}
+                  showRatingsOverlay={showRatingsOverlay}
+                />
+              ))}
+            </div>
+          </div>
+          
+          {/* Ligne 4: Milieux offensifs ou ailiers (si formation complexe) */}
+          {playerLines[3] && playerLines[3].length > 0 && (
+            <div className="flex justify-center">
+              <div className="flex space-x-6">
+                {playerLines[3].map((player, index) => (
+                  <PlayerTacticalCard
+                    key={index}
+                    player={player}
+                    playerStats={getPlayerStats(player)}
+                    userRating={getUserRatingForPlayer(player)}
+                    activeTeam={activeTeam}
+                    onSelect={onPlayerSelect}
+                    showRatingsOverlay={showRatingsOverlay}
+                  />
                 ))}
               </div>
             </div>
+          )}
+          
+          {/* Ligne 5: Attaquants (tout en bas) */}
+          <div className="flex justify-center">
+            <div className="flex space-x-6">
+              {playerLines[4] && playerLines[4].map((player, index) => (
+                <PlayerTacticalCard
+                  key={index}
+                  player={player}
+                  playerStats={getPlayerStats(player)}
+                  userRating={getUserRatingForPlayer(player)}
+                  activeTeam={activeTeam}
+                  onSelect={onPlayerSelect}
+                  showRatingsOverlay={showRatingsOverlay}
+                />
+              ))}
+            </div>
           </div>
+          
+        </div>
 
-          {/* Coach */}
-          <div className="absolute bottom-6 right-6">
-            <div className="bg-black bg-opacity-40 backdrop-blur-md rounded-2xl p-4 text-center border border-white border-opacity-20">
-              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-white text-xl font-bold shadow-xl mb-2 ${
-                activeTeam === 'home' ? 'bg-blue-700' : 'bg-red-700'
+        {/* Statistiques en temps réel */}
+        <div className="absolute top-6 left-6">
+          <div className="bg-black/30 backdrop-blur-md rounded-2xl p-4 border border-white/20">
+            <div className="text-white text-sm">
+              <div className="font-bold mb-2 flex items-center space-x-2">
+                <span>📊</span>
+                <span>Notations</span>
+              </div>
+              <div className="space-y-1 text-xs text-white">
+                <div className="flex items-center justify-between">
+                  <span>Joueurs notés:</span>
+                  <span className="font-bold">
+                    {currentLineup.startXI.filter(player => getUserRatingForPlayer(player)).length}/11
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Banc noté:</span>
+                  <span className="font-bold">
+                    {currentLineup.substitutes.filter(player => getUserRatingForPlayer(player)).length}/{currentLineup.substitutes.length}
+                  </span>
+                </div>
+                {showRatingsOverlay && (
+                  <div className="pt-1 mt-1 border-t border-white/20">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
+                      <span>Vos notes</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Informations d'équipe */}
+        <div className="absolute bottom-6 left-6 transform translate-y-[-100px]">
+          <div className="bg-black/30 backdrop-blur-md rounded-2xl p-4 border border-white/20">
+            <div className="flex items-center space-x-3">
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white text-lg font-bold shadow-lg ${
+                activeTeam === 'home' ? 'bg-blue-600' : 'bg-red-600'
               }`}>
                 👨‍💼
               </div>
-              <div className="text-xs text-white font-bold">Coach</div>
-              <div className="text-xs text-white opacity-80">{currentLineup.coach}</div>
-            </div>
-          </div>
-
-          {/* Légende */}
-          <div className="absolute top-6 left-6">
-            <div className="bg-black bg-opacity-40 backdrop-blur-md rounded-2xl p-4 border border-white border-opacity-20">
-              <div className="text-white text-sm font-bold mb-2">Légende</div>
-              <div className="space-y-2 text-xs text-white">
-                {showRatingsOverlay && (
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 bg-yellow-400 rounded-full"></div>
-                    <span>Badge jaune = Votre note</span>
-                  </div>
-                )}
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-green-400 rounded-full"></div>
-                  <span>Vert = Note élevée</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-red-400 rounded-full"></div>
-                  <span>Rouge = Note faible</span>
-                </div>
+              <div>
+                <div className="text-xs text-white/80 font-medium">Coach</div>
+                <div className="text-sm text-white font-bold">{currentLineup.coach}</div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Remplaçants en bas */}
-      <div className="bg-gray-50 p-6 border-t">
-        <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center space-x-2">
-          <Users className="w-5 h-5 text-gray-600" />
-          <span>Remplaçants ({currentLineup.substitutes.length})</span>
-        </h4>
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+      {/* Section remplaçants modernisée */}
+      <div className="bg-gradient-to-br from-slate-50 to-gray-100 p-8 border-t">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-slate-200 rounded-xl flex items-center justify-center">
+              <Users className="w-5 h-5 text-slate-600" />
+            </div>
+            <div>
+              <h4 className="text-xl font-bold text-gray-900">Banc de touche</h4>
+              <p className="text-sm text-gray-600">{currentLineup.substitutes.length} remplaçants disponibles</p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {currentLineup.substitutes.map((player: any, index: number) => (
             <PlayerSubstituteCard
               key={index}
@@ -475,47 +624,65 @@ function TacticalView({
   )
 }
 
-// Carte de joueur pour la vue tactique
+// Carte de joueur pour la vue tactique - Version équilibrée
 function PlayerTacticalCard({ player, playerStats, userRating, activeTeam, onSelect, showRatingsOverlay }: any) {
+  // Fonction pour obtenir la couleur selon la note utilisateur
+  const getPlayerCardColor = () => {
+    if (userRating && userRating.rating) {
+      const rating = userRating.rating
+      if (rating >= 9) return 'from-emerald-400 to-emerald-600' // Excellent (9-10)
+      if (rating >= 7) return 'from-green-400 to-green-600'     // Très bon (7-8)
+      if (rating >= 6) return 'from-blue-400 to-blue-600'       // Bon (6)
+      if (rating >= 4) return 'from-yellow-400 to-yellow-600'   // Moyen (4-5)
+      if (rating >= 2) return 'from-orange-400 to-orange-600'   // Faible (2-3)
+      return 'from-red-400 to-red-600'                          // Très mauvais (1)
+    }
+    
+    // Couleur par position (défaut)
+    const pos = player.position || player.player?.pos || ''
+    if (pos.includes('GK')) return 'from-purple-500 to-purple-700'
+    if (pos.includes('CB') || pos.includes('RB') || pos.includes('LB') || pos.includes('DEF')) return 'from-slate-500 to-slate-700'
+    if (pos.includes('CM') || pos.includes('CDM') || pos.includes('CAM') || pos.includes('MID')) return 'from-slate-500 to-slate-700'
+    if (pos.includes('ST') || pos.includes('CF') || pos.includes('LW') || pos.includes('RW') || pos.includes('FWD')) return 'from-slate-500 to-slate-700'
+    return 'from-gray-500 to-gray-700'
+  }
+
+  // Fonction pour obtenir la couleur du badge de position
+  const getPositionColor = (pos: string) => {
+    if (pos?.includes('GK')) return 'from-purple-500 to-purple-700'
+    if (pos?.includes('CB') || pos?.includes('RB') || pos?.includes('LB') || pos?.includes('DEF')) return 'from-blue-500 to-blue-700'
+    if (pos?.includes('CM') || pos?.includes('CDM') || pos?.includes('CAM') || pos?.includes('MID')) return 'from-green-500 to-green-700'
+    if (pos?.includes('ST') || pos?.includes('CF') || pos?.includes('LW') || pos?.includes('RW') || pos?.includes('FWD')) return 'from-red-500 to-red-700'
+    return 'from-gray-500 to-gray-700'
+  }
+
   return (
     <div
       onClick={() => onSelect({...player, ...playerStats, userRating})}
-      className="cursor-pointer group transition-all duration-300 hover:scale-110 flex flex-col items-center relative"
+      className="cursor-pointer group transition-all duration-500 hover:scale-110 flex flex-col items-center relative transform hover:-translate-y-1"
     >
-      {/* Maillot du joueur */}
-      <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-white font-black text-lg shadow-2xl border-4 border-white transition-all duration-300 relative ${
-        activeTeam === 'home' ? 'bg-gradient-to-br from-blue-600 to-blue-800' : 'bg-gradient-to-br from-red-600 to-red-800'
-      } ${userRating ? 'ring-4 ring-yellow-400 ring-opacity-80' : ''} group-hover:shadow-2xl group-hover:scale-110`}>
+      {/* Maillot taille réduite avec badge de note */}
+      <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-white font-black text-lg shadow-2xl border-2 border-white/50 transition-all duration-700 relative bg-gradient-to-br ${getPlayerCardColor()} ${
+        userRating ? 'ring-3 ring-yellow-400/80 ring-offset-1 ring-offset-transparent' : ''
+      } group-hover:shadow-3xl group-hover:scale-105 backdrop-blur-sm`}>
         {player.number || player.player?.number || '?'}
         
-        {/* Badge de note utilisateur */}
+        {/* Badge de note utilisateur (petit) */}
         {userRating && showRatingsOverlay && (
-          <div className="absolute -top-2 -right-2 w-7 h-7 bg-gradient-to-br from-yellow-400 to-amber-500 rounded-full flex items-center justify-center text-xs font-black text-gray-900 shadow-lg border-2 border-white">
+          <div className="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-br from-yellow-300 to-yellow-500 rounded-full flex items-center justify-center text-xs font-black text-gray-900 shadow-lg border-2 border-white">
             {userRating.rating}
-          </div>
-        )}
-        
-        {/* Indicateur de performance */}
-        {playerStats.avgRating > 0 && showRatingsOverlay && (
-          <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-lg ${
-            playerStats.avgRating >= 8 ? 'bg-green-500' :
-            playerStats.avgRating >= 6 ? 'bg-blue-500' :
-            playerStats.avgRating >= 4 ? 'bg-yellow-500' :
-            'bg-red-500'
-          }`}>
-            {playerStats.avgRating.toFixed(0)}
           </div>
         )}
       </div>
       
-      {/* Nom du joueur */}
-      <div className="mt-3 text-center">
-        <div className="bg-black bg-opacity-80 text-white text-xs px-3 py-1 rounded-lg font-bold shadow-lg backdrop-blur-sm min-w-max">
+      {/* Informations joueur compactes */}
+      <div className="mt-3 text-center space-y-1">
+        <div className="bg-black/70 text-white text-xs px-3 py-1 rounded-lg font-bold shadow-lg backdrop-blur-md border border-white/20 min-w-max">
           {(player.player?.name || player.player || player.name || 'Joueur').split(' ').slice(-1)[0]}
         </div>
         
-        {/* Position */}
-        <div className="text-white text-xs mt-1 bg-white bg-opacity-30 px-2 py-0.5 rounded-full font-medium">
+        {/* Position avec couleur par défaut */}
+        <div className={`text-white text-xs px-2 py-0.5 rounded-full font-semibold bg-gradient-to-r ${getPositionColor(player.position || player.player?.pos)} shadow-md`}>
           {player.position || player.player?.pos || 'POS'}
         </div>
       </div>
@@ -523,35 +690,62 @@ function PlayerTacticalCard({ player, playerStats, userRating, activeTeam, onSel
   )
 }
 
-// Carte de joueur remplaçant
+// Carte de joueur remplaçant - Version moderne épurée
 function PlayerSubstituteCard({ player, playerStats, userRating, activeTeam, onSelect }: any) {
+  // Fonction pour obtenir la couleur selon la note utilisateur (même logique)
+  const getPlayerCardColor = () => {
+    if (userRating && userRating.rating) {
+      const rating = userRating.rating
+      if (rating >= 9) return 'from-emerald-400 to-emerald-600'
+      if (rating >= 7) return 'from-green-400 to-green-600'
+      if (rating >= 6) return 'from-blue-400 to-blue-600'
+      if (rating >= 4) return 'from-yellow-400 to-yellow-600'
+      if (rating >= 2) return 'from-orange-400 to-orange-600'
+      return 'from-red-400 to-red-600'
+    }
+    return activeTeam === 'home' ? 'from-blue-500 to-blue-700' : 'from-red-500 to-red-700'
+  }
+
   return (
     <div
       onClick={() => onSelect({...player, ...playerStats, userRating})}
-      className="group cursor-pointer bg-white rounded-xl p-4 hover:shadow-lg transition-all duration-300 border border-gray-200 hover:border-gray-300"
+      className="group cursor-pointer bg-white rounded-2xl p-5 hover:shadow-xl transition-all duration-300 border border-gray-100 hover:border-gray-200 transform hover:-translate-y-1"
     >
-      <div className="flex items-center space-x-3">
-        <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white text-sm font-bold shadow-md transition-transform group-hover:scale-110 ${
-          activeTeam === 'home' ? 'bg-gradient-to-br from-blue-500 to-blue-700' : 'bg-gradient-to-br from-red-500 to-red-700'
-        } ${userRating ? 'ring-2 ring-yellow-400' : ''}`}>
+      <div className="flex items-center space-x-4">
+        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-white text-lg font-bold shadow-lg transition-transform group-hover:scale-110 relative bg-gradient-to-br ${getPlayerCardColor()} ${
+          userRating ? 'ring-3 ring-yellow-400/60' : ''
+        }`}>
           {player.number || player.player?.number || '?'}
+          
+          {/* Badge Remplaçant */}
+          <div className="absolute -top-1 -right-1 bg-gray-600 text-white text-xs px-1.5 py-0.5 rounded-full font-bold">
+            REMP
+          </div>
         </div>
         
         <div className="flex-1 min-w-0">
-          <p className="font-bold text-gray-900 group-hover:text-blue-600 transition-colors text-sm truncate">
+          <p className="font-bold text-gray-900 group-hover:text-blue-600 transition-colors text-base truncate">
             {(player.player?.name || player.player || player.name || 'Joueur').split(' ').slice(-1)[0]}
           </p>
-          <p className="text-xs text-gray-600">{player.position || player.player?.pos || 'SUB'}</p>
+          <p className="text-sm text-gray-600 font-medium">{player.position || player.player?.pos || 'SUB'}</p>
           
-          <div className="flex items-center space-x-2 mt-1">
-            {playerStats.avgRating > 0 && (
+          <div className="flex items-center space-x-2 mt-2">
+            {userRating ? (
               <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full font-bold">
+                ⭐ Votre: {userRating.rating}/10
+              </span>
+            ) : playerStats.avgRating > 0 ? (
+              <span className={`text-xs px-2 py-1 rounded-full font-bold ${
+                playerStats.avgRating >= 8 ? 'bg-emerald-100 text-emerald-800' :
+                playerStats.avgRating >= 6 ? 'bg-blue-100 text-blue-800' :
+                playerStats.avgRating >= 4 ? 'bg-amber-100 text-amber-800' :
+                'bg-red-100 text-red-800'
+              }`}>
                 ⭐ {playerStats.avgRating.toFixed(1)}
               </span>
-            )}
-            {userRating && (
-              <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full font-bold">
-                Votre note: {userRating.rating}/10
+            ) : (
+              <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full font-medium">
+                Non noté
               </span>
             )}
           </div>
@@ -561,7 +755,7 @@ function PlayerSubstituteCard({ player, playerStats, userRating, activeTeam, onS
   )
 }
 
-// Vue en liste moderne
+// Vue en liste moderne épurée
 function ListView({ currentLineup, activeTeam, getPlayerStats, getUserRatingForPlayer, onPlayerSelect }: any) {
   return (
     <div className="space-y-6">
@@ -620,17 +814,31 @@ function ListView({ currentLineup, activeTeam, getPlayerStats, getUserRatingForP
   )
 }
 
-// Carte de joueur pour la vue liste
+// Carte de joueur pour la vue liste - Version épurée
 function PlayerListCard({ player, playerStats, userRating, activeTeam, onSelect, isStarter }: any) {
+  // Fonction pour obtenir la couleur selon la note utilisateur
+  const getPlayerCardColor = () => {
+    if (userRating && userRating.rating) {
+      const rating = userRating.rating
+      if (rating >= 9) return 'from-emerald-400 to-emerald-600'
+      if (rating >= 7) return 'from-green-400 to-green-600'
+      if (rating >= 6) return 'from-blue-400 to-blue-600'
+      if (rating >= 4) return 'from-yellow-400 to-yellow-600'
+      if (rating >= 2) return 'from-orange-400 to-orange-600'
+      return 'from-red-400 to-red-600'
+    }
+    return activeTeam === 'home' ? 'from-blue-500 to-blue-700' : 'from-red-500 to-red-700'
+  }
+
   return (
     <div
       onClick={() => onSelect({...player, ...playerStats, userRating})}
       className="group cursor-pointer bg-gradient-to-r from-gray-50 to-gray-100 rounded-2xl p-6 hover:shadow-xl transition-all duration-300 border border-gray-200 hover:border-gray-300"
     >
       <div className="flex items-center space-x-4">
-        <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-white font-black text-lg shadow-lg transition-transform group-hover:scale-110 ${
-          activeTeam === 'home' ? 'bg-gradient-to-br from-blue-500 to-blue-700' : 'bg-gradient-to-br from-red-500 to-red-700'
-        } ${userRating ? 'ring-4 ring-yellow-400' : ''} ${isStarter ? 'border-4 border-white' : 'border-2 border-gray-300'}`}>
+        <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-white font-black text-lg shadow-lg transition-transform group-hover:scale-110 bg-gradient-to-br ${getPlayerCardColor()} ${
+          userRating ? 'ring-4 ring-yellow-400' : ''
+        } ${isStarter ? 'border-4 border-white' : 'border-2 border-gray-300'}`}>
           {player.number || player.player?.number || '?'}
         </div>
         
@@ -648,7 +856,11 @@ function PlayerListCard({ player, playerStats, userRating, activeTeam, onSelect,
           </p>
           
           <div className="flex flex-wrap gap-2">
-            {playerStats.avgRating > 0 && (
+            {userRating ? (
+              <span className="text-xs bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full font-bold">
+                ⭐ Votre note: {userRating.rating}/10
+              </span>
+            ) : playerStats.avgRating > 0 ? (
               <span className={`text-xs px-3 py-1 rounded-full font-bold ${
                 playerStats.avgRating >= 8 ? 'bg-green-100 text-green-800' :
                 playerStats.avgRating >= 6 ? 'bg-blue-100 text-blue-800' :
@@ -657,13 +869,7 @@ function PlayerListCard({ player, playerStats, userRating, activeTeam, onSelect,
               }`}>
                 ⭐ {playerStats.avgRating.toFixed(1)} ({playerStats.totalRatings} votes)
               </span>
-            )}
-            {userRating && (
-              <span className="text-xs bg-purple-100 text-purple-800 px-3 py-1 rounded-full font-bold">
-                Votre note: {userRating.rating}/10
-              </span>
-            )}
-            {!userRating && (
+            ) : (
               <span className="text-xs bg-gray-100 text-gray-600 px-3 py-1 rounded-full font-medium">
                 Cliquez pour noter
               </span>
@@ -740,16 +946,30 @@ function CompareView({ homeLineup, awayLineup, getPlayerStats, getUserRatingForP
   )
 }
 
-// Carte de joueur pour la vue de comparaison
+// Carte de joueur pour la vue de comparaison - Version épurée
 function ComparePlayerCard({ player, playerStats, userRating, teamColor, onSelect }: any) {
+  // Fonction pour obtenir la couleur selon la note utilisateur
+  const getPlayerCardColor = () => {
+    if (userRating && userRating.rating) {
+      const rating = userRating.rating
+      if (rating >= 9) return 'bg-emerald-500'
+      if (rating >= 7) return 'bg-green-500'
+      if (rating >= 6) return 'bg-blue-500'
+      if (rating >= 4) return 'bg-yellow-500'
+      if (rating >= 2) return 'bg-orange-500'
+      return 'bg-red-500'
+    }
+    return teamColor === 'blue' ? 'bg-blue-500' : 'bg-red-500'
+  }
+
   return (
     <div
       onClick={() => onSelect({...player, ...playerStats, userRating})}
       className="group cursor-pointer flex items-center space-x-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-all"
     >
-      <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-white text-sm font-bold ${
-        teamColor === 'blue' ? 'bg-blue-500' : 'bg-red-500'
-      } ${userRating ? 'ring-2 ring-yellow-400' : ''}`}>
+      <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-white text-sm font-bold ${getPlayerCardColor()} ${
+        userRating ? 'ring-2 ring-yellow-400' : ''
+      }`}>
         {player.number || player.player?.number || '?'}
       </div>
       
@@ -761,7 +981,11 @@ function ComparePlayerCard({ player, playerStats, userRating, teamColor, onSelec
       </div>
       
       <div className="text-right">
-        {playerStats.avgRating > 0 ? (
+        {userRating ? (
+          <div className="text-sm font-bold text-yellow-600">
+            {userRating.rating}/10
+          </div>
+        ) : playerStats.avgRating > 0 ? (
           <div className={`text-sm font-bold ${
             playerStats.avgRating >= 8 ? 'text-green-600' :
             playerStats.avgRating >= 6 ? 'text-blue-600' :
@@ -773,17 +997,12 @@ function ComparePlayerCard({ player, playerStats, userRating, teamColor, onSelec
         ) : (
           <div className="text-xs text-gray-400">—</div>
         )}
-        {userRating && (
-          <div className="text-xs text-purple-600 font-bold">
-            Votre: {userRating.rating}
-          </div>
-        )}
       </div>
     </div>
   )
 }
 
-// Modal de notation du joueur
+// Modal de notation du joueur - Version moderne
 function PlayerRatingModal({ player, matchId, onRate, onClose, teamColor }: any) {
   const [selectedRating, setSelectedRating] = useState(player.userRating?.rating || 0)
   const [comment, setComment] = useState(player.userRating?.comment || '')
