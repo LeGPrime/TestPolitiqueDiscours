@@ -371,23 +371,64 @@ function BasketballQuartersTab({ match, details }: any) {
 }
 
 function BasketballPlayersTab({ match, playerRatings, onRatePlayer, currentUserId }: any) {
-  // Simuler des joueurs NBA typiques (en attendant de vraies données)
+  const [activeTeam, setActiveTeam] = useState<'home' | 'away'>('home')
+  const [selectedPlayer, setSelectedPlayer] = useState<any>(null)
+  const [showRatingsOverlay, setShowRatingsOverlay] = useState(true)
+
+  // Générer des joueurs NBA typiques avec positions basketball
   const generateBasketballPlayers = (teamName: string) => {
-    const positions = ['PG', 'SG', 'SF', 'PF', 'C']
+    const positions = [
+      { pos: 'PG', name: 'Point Guard' },
+      { pos: 'SG', name: 'Shooting Guard' },
+      { pos: 'SF', name: 'Small Forward' },
+      { pos: 'PF', name: 'Power Forward' },
+      { pos: 'C', name: 'Center' }
+    ]
+    
+    // Bench players
+    const benchPositions = [
+      { pos: 'PG', name: 'Backup PG' },
+      { pos: 'SG', name: 'Sixth Man' },
+      { pos: 'SF', name: 'Wing' },
+      { pos: 'PF', name: 'Backup PF' },
+      { pos: 'C', name: 'Backup C' },
+      { pos: 'G', name: 'Guard' },
+      { pos: 'F', name: 'Forward' }
+    ]
+    
     const players = []
     
-    for (let i = 0; i < 12; i++) {
+    // Starting 5
+    for (let i = 0; i < 5; i++) {
       players.push({
-        id: `${teamName}_player_${i}`,
-        name: `Joueur ${i + 1}`,
+        id: `${teamName}_starter_${i}`,
+        name: `${positions[i].name} ${i + 1}`,
         number: i + 1,
-        position: positions[i % positions.length],
-        isStarter: i < 5,
-        minutes: i < 5 ? Math.floor(Math.random() * 15) + 25 : Math.floor(Math.random() * 20) + 5,
-        points: i < 5 ? Math.floor(Math.random() * 20) + 8 : Math.floor(Math.random() * 15),
-        rebounds: Math.floor(Math.random() * 8) + 2,
-        assists: Math.floor(Math.random() * 6) + 1,
-        team: teamName
+        position: positions[i].pos,
+        isStarter: true,
+        minutes: Math.floor(Math.random() * 15) + 28, // 28-42 min pour les titulaires
+        points: Math.floor(Math.random() * 25) + 8,   // 8-32 points
+        rebounds: Math.floor(Math.random() * 10) + 3, // 3-12 rebonds
+        assists: Math.floor(Math.random() * 8) + 2,   // 2-9 passes
+        team: teamName,
+        efficiency: Math.floor(Math.random() * 20) + 10 // +/- efficiency
+      })
+    }
+    
+    // Bench (7 joueurs)
+    for (let i = 0; i < 7; i++) {
+      players.push({
+        id: `${teamName}_bench_${i}`,
+        name: `${benchPositions[i].name} ${i + 6}`,
+        number: i + 6,
+        position: benchPositions[i].pos,
+        isStarter: false,
+        minutes: Math.floor(Math.random() * 20) + 5, // 5-24 min pour les remplaçants
+        points: Math.floor(Math.random() * 15) + 2,  // 2-16 points
+        rebounds: Math.floor(Math.random() * 6) + 1, // 1-6 rebonds
+        assists: Math.floor(Math.random() * 4) + 1,  // 1-4 passes
+        team: teamName,
+        efficiency: Math.floor(Math.random() * 15) - 5 // -5 to +10 efficiency
       })
     }
     
@@ -397,8 +438,9 @@ function BasketballPlayersTab({ match, playerRatings, onRatePlayer, currentUserI
   const homePlayers = generateBasketballPlayers(match.homeTeam)
   const awayPlayers = generateBasketballPlayers(match.awayTeam)
   
-  const [activeTeam, setActiveTeam] = useState<'home' | 'away'>('home')
   const currentPlayers = activeTeam === 'home' ? homePlayers : awayPlayers
+  const starters = currentPlayers.filter(p => p.isStarter)
+  const bench = currentPlayers.filter(p => !p.isStarter)
 
   const getUserRatingForPlayer = (playerId: string) => {
     return playerRatings?.find((rating: any) => 
@@ -408,142 +450,369 @@ function BasketballPlayersTab({ match, playerRatings, onRatePlayer, currentUserI
 
   return (
     <div className="space-y-6">
-      {/* Toggle équipes */}
-      <div className="flex bg-gradient-to-r from-gray-100 to-gray-50 rounded-xl p-1 shadow-inner w-fit">
-        <button
-          onClick={() => setActiveTeam('home')}
-          className={`flex items-center space-x-3 px-6 py-3 rounded-lg transition-all duration-300 ${
-            activeTeam === 'home'
-              ? 'bg-white text-blue-600 shadow-lg transform scale-105 font-semibold'
-              : 'text-gray-600 hover:text-gray-800'
-          }`}
-        >
-          <div className="w-4 h-4 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full shadow-sm"></div>
-          <span>{match.homeTeam}</span>
-        </button>
-        <button
-          onClick={() => setActiveTeam('away')}
-          className={`flex items-center space-x-3 px-6 py-3 rounded-lg transition-all duration-300 ${
-            activeTeam === 'away'
-              ? 'bg-white text-red-600 shadow-lg transform scale-105 font-semibold'
-              : 'text-gray-600 hover:text-gray-800'
-          }`}
-        >
-          <div className="w-4 h-4 bg-gradient-to-br from-red-400 to-red-600 rounded-full shadow-sm"></div>
-          <span>{match.awayTeam}</span>
-        </button>
-      </div>
+      {/* Header de contrôle basketball */}
+      <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
+        <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
+          {/* Sélecteur d'équipe */}
+          <div className="flex bg-gradient-to-r from-orange-100 to-red-50 rounded-2xl p-2 shadow-inner">
+            <button
+              onClick={() => setActiveTeam('home')}
+              className={`flex items-center space-x-3 px-6 py-4 rounded-xl transition-all duration-300 ${
+                activeTeam === 'home'
+                  ? 'bg-white text-orange-600 shadow-lg transform scale-105 font-bold'
+                  : 'text-gray-600 hover:text-gray-800'
+              }`}
+            >
+              <div className="w-5 h-5 bg-gradient-to-br from-orange-400 to-red-500 rounded-full shadow-sm"></div>
+              <span className="text-lg">{match.homeTeam}</span>
+              <div className="bg-orange-100 text-orange-700 px-2 py-1 rounded-full text-xs font-bold">
+                🏀 Starting 5
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveTeam('away')}
+              className={`flex items-center space-x-3 px-6 py-4 rounded-xl transition-all duration-300 ${
+                activeTeam === 'away'
+                  ? 'bg-white text-blue-600 shadow-lg transform scale-105 font-bold'
+                  : 'text-gray-600 hover:text-gray-800'
+              }`}
+            >
+              <div className="w-5 h-5 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full shadow-sm"></div>
+              <span className="text-lg">{match.awayTeam}</span>
+              <div className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs font-bold">
+                🏀 Starting 5
+              </div>
+            </button>
+          </div>
 
-      {/* Cinq majeur */}
-      <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-        <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-6 text-white">
-          <h3 className="text-xl font-semibold">🏀 Cinq Majeur</h3>
-        </div>
-        
-        <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-            {currentPlayers.filter(p => p.isStarter).map((player) => (
-              <BasketballPlayerCard
-                key={player.id}
-                player={player}
-                userRating={getUserRatingForPlayer(player.id)}
-                onRate={onRatePlayer}
-                teamColor={activeTeam === 'home' ? 'blue' : 'red'}
-              />
-            ))}
+          {/* Contrôles d'affichage */}
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={() => setShowRatingsOverlay(!showRatingsOverlay)}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all ${
+                showRatingsOverlay 
+                  ? 'bg-yellow-100 text-yellow-700 border border-yellow-300' 
+                  : 'bg-gray-100 text-gray-600'
+              }`}
+            >
+              <span className="text-lg">⭐</span>
+              <span className="text-sm font-medium">Notes</span>
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Banc */}
+      {/* Terrain de Basketball Interactif */}
+      <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
+        <div className="bg-gradient-to-r from-orange-500 to-red-600 p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <span className="text-3xl">🏀</span>
+              <div>
+                <h3 className="text-2xl font-bold">
+                  {activeTeam === 'home' ? match.homeTeam : match.awayTeam}
+                </h3>
+                <p className="text-orange-100">Starting Five - Vue Tactique</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-lg font-bold">Basketball Court</div>
+              <div className="text-orange-200 text-sm">Cliquez sur un joueur pour le noter</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Terrain de Basketball Moderne */}
+        <div className="relative overflow-hidden">
+          <div className="bg-gradient-to-b from-amber-100 via-orange-200 to-amber-300 relative" style={{ aspectRatio: '94/50', minHeight: '600px' }}>
+            {/* Texture parquet */}
+            <div className="absolute inset-0 opacity-10">
+              <div className="w-full h-full" style={{
+                backgroundImage: `repeating-linear-gradient(
+                  90deg,
+                  transparent,
+                  transparent 8px,
+                  rgba(139,69,19,0.3) 8px,
+                  rgba(139,69,19,0.3) 9px
+                )`
+              }}></div>
+            </div>
+
+            {/* Lignes du terrain de basketball détaillées */}
+            <div className="absolute inset-0 opacity-40">
+              {/* Ligne médiane */}
+              <div className="absolute top-0 bottom-0 left-1/2 w-0.5 bg-white transform -translate-x-0.5"></div>
+              
+              {/* Cercle central */}
+              <div className="absolute top-1/2 left-1/2 w-24 h-24 border-2 border-white rounded-full transform -translate-x-1/2 -translate-y-1/2"></div>
+              
+              {/* Zone restrictive gauche */}
+              <div className="absolute top-1/2 left-4 w-16 h-32 border-2 border-white transform -translate-y-1/2"></div>
+              <div className="absolute top-1/2 left-4 w-8 h-16 border-2 border-white transform -translate-y-1/2"></div>
+              
+              {/* Zone restrictive droite */}
+              <div className="absolute top-1/2 right-4 w-16 h-32 border-2 border-white transform -translate-y-1/2"></div>
+              <div className="absolute top-1/2 right-4 w-8 h-16 border-2 border-white transform -translate-y-1/2"></div>
+              
+              {/* Ligne à 3 points gauche */}
+              <div className="absolute top-1/2 left-0 w-32 h-48 border-2 border-white rounded-r-full transform -translate-y-1/2" style={{ borderLeft: 'none' }}></div>
+              
+              {/* Ligne à 3 points droite */}
+              <div className="absolute top-1/2 right-0 w-32 h-48 border-2 border-white rounded-l-full transform -translate-y-1/2" style={{ borderRight: 'none' }}></div>
+              
+              {/* Paniers */}
+              <div className="absolute top-1/2 left-2 w-2 h-4 bg-orange-600 transform -translate-y-1/2 rounded-sm"></div>
+              <div className="absolute top-1/2 right-2 w-2 h-4 bg-orange-600 transform -translate-y-1/2 rounded-sm"></div>
+            </div>
+
+            {/* Positionnement des joueurs Basketball */}
+            <div className="absolute inset-0 p-8">
+              <div className="relative w-full h-full flex justify-between items-center">
+                
+                {/* Formation Basketball - 5 joueurs positionnés stratégiquement */}
+                <div className="flex flex-col justify-between h-full py-16">
+                  {/* PG - Point Guard (arrière) */}
+                  <div className="flex justify-center">
+                    <BasketballPlayerCard
+                      player={starters[0]}
+                      userRating={getUserRatingForPlayer(starters[0]?.id)}
+                      onSelect={setSelectedPlayer}
+                      teamColor={activeTeam}
+                      showRatingsOverlay={showRatingsOverlay}
+                      position="PG"
+                    />
+                  </div>
+                </div>
+
+                {/* Zone milieu gauche */}
+                <div className="flex flex-col justify-between h-full py-8">
+                  {/* SG - Shooting Guard */}
+                  <div className="flex justify-center">
+                    <BasketballPlayerCard
+                      player={starters[1]}
+                      userRating={getUserRatingForPlayer(starters[1]?.id)}
+                      onSelect={setSelectedPlayer}
+                      teamColor={activeTeam}
+                      showRatingsOverlay={showRatingsOverlay}
+                      position="SG"
+                    />
+                  </div>
+                  
+                  {/* SF - Small Forward */}
+                  <div className="flex justify-center">
+                    <BasketballPlayerCard
+                      player={starters[2]}
+                      userRating={getUserRatingForPlayer(starters[2]?.id)}
+                      onSelect={setSelectedPlayer}
+                      teamColor={activeTeam}
+                      showRatingsOverlay={showRatingsOverlay}
+                      position="SF"
+                    />
+                  </div>
+                </div>
+
+                {/* Zone avant (près du panier) */}
+                <div className="flex flex-col justify-center space-y-16">
+                  {/* PF - Power Forward */}
+                  <BasketballPlayerCard
+                    player={starters[3]}
+                    userRating={getUserRatingForPlayer(starters[3]?.id)}
+                    onSelect={setSelectedPlayer}
+                    teamColor={activeTeam}
+                    showRatingsOverlay={showRatingsOverlay}
+                    position="PF"
+                  />
+                  
+                  {/* C - Center */}
+                  <BasketballPlayerCard
+                    player={starters[4]}
+                    userRating={getUserRatingForPlayer(starters[4]?.id)}
+                    onSelect={setSelectedPlayer}
+                    teamColor={activeTeam}
+                    showRatingsOverlay={showRatingsOverlay}
+                    position="C"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Coach position */}
+            <div className="absolute bottom-6 left-6">
+              <div className="bg-black bg-opacity-40 backdrop-blur-md rounded-2xl p-4 text-center border border-white border-opacity-20">
+                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-white text-xl font-bold shadow-xl mb-2 ${
+                  activeTeam === 'home' ? 'bg-orange-700' : 'bg-blue-700'
+                }`}>
+                  👨‍💼
+                </div>
+                <div className="text-xs text-white font-bold">Head Coach</div>
+                <div className="text-xs text-white opacity-80">NBA</div>
+              </div>
+            </div>
+
+            {/* Légende Basketball */}
+            <div className="absolute top-6 right-6">
+              <div className="bg-black bg-opacity-40 backdrop-blur-md rounded-2xl p-4 border border-white border-opacity-20">
+                <div className="text-white text-sm font-bold mb-2">🏀 Positions</div>
+                <div className="space-y-1 text-xs text-white">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 bg-purple-400 rounded-full"></div>
+                    <span>PG - Point Guard</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
+                    <span>SG - Shooting Guard</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 bg-green-400 rounded-full"></div>
+                    <span>SF - Small Forward</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 bg-yellow-400 rounded-full"></div>
+                    <span>PF - Power Forward</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 bg-red-400 rounded-full"></div>
+                    <span>C - Center</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Banc de touche moderne */}
       <div className="bg-white rounded-xl shadow-lg overflow-hidden">
         <div className="bg-gradient-to-r from-gray-500 to-gray-600 p-6 text-white">
-          <h3 className="text-xl font-semibold">🪑 Banc</h3>
+          <h3 className="text-xl font-semibold flex items-center space-x-2">
+            <span>🪑</span>
+            <span>Banc de touche ({bench.length} joueurs)</span>
+          </h3>
         </div>
         
         <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {currentPlayers.filter(p => !p.isStarter).map((player) => (
-              <BasketballPlayerCard
-                key={player.id}
+            {bench.map((player, index) => (
+              <BasketballBenchCard
+                key={index}
                 player={player}
                 userRating={getUserRatingForPlayer(player.id)}
-                onRate={onRatePlayer}
-                teamColor={activeTeam === 'home' ? 'blue' : 'red'}
+                onSelect={setSelectedPlayer}
+                teamColor={activeTeam}
               />
             ))}
           </div>
+        </div>
+      </div>
+
+      {/* Modal de notation du joueur */}
+      {selectedPlayer && (
+        <BasketballPlayerRatingModal
+          player={selectedPlayer}
+          userRating={selectedPlayer.userRating}
+          onRate={onRatePlayer}
+          onClose={() => setSelectedPlayer(null)}
+          teamColor={activeTeam === 'home' ? 'orange' : 'blue'}
+        />
+      )}
+    </div>
+  )
+}
+
+// Composant carte joueur pour le terrain de basketball
+function BasketballPlayerCard({ player, userRating, onSelect, teamColor, showRatingsOverlay, position }: any) {
+  if (!player) return null
+
+  const getPositionColor = (pos: string) => {
+    const colors = {
+      'PG': 'from-purple-500 to-purple-700',
+      'SG': 'from-blue-500 to-blue-700', 
+      'SF': 'from-green-500 to-green-700',
+      'PF': 'from-yellow-500 to-yellow-700',
+      'C': 'from-red-500 to-red-700'
+    }
+    return colors[pos as keyof typeof colors] || 'from-gray-500 to-gray-700'
+  }
+
+  return (
+    <div
+      onClick={() => onSelect({...player, userRating})}
+      className="cursor-pointer group transition-all duration-300 hover:scale-110 flex flex-col items-center relative"
+    >
+      {/* Maillot basketball avec couleur selon position */}
+      <div className={`w-18 h-18 rounded-2xl flex items-center justify-center text-white font-black text-lg shadow-2xl border-4 border-white transition-all duration-300 relative bg-gradient-to-br ${getPositionColor(position)} ${
+        userRating ? 'ring-4 ring-yellow-400 ring-opacity-80' : ''
+      } group-hover:shadow-2xl group-hover:scale-110`}>
+        {player.number || '?'}
+        
+        {/* Badge de note utilisateur */}
+        {userRating && showRatingsOverlay && (
+          <div className="absolute -top-2 -right-2 w-7 h-7 bg-gradient-to-br from-yellow-400 to-amber-500 rounded-full flex items-center justify-center text-xs font-black text-gray-900 shadow-lg border-2 border-white">
+            {userRating.rating}
+          </div>
+        )}
+      </div>
+      
+      {/* Nom et position du joueur */}
+      <div className="mt-3 text-center">
+        <div className="bg-black bg-opacity-80 text-white text-sm px-3 py-1 rounded-lg font-bold shadow-lg backdrop-blur-sm min-w-max">
+          {player.name?.split(' ').slice(-1)[0] || `Player ${player.number}`}
+        </div>
+        
+        {/* Position avec couleur */}
+        <div className={`text-white text-xs mt-1 px-2 py-0.5 rounded-full font-bold bg-gradient-to-r ${getPositionColor(position)}`}>
+          {position}
+        </div>
+        
+        {/* Stats rapides */}
+        <div className="text-white text-xs mt-1 bg-white bg-opacity-20 px-2 py-1 rounded-full">
+          {player.points}pts • {player.rebounds}reb • {player.assists}ast
         </div>
       </div>
     </div>
   )
 }
 
-function BasketballPlayerCard({ player, userRating, onRate, teamColor }: any) {
-  const [showRatingModal, setShowRatingModal] = useState(false)
-
+// Composant carte joueur pour le banc
+function BasketballBenchCard({ player, userRating, onSelect, teamColor }: any) {
   return (
-    <>
-      <div
-        onClick={() => setShowRatingModal(true)}
-        className="cursor-pointer bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 hover:shadow-lg transition-all duration-300 border border-gray-200 hover:border-gray-300 group"
-      >
-        <div className="text-center mb-3">
-          <div className={`w-16 h-16 mx-auto rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-lg transition-transform group-hover:scale-110 ${
-            teamColor === 'blue' ? 'bg-gradient-to-br from-blue-500 to-blue-700' : 'bg-gradient-to-br from-red-500 to-red-700'
-          } ${userRating ? 'ring-4 ring-yellow-400' : ''}`}>
-            #{player.number}
+    <div
+      onClick={() => onSelect({...player, userRating})}
+      className="group cursor-pointer bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 hover:shadow-lg transition-all duration-300 border border-gray-200 hover:border-gray-300"
+    >
+      <div className="flex items-center space-x-3">
+        <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white text-sm font-bold shadow-md transition-transform group-hover:scale-110 ${
+          teamColor === 'home' ? 'bg-gradient-to-br from-orange-500 to-red-600' : 'bg-gradient-to-br from-blue-500 to-blue-700'
+        } ${userRating ? 'ring-2 ring-yellow-400' : ''}`}>
+          {player.number || '?'}
+        </div>
+        
+        <div className="flex-1 min-w-0">
+          <p className="font-bold text-gray-900 group-hover:text-blue-600 transition-colors text-sm truncate">
+            {player.name}
+          </p>
+          <p className="text-xs text-gray-600">{player.position}</p>
+          
+          {/* Stats joueur */}
+          <div className="text-xs text-gray-500 mt-1">
+            {player.points}pts • {player.minutes}min • +{player.efficiency}
           </div>
           
-          <h4 className="font-bold text-gray-900 mt-2 group-hover:text-blue-600 transition-colors">
-            {player.name}
-          </h4>
-          <p className="text-sm text-gray-600 font-medium">{player.position}</p>
-        </div>
-
-        {/* Stats basket */}
-        <div className="space-y-2 text-xs">
-          <div className="flex justify-between">
-            <span className="text-gray-600">Minutes:</span>
-            <span className="font-bold">{player.minutes}'</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-600">Points:</span>
-            <span className="font-bold text-orange-600">{player.points}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-600">Rebonds:</span>
-            <span className="font-bold text-green-600">{player.rebounds}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-600">Passes:</span>
-            <span className="font-bold text-blue-600">{player.assists}</span>
-          </div>
-        </div>
-
-        {/* Note utilisateur */}
-        {userRating && (
-          <div className="mt-3 pt-3 border-t border-gray-200">
-            <div className="text-center">
+          <div className="flex items-center space-x-2 mt-1">
+            {userRating && (
               <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full font-bold">
                 ⭐ Votre note: {userRating.rating}/10
               </span>
-            </div>
+            )}
+            {!userRating && (
+              <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full font-medium">
+                Cliquez pour noter
+              </span>
+            )}
           </div>
-        )}
+        </div>
       </div>
-
-      {/* Modal de notation */}
-      {showRatingModal && (
-        <BasketballPlayerRatingModal
-          player={player}
-          userRating={userRating}
-          onRate={onRate}
-          onClose={() => setShowRatingModal(false)}
-          teamColor={teamColor}
-        />
-      )}
-    </>
+    </div>
   )
 }
 
@@ -566,40 +835,58 @@ function BasketballPlayerRatingModal({ player, userRating, onRate, onClose, team
     }
   }
 
+  const getRatingDescription = (rating: number) => {
+    if (rating === 0) return { emoji: "🤔", text: "Sélectionnez une note", color: "text-gray-500" }
+    if (rating <= 2) return { emoji: "📉", text: "Performance très décevante", color: "text-red-600" }
+    if (rating <= 4) return { emoji: "😐", text: "En-dessous des attentes", color: "text-orange-600" }
+    if (rating <= 6) return { emoji: "👌", text: "Performance solide", color: "text-yellow-600" }
+    if (rating <= 8) return { emoji: "🔥", text: "Excellente performance", color: "text-green-600" }
+    return { emoji: "🐐", text: "Performance légendaire", color: "text-purple-600" }
+  }
+
+  const ratingDesc = getRatingDescription(selectedRating)
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl transform transition-all">
-        <div className={`${teamColor === 'blue' ? 'bg-gradient-to-r from-blue-500 to-blue-600' : 'bg-gradient-to-r from-red-500 to-red-600'} p-6 rounded-t-2xl`}>
+      <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl transform transition-all">
+        {/* Header avec gradient basketball */}
+        <div className={`${teamColor === 'orange' ? 'bg-gradient-to-r from-orange-600 to-red-700' : 'bg-gradient-to-r from-blue-600 to-blue-700'} p-8 rounded-t-3xl text-white`}>
           <div className="flex items-center space-x-4">
-            <div className="w-16 h-16 bg-white bg-opacity-20 rounded-xl flex items-center justify-center text-white text-xl font-bold backdrop-blur-sm">
-              #{player.number}
+            <div className="w-20 h-20 bg-white bg-opacity-20 rounded-2xl flex items-center justify-center text-white text-2xl font-black backdrop-blur-sm">
+              {player.number || '?'}
             </div>
-            <div className="flex-1 text-white">
-              <h3 className="text-xl font-bold">{player.name}</h3>
-              <p className="text-blue-100 opacity-90">{player.position}</p>
-              <div className="flex items-center space-x-3 mt-1 text-sm">
-                <span className="bg-white bg-opacity-20 px-2 py-1 rounded-full">
+            <div className="flex-1">
+              <h3 className="text-2xl font-bold">{player.name}</h3>
+              <p className="text-orange-100 opacity-90">{player.position} • {player.team}</p>
+              <div className="flex items-center space-x-3 mt-2 text-sm">
+                <span className="bg-white bg-opacity-20 px-3 py-1 rounded-full">
                   {player.points} pts
                 </span>
-                <span className="bg-white bg-opacity-20 px-2 py-1 rounded-full">
-                  {player.minutes}'
+                <span className="bg-white bg-opacity-20 px-3 py-1 rounded-full">
+                  {player.rebounds} reb
+                </span>
+                <span className="bg-white bg-opacity-20 px-3 py-1 rounded-full">
+                  {player.assists} ast
                 </span>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="p-6 space-y-6">
+        <div className="p-8 space-y-8">
+          {/* Système de notation basketball */}
           <div>
-            <p className="text-sm font-semibold mb-4 text-gray-700">Performance sur 10 :</p>
-            <div className="grid grid-cols-5 gap-2 mb-4">
+            <p className="text-sm font-bold mb-6 text-gray-700">🏀 Évaluation de la performance :</p>
+            
+            {/* Grille de notation */}
+            <div className="grid grid-cols-5 gap-3 mb-6">
               {Array.from({ length: 10 }, (_, i) => (
                 <button
                   key={i}
                   onClick={() => setSelectedRating(i + 1)}
-                  className={`aspect-square rounded-xl text-sm font-bold transition-all duration-200 ${
+                  className={`aspect-square rounded-xl text-sm font-black transition-all duration-200 ${
                     i < selectedRating 
-                      ? 'bg-gradient-to-br from-orange-400 to-red-500 text-white shadow-lg scale-105' 
+                      ? 'bg-gradient-to-br from-orange-400 to-red-500 text-white shadow-lg scale-105 ring-2 ring-orange-300' 
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:scale-105'
                   }`}
                 >
@@ -607,38 +894,67 @@ function BasketballPlayerRatingModal({ player, userRating, onRate, onClose, team
                 </button>
               ))}
             </div>
+            
+            {/* Barre de progression basketball */}
+            <div className="w-full bg-gray-200 rounded-full h-3 mb-4">
+              <div 
+                className="bg-gradient-to-r from-orange-400 to-red-500 h-3 rounded-full transition-all duration-500"
+                style={{ width: `${(selectedRating / 10) * 100}%` }}
+              ></div>
+            </div>
+            
+            {/* Description de la note */}
+            <div className={`text-center text-sm font-bold ${ratingDesc.color} bg-gray-50 rounded-xl p-4`}>
+              <span className="text-3xl mr-3">{ratingDesc.emoji}</span>
+              {ratingDesc.text}
+            </div>
           </div>
           
+          {/* Zone de commentaire basketball */}
           <div>
-            <label className="block text-sm font-semibold mb-3 text-gray-700">
-              💭 Commentaire (optionnel) :
+            <label className="block text-sm font-bold mb-4 text-gray-700">
+              💭 Votre analyse basketball :
             </label>
             <textarea
               value={comment}
               onChange={(e) => setComment(e.target.value)}
-              className="w-full p-4 border-2 border-gray-200 rounded-xl resize-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              className="w-full p-4 border-2 border-gray-200 rounded-xl resize-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all placeholder-gray-400"
               rows={3}
-              placeholder="Comment a-t-il joué selon vous ?"
+              placeholder="Efficacité au tir, défense, rebonds, impact sur le match..."
+              maxLength={200}
             />
+            <div className="text-xs text-gray-500 mt-2 text-right">
+              {comment.length}/200 caractères
+            </div>
           </div>
           
-          <div className="flex space-x-3 pt-2">
+          {/* Actions avec design basketball */}
+          <div className="flex space-x-4 pt-4">
             <button
               onClick={onClose}
-              className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-all font-medium"
+              className="flex-1 px-6 py-4 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-all font-bold text-lg"
             >
               Annuler
             </button>
             <button
               onClick={handleRate}
               disabled={selectedRating === 0 || submitting}
-              className={`flex-1 px-4 py-3 rounded-xl transition-all font-medium text-white shadow-lg ${
+              className={`flex-1 px-6 py-4 rounded-xl transition-all font-bold text-lg text-white shadow-lg ${
                 selectedRating === 0 || submitting
                   ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 hover:shadow-xl'
+                  : teamColor === 'orange'
+                  ? 'bg-gradient-to-r from-orange-600 to-red-700 hover:from-orange-700 hover:to-red-800 hover:shadow-xl'
+                  : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 hover:shadow-xl'
               }`}
             >
-              {submitting ? 'Notation...' : `Noter ${selectedRating}/10`}
+              {submitting ? (
+                <div className="flex items-center justify-center">
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                  Notation...
+                </div>
+              ) : (
+                `🏀 ${userRating ? 'Modifier' : 'Noter'} (${selectedRating}/10)`
+              )}
             </button>
           </div>
         </div>
