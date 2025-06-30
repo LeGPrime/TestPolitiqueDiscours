@@ -1,6 +1,6 @@
 // components/NotificationCenter.tsx - Système de notifications complet
 import { useState, useEffect, useRef } from 'react'
-import { Bell, X, Check, Users, Star, Trophy, Calendar, Eye } from 'lucide-react'
+import { Bell, X, Check, Users, Star, Trophy, Calendar, Eye, TrendingUp } from 'lucide-react'
 import Link from 'next/link'
 import axios from 'axios'
 
