@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useSession, signIn, signOut } from 'next-auth/react'
-import { Star, Trophy, LogOut, RefreshCw, Search, Users, Calendar, Filter, BarChart3, Eye } from 'lucide-react'
+import { Star, Trophy, LogOut, RefreshCw, Search, Users, Calendar, Filter, BarChart3, Eye, X, ChevronDown } from 'lucide-react'
 import axios from 'axios'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
@@ -32,6 +32,19 @@ interface Match {
   }>
 }
 
+interface FilterStats {
+  total: number
+  bySport: Array<{
+    sport: string
+    count: number
+  }>
+  byCompetition: Array<{
+    competition: string
+    count: number
+    sport: string
+  }>
+}
+
 export default function Home() {
   const { data: session } = useSession()
   const router = useRouter()
@@ -40,15 +53,18 @@ export default function Home() {
   const [refreshing, setRefreshing] = useState(false)
   const [filter, setFilter] = useState<'recent' | 'today'>('recent')
   const [sportFilter, setSportFilter] = useState<'all' | 'football' | 'basketball' | 'mma' | 'rugby' | 'f1'>('all')
+  const [competitionFilter, setCompetitionFilter] = useState<string>('all')
   const [searchTerm, setSearchTerm] = useState('')
-  const [stats, setStats] = useState<any>(null)
+  const [stats, setStats] = useState<FilterStats | null>(null)
   const [showFilters, setShowFilters] = useState(false)
+  const [availableCompetitions, setAvailableCompetitions] = useState<Array<{competition: string, count: number, sport: string}>>([])
 
   useEffect(() => {
     if (session) {
       fetchMatches()
+      fetchFilterStats()
     }
-  }, [session, filter, sportFilter])
+  }, [session, filter, sportFilter, competitionFilter])
 
   const fetchMatches = async () => {
     try {
@@ -63,6 +79,10 @@ export default function Home() {
         params.append('search', searchTerm)
       }
 
+      if (competitionFilter && competitionFilter !== 'all') {
+        params.append('competition', competitionFilter)
+      }
+
       const response = await axios.get(`/api/matches?${params}`)
       setMatches(response.data.matches)
       setStats(response.data.stats)
@@ -74,11 +94,21 @@ export default function Home() {
     }
   }
 
+  const fetchFilterStats = async () => {
+    try {
+      const response = await axios.get('/api/filter-stats')
+      if (response.data.success) {
+        setAvailableCompetitions(response.data.competitions)
+      }
+    } catch (error) {
+      console.error('Erreur stats filtres:', error)
+    }
+  }
+
   const rateMatch = async (matchId: string, rating: number, comment?: string) => {
     try {
       await axios.post('/api/ratings', { matchId, rating, comment })
       fetchMatches()
-      // Mobile-friendly notification
       showMobileNotification('⭐ Événement noté avec succès !', 'success')
     } catch (error) {
       console.error('Erreur notation:', error)
@@ -113,10 +143,22 @@ export default function Home() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
-    if (searchTerm.trim()) {
-      fetchMatches()
-    }
+    fetchMatches()
   }
+
+  const clearFilters = () => {
+    setSportFilter('all')
+    setCompetitionFilter('all')
+    setSearchTerm('')
+    setFilter('recent')
+  }
+
+  // Réinitialiser le filtre compétition quand on change de sport
+  useEffect(() => {
+    if (sportFilter !== 'all') {
+      setCompetitionFilter('all')
+    }
+  }, [sportFilter])
 
   // Sports disponibles
   const sports = [
@@ -127,6 +169,26 @@ export default function Home() {
     { id: 'rugby', name: 'Rugby', emoji: '🏉', color: 'text-purple-600' },
     { id: 'f1', name: 'F1', emoji: '🏎️', color: 'text-blue-600' }
   ]
+
+  // Compétitions filtrées par sport sélectionné
+  const getFilteredCompetitions = () => {
+    if (sportFilter === 'all') {
+      return availableCompetitions
+    }
+    return availableCompetitions.filter(comp => 
+      comp.sport.toLowerCase() === sportFilter
+    )
+  }
+
+  // Compter les filtres actifs
+  const getActiveFiltersCount = () => {
+    let count = 0
+    if (sportFilter !== 'all') count++
+    if (competitionFilter !== 'all') count++
+    if (searchTerm) count++
+    if (filter !== 'recent') count++
+    return count
+  }
 
   if (!session) {
     return (
@@ -197,7 +259,7 @@ export default function Home() {
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Rechercher équipe, fighter..."
+                placeholder="Rechercher équipe, compétition..."
                 className="flex-1 input-mobile text-sm"
               />
               <button
@@ -208,7 +270,7 @@ export default function Home() {
               </button>
             </form>
 
-            {/* 📱 Filter toggle button */}
+            {/* 📱 Filter toggle button with active count */}
             <div className="flex items-center justify-between">
               <button
                 onClick={() => setShowFilters(!showFilters)}
@@ -216,27 +278,45 @@ export default function Home() {
               >
                 <Filter className="w-4 h-4" />
                 <span className="text-sm font-medium">Filtres</span>
-                <span className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 px-2 py-1 rounded-full">
-                  {sportFilter === 'all' ? 'Tous' : sports.find(s => s.id === sportFilter)?.name}
-                </span>
+                {getActiveFiltersCount() > 0 && (
+                  <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full min-w-[20px] h-5 flex items-center justify-center">
+                    {getActiveFiltersCount()}
+                  </span>
+                )}
+                <ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
               </button>
               
-              <button
-                onClick={fetchMatches}
-                disabled={refreshing}
-                className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl transition-colors active:scale-95"
-              >
-                <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
-              </button>
+              <div className="flex items-center space-x-2">
+                {getActiveFiltersCount() > 0 && (
+                  <button
+                    onClick={clearFilters}
+                    className="flex items-center space-x-1 px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm"
+                  >
+                    <X className="w-4 h-4" />
+                    <span>Effacer</span>
+                  </button>
+                )}
+                
+                <button
+                  onClick={fetchMatches}
+                  disabled={refreshing}
+                  className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl transition-colors active:scale-95"
+                >
+                  <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
+                </button>
+              </div>
             </div>
           </div>
 
           {/* 📱 COLLAPSIBLE FILTERS */}
           {showFilters && (
-            <div className="mt-4 p-4 bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 space-y-4">
+            <div className="mt-4 p-4 bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 space-y-6">
               {/* Period filters */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Période</h3>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center space-x-2">
+                  <Calendar className="w-4 h-4" />
+                  <span>Période</span>
+                </h3>
                 <div className="flex bg-gray-100 dark:bg-slate-700 rounded-lg p-1">
                   <button
                     onClick={() => setFilter('recent')}
@@ -259,7 +339,10 @@ export default function Home() {
 
               {/* Sport filters */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Sports</h3>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center space-x-2">
+                  <Trophy className="w-4 h-4" />
+                  <span>Sports</span>
+                </h3>
                 <div className="grid grid-cols-2 gap-2">
                   {sports.map((sport) => (
                     <button
@@ -287,6 +370,100 @@ export default function Home() {
                   ))}
                 </div>
               </div>
+
+              {/* Competition filters */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center space-x-2">
+                  <BarChart3 className="w-4 h-4" />
+                  <span>
+                    Compétitions
+                    {sportFilter !== 'all' && (
+                      <span className="ml-1 text-xs text-gray-500">
+                        ({sports.find(s => s.id === sportFilter)?.name})
+                      </span>
+                    )}
+                  </span>
+                </h3>
+                
+                {getFilteredCompetitions().length > 0 ? (
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    <button
+                      onClick={() => setCompetitionFilter('all')}
+                      className={`w-full flex items-center justify-between p-3 rounded-lg text-left transition-all ${
+                        competitionFilter === 'all'
+                          ? 'bg-blue-500 text-white shadow-md'
+                          : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600'
+                      }`}
+                    >
+                      <span className="font-medium text-sm">
+                        🏆 Toutes les compétitions
+                      </span>
+                      <span className={`text-xs px-2 py-1 rounded-full ${
+                        competitionFilter === 'all' ? 'bg-white/20' : 'bg-white dark:bg-slate-600'
+                      }`}>
+                        {getFilteredCompetitions().reduce((sum, comp) => sum + comp.count, 0)}
+                      </span>
+                    </button>
+                    
+                    {getFilteredCompetitions()
+                      .sort((a, b) => b.count - a.count)
+                      .map((competition) => (
+                      <button
+                        key={competition.competition}
+                        onClick={() => setCompetitionFilter(competition.competition)}
+                        className={`w-full flex items-center justify-between p-3 rounded-lg text-left transition-all ${
+                          competitionFilter === competition.competition
+                            ? 'bg-blue-500 text-white shadow-md'
+                            : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600'
+                        }`}
+                      >
+                        <div className="flex items-center space-x-2">
+                          <span className="text-sm">
+                            {competition.sport === 'football' && '⚽'}
+                            {competition.sport === 'basketball' && '🏀'}
+                            {competition.sport === 'mma' && '🥊'}
+                            {competition.sport === 'rugby' && '🏉'}
+                            {competition.sport === 'f1' && '🏎️'}
+                          </span>
+                          <span className="font-medium text-sm">{competition.competition}</span>
+                        </div>
+                        <span className={`text-xs px-2 py-1 rounded-full ${
+                          competitionFilter === competition.competition ? 'bg-white/20' : 'bg-white dark:bg-slate-600'
+                        }`}>
+                          {competition.count}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-6 text-gray-500 dark:text-gray-400">
+                    <Trophy className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">
+                      {sportFilter === 'all' 
+                        ? 'Aucune compétition disponible' 
+                        : `Aucune compétition ${sports.find(s => s.id === sportFilter)?.name} disponible`
+                      }
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Summary of active filters */}
+              {getActiveFiltersCount() > 0 && (
+                <div className="border-t border-gray-200 dark:border-slate-600 pt-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      {getActiveFiltersCount()} filtre{getActiveFiltersCount() > 1 ? 's' : ''} actif{getActiveFiltersCount() > 1 ? 's' : ''}
+                    </span>
+                    <button
+                      onClick={clearFilters}
+                      className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium"
+                    >
+                      Tout effacer
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -302,20 +479,17 @@ export default function Home() {
           <div className="text-center py-12">
             <Trophy className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-xl font-medium text-gray-900 dark:text-white mb-2">
-              {searchTerm ? 'Aucun événement trouvé' : 'Aucun événement disponible'}
+              {getActiveFiltersCount() > 0 ? 'Aucun événement trouvé' : 'Aucun événement disponible'}
             </h3>
             <p className="text-gray-600 dark:text-gray-400 mb-4 px-4">
-              {searchTerm 
-                ? `Aucun événement trouvé pour "${searchTerm}" en ${sportFilter === 'all' ? 'tous sports' : sportFilter}`
+              {getActiveFiltersCount() > 0 
+                ? `Aucun événement ne correspond à vos critères de recherche`
                 : 'Les événements apparaîtront ici une fois terminés'
               }
             </p>
-            {searchTerm && (
+            {getActiveFiltersCount() > 0 && (
               <button
-                onClick={() => {
-                  setSearchTerm('')
-                  fetchMatches()
-                }}
+                onClick={clearFilters}
                 className="btn-mobile-primary"
               >
                 Voir tous les événements
@@ -324,6 +498,24 @@ export default function Home() {
           </div>
         ) : (
           <div className="space-y-4">
+            {/* Results summary */}
+            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 mb-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Trophy className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                  <span className="font-medium text-blue-800 dark:text-blue-200">
+                    {matches.length} événement{matches.length > 1 ? 's' : ''} trouvé{matches.length > 1 ? 's' : ''}
+                  </span>
+                </div>
+                {getActiveFiltersCount() > 0 && (
+                  <div className="flex items-center space-x-2 text-sm text-blue-600 dark:text-blue-400">
+                    <Filter className="w-4 h-4" />
+                    <span>{getActiveFiltersCount()} filtre{getActiveFiltersCount() > 1 ? 's' : ''}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
             {matches.map((match) => (
               <MobileMatchCard
                 key={match.id}
@@ -339,7 +531,7 @@ export default function Home() {
   )
 }
 
-// 📱 COMPOSANT MATCH CARD OPTIMISÉ MOBILE
+// 📱 COMPOSANT MATCH CARD OPTIMISÉ MOBILE (inchangé)
 function MobileMatchCard({ match, onRate, currentUserId }: {
   match: Match
   onRate: (matchId: string, rating: number, comment?: string) => void

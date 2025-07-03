@@ -8,12 +8,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         type = 'recent', 
         search, 
         days = '14', 
-        sport = 'all',  // 🆕 FILTRE SPORT
+        sport = 'all',
+        competition = 'all', // 🆕 NOUVEAU FILTRE
         limit = '50' 
       } = req.query
 
       console.log(`📊 Recherche dans la base de données locale...`)
-      console.log(`🏆 Sport: ${sport}, Type: ${type}`)
+      console.log(`🏆 Sport: ${sport}, Compétition: ${competition}, Type: ${type}`)
 
       // Construire le filtre de base
       const whereClause: any = {
@@ -23,6 +24,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // 🆕 FILTRE PAR SPORT
       if (sport && sport !== 'all') {
         whereClause.sport = sport.toString().toUpperCase()
+      }
+
+      // 🆕 FILTRE PAR COMPÉTITION
+      if (competition && competition !== 'all') {
+        whereClause.competition = competition.toString()
       }
 
       // Filtrer par recherche si nécessaire
@@ -90,13 +96,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         details: match.details || null
       }))
 
-      // 🆕 STATISTIQUES PAR SPORT
+      // 🆕 STATISTIQUES PAR SPORT ET COMPÉTITION
       const sportStats = await prisma.match.groupBy({
         by: ['sport'],
         _count: {
           id: true
         },
-        where: { status: 'FINISHED' }
+        where: { 
+          status: 'FINISHED',
+          ...(competition !== 'all' ? { competition: competition.toString() } : {})
+        }
+      })
+
+      const competitionStats = await prisma.match.groupBy({
+        by: ['competition'],
+        _count: {
+          id: true
+        },
+        where: { 
+          status: 'FINISHED',
+          ...(sport !== 'all' ? { sport: sport.toString().toUpperCase() } : {})
+        },
+        orderBy: {
+          _count: {
+            id: 'desc'
+          }
+        },
+        take: 20 // Top 20 compétitions
       })
 
       res.status(200).json({ 
@@ -105,6 +131,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           total: formattedMatches.length,
           bySport: sportStats.map(stat => ({
             sport: stat.sport.toLowerCase(),
+            count: stat._count.id
+          })),
+          byCompetition: competitionStats.map(stat => ({
+            competition: stat.competition,
             count: stat._count.id
           }))
         }
