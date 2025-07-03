@@ -420,9 +420,25 @@ function MobileMatchCard({ match, onRate, currentUserId }: {
           </div>
           
           <div className="mx-4 text-center">
-            <div className="text-xl font-bold text-gray-900 dark:text-white">
-              {formatScore(match.homeScore, match.awayScore, match.sport)}
-            </div>
+           {match.sport === 'f1' ? (
+  <div className="text-center">
+    {match.status === 'FINISHED' ? (
+      <div className="text-green-600 font-semibold">
+        <div className="text-lg">🏁</div>
+        <div className="text-sm">TERMINÉ</div>
+      </div>
+    ) : (
+      <div className="text-blue-600 font-semibold">
+        <div className="text-lg">📅</div>
+        <div className="text-sm">À VENIR</div>
+      </div>
+    )}
+  </div>
+) : (
+  <div className="text-xl font-bold text-gray-900 dark:text-white">
+    {formatScore(match.homeScore, match.awayScore, match.sport)}
+  </div>
+)}
           </div>
           
           <div className="flex items-center space-x-2 flex-1 justify-end min-w-0">

@@ -3,13 +3,10 @@
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
   "/": "pages/index.js",
-  "/top-matches": "pages/top-matches.js",
-  "/friends": "pages/friends.js",
-  "/api/profile": "pages/api/profile.js",
-  "/api/teams": "pages/api/teams.js",
-  "/api/matches": "pages/api/matches.js",
   "/api/auth/[...nextauth]": "pages/api/auth/[...nextauth].js",
-  "/api/top-matches": "pages/api/top-matches.js",
-  "/search": "pages/search.js",
-  "/match/[id]": "pages/match/[id].js"
+  "/api/matches": "pages/api/matches.js",
+  "/api/match-details/[id]": "pages/api/match-details/[id].js",
+  "/api/player-ratings": "pages/api/player-ratings.js",
+  "/match/[id]": "pages/match/[id].js",
+  "/api/f1-race-details/[id]": "pages/api/f1-race-details/[id].js"
 }

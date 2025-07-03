@@ -1,11 +1,11 @@
-// pages/admin/f1-dashboard.tsx
+// pages/admin/f1-dashboard.tsx - VERSION COMPLÈTE CORRIGÉE
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import {
   Car, RefreshCw, Trophy, Users, Database, 
   CheckCircle, XCircle, AlertTriangle, Clock,
-  Download, Play, BarChart3, Flag, Timer
+  Download, Play, BarChart3, Flag, Timer, Trash2
 } from 'lucide-react'
 import axios from 'axios'
 
@@ -16,27 +16,15 @@ interface F1Stats {
   lastUpdate: string
 }
 
-interface F1ImportResult {
-  success: boolean
-  action: string
-  season: number
-  message: string
-  results?: {
-    races?: any
-    drivers?: any
-    total?: any
-  }
-  recommendations?: string[]
-}
-
 export default function F1Dashboard() {
   const { data: session } = useSession()
   const [loading, setLoading] = useState(false)
   const [testing, setTesting] = useState(false)
+  const [cleaning, setCleaning] = useState(false)
   const [connectionStatus, setConnectionStatus] = useState<any>(null)
   const [logs, setLogs] = useState<string[]>([])
   const [stats, setStats] = useState<F1Stats | null>(null)
-  const [selectedSeason, setSelectedSeason] = useState(2024)
+  const [selectedSeason, setSelectedSeason] = useState(2025)
 
   useEffect(() => {
     if (session) {
@@ -49,16 +37,10 @@ export default function F1Dashboard() {
       const response = await axios.get('/api/matches?sport=f1&limit=1000')
       const f1Matches = response.data.matches || []
       
-      // Compter les pilotes uniques
-      const drivers = new Set()
-      f1Matches.forEach((match: any) => {
-        // Les pilotes seront dans les player ratings
-      })
-      
       setStats({
         totalRaces: f1Matches.length,
-        totalDrivers: 0, // À calculer depuis les player ratings
-        season: '2024',
+        totalDrivers: 0,
+        season: '2025',
         lastUpdate: new Date().toLocaleString()
       })
     } catch (error) {
@@ -71,6 +53,7 @@ export default function F1Dashboard() {
     setLogs(prev => [`[${timestamp}] ${message}`, ...prev.slice(0, 19)])
   }
 
+  // 🆕 FONCTION TEST API CORRIGÉE
   const testF1Connection = async () => {
     setTesting(true)
     addLog('🔍 Test de connexion à l\'API Formula 1...')
@@ -79,6 +62,8 @@ export default function F1Dashboard() {
       const response = await axios.post('/api/import-f1', {
         action: 'test_connection'
       })
+
+      console.log('Réponse API test:', response.data) // Debug
 
       if (response.data.success) {
         setConnectionStatus({
@@ -99,21 +84,113 @@ export default function F1Dashboard() {
         addLog('❌ ' + response.data.message)
       }
     } catch (error: any) {
-      const errorMsg = error.response?.data?.error || error.message
+      console.error('Erreur test F1:', error)
+      
+      let errorMsg = 'Erreur inconnue'
+      if (error.response?.data?.error) {
+        errorMsg = error.response.data.error
+      } else if (error.response?.data?.message) {
+        errorMsg = error.response.data.message
+      } else if (error.message) {
+        errorMsg = error.message
+      }
+      
       setConnectionStatus({
         success: false,
         message: errorMsg
       })
       addLog('❌ Erreur: ' + errorMsg)
       
-      if (error.response?.data?.troubleshooting) {
-        addLog('🔧 Solutions suggérées:')
-        error.response.data.troubleshooting.forEach((tip: string) => {
-          addLog(`   • ${tip}`)
-        })
+      // 🆕 DIAGNOSTIC DÉTAILLÉ
+      if (error.response?.status === 500) {
+        addLog('🔧 Diagnostic: Problème serveur - vérifiez votre clé RAPIDAPI_KEY')
+      } else if (error.response?.status === 401) {
+        addLog('🔧 Diagnostic: Clé API invalide ou expirée')
+      } else if (!process.env.RAPIDAPI_KEY) {
+        addLog('🔧 Diagnostic: Variable RAPIDAPI_KEY manquante dans .env')
       }
+      
     } finally {
       setTesting(false)
+    }
+  }
+
+  // 🆕 FONCTION NETTOYAGE
+  const cleanF1Duplicates = async () => {
+    if (!confirm('🧹 Supprimer tous les doublons F1 ?\n\nCette action est irréversible mais garde au moins 1 exemplaire de chaque GP.')) {
+      return
+    }
+    
+    setCleaning(true)
+    addLog('🧹 Démarrage du nettoyage F1...')
+
+    try {
+      const response = await axios.post('/api/cleanup-f1-duplicates')
+      
+      if (response.data.success) {
+        addLog('✅ ' + response.data.message)
+        addLog(`📊 Statistiques de nettoyage :`)
+        addLog(`  • GP trouvés initialement : ${response.data.stats.initialCount}`)
+        addLog(`  • Doublons supprimés : ${response.data.stats.duplicatesDeleted}`)
+        addLog(`  • GP uniques restants : ${response.data.stats.finalCount}`)
+        
+        if (response.data.recommendations) {
+          addLog('💡 Recommandations :')
+          response.data.recommendations.forEach((rec: string) => addLog(`   • ${rec}`))
+        }
+        
+        // Actualiser les stats
+        await fetchF1Stats()
+      } else {
+        addLog('❌ Erreur nettoyage : ' + response.data.error)
+      }
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.error || error.message
+      addLog('❌ Erreur nettoyage : ' + errorMsg)
+    } finally {
+      setCleaning(false)
+    }
+  }
+
+  // 🆕 FONCTION SUPPRESSION COMPLÈTE  
+  const deleteAllF1 = async () => {
+    if (!confirm('🚨 ATTENTION : Supprimer TOUT F1 ?\n\n• Tous les Grands Prix\n• Tous les pilotes\n• Toutes les notes F1\n\nCette action est IRRÉVERSIBLE !')) {
+      return
+    }
+    
+    if (!confirm('🚨 DERNIÈRE CHANCE !\n\nÊtes-vous SÛR de vouloir tout supprimer ?\n\nTapez "SUPPRIMER" dans la prochaine boîte pour confirmer.')) {
+      return
+    }
+    
+    const confirmation = prompt('Tapez "SUPPRIMER" en majuscules pour confirmer :')
+    if (confirmation !== 'SUPPRIMER') {
+      addLog('❌ Suppression annulée')
+      return
+    }
+    
+    setCleaning(true)
+    addLog('🚨 SUPPRESSION COMPLÈTE F1 EN COURS...')
+
+    try {
+      // Appeler l'API de suppression complète (à créer)
+      const response = await axios.post('/api/delete-all-f1')
+      
+      if (response.data.success) {
+        addLog('✅ ' + response.data.message)
+        addLog(`📊 Supprimé :`)
+        addLog(`  • ${response.data.stats.matchesDeleted} Grands Prix`)
+        addLog(`  • ${response.data.stats.driversDeleted} pilotes`)
+        addLog(`  • ${response.data.stats.ratingsDeleted} notes`)
+        
+        await fetchF1Stats()
+      } else {
+        addLog('❌ Erreur suppression : ' + response.data.error)
+      }
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.error || error.message
+      addLog('❌ Erreur suppression : ' + errorMsg)
+    } finally {
+      setCleaning(false)
     }
   }
 
@@ -130,7 +207,7 @@ export default function F1Dashboard() {
       if (response.data.success) {
         addLog('✅ Import F1 réussi !')
         
-        const result = response.data as F1ImportResult
+        const result = response.data
         
         if (action === 'import_complete' && result.results) {
           addLog(`🏁 RÉSULTATS COMPLETS F1 ${selectedSeason}:`)
@@ -141,7 +218,7 @@ export default function F1Dashboard() {
           
           if (result.recommendations) {
             addLog('💡 Recommandations:')
-            result.recommendations.forEach(rec => addLog(`   • ${rec}`))
+            result.recommendations.forEach((rec: string) => addLog(`   • ${rec}`))
           }
         } else {
           addLog(`📊 ${result.message}`)
@@ -152,25 +229,13 @@ export default function F1Dashboard() {
           }
         }
         
-        // Actualiser les stats
         await fetchF1Stats()
       } else {
         addLog('❌ Erreur import: ' + response.data.error)
-        if (response.data.troubleshooting) {
-          addLog('🔧 Solutions:')
-          response.data.troubleshooting.forEach((tip: string) => addLog(`   • ${tip}`))
-        }
       }
     } catch (error: any) {
       const errorMsg = error.response?.data?.error || error.message
       addLog('❌ Erreur: ' + errorMsg)
-      
-      if (error.response?.data?.troubleshooting) {
-        addLog('🔧 Solutions suggérées:')
-        error.response.data.troubleshooting.forEach((tip: string) => {
-          addLog(`   • ${tip}`)
-        })
-      }
     } finally {
       setLoading(false)
     }
@@ -307,7 +372,7 @@ export default function F1Dashboard() {
               
               {connectionStatus.data && connectionStatus.success && (
                 <div className="text-sm text-green-700 mt-2">
-                  📊 {connectionStatus.data.races} courses disponibles
+                  📊 {connectionStatus.data.races || connectionStatus.data.weekends} éléments disponibles
                   {connectionStatus.data.examples && (
                     <div className="mt-1">
                       🎯 Exemples: {connectionStatus.data.examples.join(', ')}
@@ -319,6 +384,49 @@ export default function F1Dashboard() {
           )}
         </div>
 
+        {/* 🆕 SECTION NETTOYAGE */}
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+          <h2 className="text-xl font-semibold text-gray-900 mb-6 flex items-center space-x-2">
+            <Trash2 className="w-5 h-5 text-orange-600" />
+            <span>🧹 Nettoyage des données F1</span>
+          </h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            
+            {/* Nettoyage doublons */}
+            <button
+              onClick={cleanF1Duplicates}
+              disabled={cleaning}
+              className="flex flex-col items-center space-y-3 bg-gradient-to-r from-orange-500 to-red-600 text-white p-6 rounded-xl hover:from-orange-600 hover:to-red-700 disabled:opacity-50 transition-all"
+            >
+              {cleaning ? (
+                <RefreshCw className="w-8 h-8 animate-spin" />
+              ) : (
+                <Trash2 className="w-8 h-8" />
+              )}
+              <span className="font-semibold text-lg">Nettoyer doublons</span>
+              <span className="text-sm opacity-90">🧹 Garde 1 exemplaire par GP</span>
+              <span className="text-xs opacity-75">Recommandé avant import</span>
+            </button>
+
+            {/* Suppression complète */}
+            <button
+              onClick={deleteAllF1}
+              disabled={cleaning}
+              className="flex flex-col items-center space-y-3 bg-gradient-to-r from-red-600 to-red-800 text-white p-6 rounded-xl hover:from-red-700 hover:to-red-900 disabled:opacity-50 transition-all border-2 border-red-400"
+            >
+              {cleaning ? (
+                <RefreshCw className="w-8 h-8 animate-spin" />
+              ) : (
+                <AlertTriangle className="w-8 h-8" />
+              )}
+              <span className="font-semibold text-lg">TOUT supprimer</span>
+              <span className="text-sm opacity-90">🚨 SUPPRIME TOUT F1</span>
+              <span className="text-xs opacity-75">IRRÉVERSIBLE !</span>
+            </button>
+          </div>
+        </div>
+
         {/* Contrôles d'import F1 */}
         <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
           <h2 className="text-xl font-semibold text-gray-900 mb-6 flex items-center space-x-2">
@@ -326,7 +434,6 @@ export default function F1Dashboard() {
             <span>🏁 Import des données F1</span>
           </h2>
           
-          {/* Sélection de saison */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Saison Formula 1
@@ -336,9 +443,9 @@ export default function F1Dashboard() {
               onChange={(e) => setSelectedSeason(parseInt(e.target.value))}
               className="block w-48 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
+              <option value={2025}>2025</option>
               <option value={2024}>2024</option>
               <option value={2023}>2023</option>
-              <option value={2022}>2022</option>
             </select>
           </div>
           
@@ -390,32 +497,21 @@ export default function F1Dashboard() {
               <span className="text-sm opacity-90">👨‍✈️ Pilotes uniquement</span>
             </button>
 
-            {/* Actualiser stats */}
+            {/* 🆕 Import Mode MOCK */}
             <button
-              onClick={fetchF1Stats}
-              className="flex flex-col items-center space-y-3 bg-gradient-to-r from-gray-500 to-gray-600 text-white p-6 rounded-xl hover:from-gray-600 hover:to-gray-700 transition-all"
+              onClick={() => runF1Import('import_mock')}
+              disabled={loading}
+              className="flex flex-col items-center space-y-3 bg-gradient-to-r from-purple-500 to-indigo-600 text-white p-6 rounded-xl hover:from-purple-600 hover:to-indigo-700 disabled:opacity-50 transition-all border-2 border-purple-300"
             >
-              <BarChart3 className="w-6 h-6" />
-              <span className="font-semibold">Actualiser</span>
-              <span className="text-sm opacity-90">📊 Statistiques</span>
+              {loading ? (
+                <RefreshCw className="w-8 h-8 animate-spin" />
+              ) : (
+                <Trophy className="w-8 h-8" />
+              )}
+              <span className="font-semibold text-lg">Mode MOCK</span>
+              <span className="text-sm opacity-90">🎭 24 GP de test</span>
+              <span className="text-xs opacity-75">Si API ne marche pas</span>
             </button>
-          </div>
-
-          {/* Aide F1 */}
-          <div className="mt-6 bg-red-50 border border-red-200 rounded-lg p-4">
-            <div className="flex items-start space-x-3">
-              <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5" />
-              <div className="text-sm">
-                <p className="font-medium text-red-800 mb-2">🏁 Guide API Formula 1</p>
-                <div className="text-red-700 space-y-1">
-                  <p>• <strong>API gratuite :</strong> Utilisez l'API Formula 1 sur RapidAPI</p>
-                  <p>• <strong>Clé requise :</strong> Configurez RAPIDAPI_KEY dans votre .env</p>
-                  <p>• <strong>Données complètes :</strong> Courses, pilotes, résultats, qualifications</p>
-                  <p>• <strong>Notation :</strong> Chaque pilote peut être noté sur 10 par GP</p>
-                  <p>• <strong>Interface dédiée :</strong> Page spéciale F1 avec tous les détails</p>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -433,8 +529,8 @@ export default function F1Dashboard() {
                 <p className="mb-4">Aucune activité F1 récente</p>
                 <div className="space-y-2 text-xs">
                   <p>🔍 Testez votre connexion API F1</p>
+                  <p>🧹 Nettoyez vos données F1</p>
                   <p>🏁 Importez les Grands Prix et pilotes</p>
-                  <p>📊 Les logs apparaîtront en temps réel</p>
                 </div>
               </div>
             ) : (
@@ -447,6 +543,7 @@ export default function F1Dashboard() {
                       log.includes('❌') ? 'text-red-400' :
                       log.includes('🚀') ? 'text-blue-400' :
                       log.includes('🏁') ? 'text-red-400' :
+                      log.includes('🧹') ? 'text-orange-400' :
                       log.includes('👨‍✈️') ? 'text-purple-400' :
                       log.includes('📊') ? 'text-yellow-400' :
                       'text-gray-300'
@@ -458,14 +555,6 @@ export default function F1Dashboard() {
               </div>
             )}
           </div>
-        </div>
-
-        {/* Footer */}
-        <div className="mt-8 text-center text-sm text-gray-500">
-          <p>🏁 Formula 1 Dashboard • API Formula 1 officielle via RapidAPI</p>
-          <p className="mt-1">
-            Importez les Grands Prix {selectedSeason} et notez vos pilotes préférés !
-          </p>
         </div>
       </div>
     </div>
