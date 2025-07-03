@@ -27,6 +27,11 @@
       "static/chunks/main.js",
       "static/chunks/pages/_error.js"
     ],
+    "/friends": [
+      "static/chunks/webpack.js",
+      "static/chunks/main.js",
+      "static/chunks/pages/friends.js"
+    ],
     "/match/[id]": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
@@ -36,6 +41,11 @@
       "static/chunks/webpack.js",
       "static/chunks/main.js",
       "static/chunks/pages/profile.js"
+    ],
+    "/search": [
+      "static/chunks/webpack.js",
+      "static/chunks/main.js",
+      "static/chunks/pages/search.js"
     ],
     "/top-matches": [
       "static/chunks/webpack.js",

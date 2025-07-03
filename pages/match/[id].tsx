@@ -1,4 +1,4 @@
-// pages/match/[id].tsx - VERSION MULTI-SPORTS COMPLÈTE
+// pages/match/[id].tsx - VERSION AVEC F1 INTÉGRÉE
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { useSession } from 'next-auth/react'
@@ -6,19 +6,20 @@ import Link from 'next/link'
 import {
   ArrowLeft, Clock, MapPin, Users, Star,
   Target, AlertTriangle, RefreshCw, UserCheck,
-  BarChart3, Activity, Trophy, Flag, Eye, EyeOff
+  BarChart3, Activity, Trophy, Flag, Eye, EyeOff, Car
 } from 'lucide-react'
 import axios from 'axios'
 import FootballMatchDetails from '../../components/FootballMatchDetails'
 import BasketballMatchDetails from '../../components/BasketballMatchDetails'
+import F1MatchDetails from '../../components/F1MatchDetails'
 
 interface MatchData {
   id: string
   sport: 'FOOTBALL' | 'BASKETBALL' | 'MMA' | 'RUGBY' | 'F1'
   homeTeam: string
   awayTeam: string
-  homeScore: number
-  awayScore: number
+  homeScore: number | null
+  awayScore: number | null
   date: string
   venue: string
   referee: string
@@ -101,7 +102,7 @@ export default function MatchDetailsPage() {
       if (response.data.success) {
         setMatchData(response.data)
         
-        // Récupérer les notations des joueurs
+        // Récupérer les notations des joueurs/pilotes
         try {
           const ratingsResponse = await axios.get(`/api/player-ratings?matchId=${id}`)
           setPlayerRatings(ratingsResponse.data.ratings || [])
@@ -136,7 +137,7 @@ export default function MatchDetailsPage() {
         comment
       })
       
-      alert('Match noté avec succès ! ⭐')
+      alert('Événement noté avec succès ! ⭐')
       fetchMatchDetails() // Refresh
     } catch (error) {
       console.error('Erreur notation:', error)
@@ -146,7 +147,7 @@ export default function MatchDetailsPage() {
 
   const ratePlayer = async (playerId: string, rating: number, comment?: string) => {
     try {
-      console.log('🎯 Notation joueur:', { playerId, rating, comment, matchId: id })
+      console.log('🎯 Notation joueur/pilote:', { playerId, rating, comment, matchId: id })
 
       const response = await axios.post('/api/player-ratings', {
         playerId,
@@ -158,7 +159,7 @@ export default function MatchDetailsPage() {
       console.log('✅ Réponse API:', response.data)
 
       if (response.data.success) {
-        // Recharger TOUTES les notations des joueurs
+        // Recharger TOUTES les notations
         const ratingsResponse = await axios.get(`/api/player-ratings?matchId=${id}`)
         if (ratingsResponse.data.success) {
           setPlayerRatings(ratingsResponse.data.ratings || [])
@@ -172,8 +173,8 @@ export default function MatchDetailsPage() {
           <div class="flex items-center space-x-2">
             <div class="text-xl">⭐</div>
             <div>
-              <div class="font-semibold">${response.data.message || 'Joueur noté !'}</div>
-              <div class="text-sm opacity-90">Moyenne: ${response.data.avgRating}/10 (${response.data.totalRatings} votes)</div>
+              <div class="font-semibold">${response.data.message || 'Notation enregistrée !'}</div>
+              <div class="text-sm opacity-90">Moyenne: ${response.data.avgRating}/${matchData?.data.match.sport === 'F1' ? '10' : '10'} (${response.data.totalRatings} votes)</div>
             </div>
           </div>
         `
@@ -190,7 +191,7 @@ export default function MatchDetailsPage() {
       }
 
     } catch (error: any) {
-      console.error('❌ Erreur notation joueur:', error)
+      console.error('❌ Erreur notation:', error)
       
       // Notification d'erreur
       const notification = document.createElement('div')
@@ -228,17 +229,14 @@ export default function MatchDetailsPage() {
     return emojis[sport as keyof typeof emojis] || '🏆'
   }
 
-  const formatScore = (homeScore: number, awayScore: number, sport: string) => {
-    if (sport === 'BASKETBALL') {
-      return `${homeScore} - ${awayScore}`
+  const formatScore = (homeScore: number | null, awayScore: number | null, sport: string) => {
+    if (sport === 'F1') {
+      return 'COURSE TERMINÉE' // Pas de score en F1
     }
     if (sport === 'MMA') {
       return 'W - L' // Win/Loss
     }
-    if (sport === 'F1') {
-      return `P${homeScore}` // Position
-    }
-    return `${homeScore} - ${awayScore}` // Football, Rugby
+    return `${homeScore ?? '?'} - ${awayScore ?? '?'}` // Football, Basketball, Rugby
   }
 
   if (loading) {
@@ -256,7 +254,7 @@ export default function MatchDetailsPage() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-red-600">Match non trouvé</p>
+          <p className="text-red-600">Événement non trouvé</p>
           <Link href="/" className="text-blue-600 hover:text-blue-700 mt-2 block">
             ← Retour à l'accueil
           </Link>
@@ -274,7 +272,7 @@ export default function MatchDetailsPage() {
         <div className="max-w-7xl mx-auto px-4 py-4">
           <Link href="/" className="flex items-center text-gray-600 hover:text-gray-900 mb-4">
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Retour aux matchs
+            Retour aux événements
           </Link>
           
           {/* Score principal universel */}
@@ -284,32 +282,44 @@ export default function MatchDetailsPage() {
               <span className="text-lg font-medium text-gray-600">{match.competition}</span>
             </div>
 
-            <div className="flex items-center justify-center space-x-8 mb-4">
-              <div className="text-center">
-                <div className="flex items-center space-x-2 mb-2">
-                  {match.homeTeamLogo && (
-                    <img src={match.homeTeamLogo} alt="" className="w-8 h-8" />
-                  )}
-                  <h1 className="text-2xl font-bold text-gray-900">{match.homeTeam}</h1>
+            {/* Header spécifique F1 */}
+            {match.sport === 'F1' ? (
+              <div className="mb-4">
+                <h1 className="text-3xl font-bold text-gray-900 mb-2">🏁 {match.homeTeam}</h1>
+                <p className="text-xl text-gray-700">📍 {match.awayTeam}</p>
+                <div className="text-lg font-medium text-red-600 mt-2">
+                  Formula 1 • Grand Prix terminé
                 </div>
-                <div className="text-4xl font-bold text-blue-600 mt-2">{match.homeScore}</div>
               </div>
-              
-              <div className="text-center">
-                <div className="text-gray-500 text-sm">VS</div>
-                <div className="text-2xl font-bold text-gray-900 mt-2">-</div>
-              </div>
-              
-              <div className="text-center">
-                <div className="flex items-center space-x-2 mb-2">
-                  <h1 className="text-2xl font-bold text-gray-900">{match.awayTeam}</h1>
-                  {match.awayTeamLogo && (
-                    <img src={match.awayTeamLogo} alt="" className="w-8 h-8" />
-                  )}
+            ) : (
+              /* Header classique pour autres sports */
+              <div className="flex items-center justify-center space-x-8 mb-4">
+                <div className="text-center">
+                  <div className="flex items-center space-x-2 mb-2">
+                    {match.homeTeamLogo && (
+                      <img src={match.homeTeamLogo} alt="" className="w-8 h-8" />
+                    )}
+                    <h1 className="text-2xl font-bold text-gray-900">{match.homeTeam}</h1>
+                  </div>
+                  <div className="text-4xl font-bold text-blue-600 mt-2">{match.homeScore ?? '?'}</div>
                 </div>
-                <div className="text-4xl font-bold text-blue-600 mt-2">{match.awayScore}</div>
+                
+                <div className="text-center">
+                  <div className="text-gray-500 text-sm">VS</div>
+                  <div className="text-2xl font-bold text-gray-900 mt-2">-</div>
+                </div>
+                
+                <div className="text-center">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <h1 className="text-2xl font-bold text-gray-900">{match.awayTeam}</h1>
+                    {match.awayTeamLogo && (
+                      <img src={match.awayTeamLogo} alt="" className="w-8 h-8" />
+                    )}
+                  </div>
+                  <div className="text-4xl font-bold text-blue-600 mt-2">{match.awayScore ?? '?'}</div>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Infos du match universelles */}
             <div className="flex items-center justify-center space-x-6 text-sm text-gray-600">
@@ -326,7 +336,7 @@ export default function MatchDetailsPage() {
                 <MapPin className="w-4 h-4" />
                 <span>{match.venue}</span>
               </div>
-              {match.referee && (
+              {match.referee && match.sport !== 'F1' && (
                 <div className="flex items-center space-x-1">
                   <Flag className="w-4 h-4" />
                   <span>{match.referee}</span>
@@ -366,8 +376,18 @@ export default function MatchDetailsPage() {
               />
             )}
 
+            {/* 🏁 NOUVEAU : Interface F1 */}
+            {match.sport === 'F1' && (
+              <F1MatchDetails
+                matchDetails={matchData.data}
+                playerRatings={playerRatings}
+                onRatePlayer={ratePlayer}
+                currentUserId={session?.user?.id}
+              />
+            )}
+
             {/* Sports pas encore implémentés */}
-            {!['FOOTBALL', 'BASKETBALL'].includes(match.sport) && (
+            {!['FOOTBALL', 'BASKETBALL', 'F1'].includes(match.sport) && (
               <div className="bg-white rounded-xl shadow-lg p-8 text-center">
                 <div className="text-6xl mb-4">{getSportEmoji(match.sport)}</div>
                 <h3 className="text-xl font-bold text-gray-900 mb-2">
@@ -378,14 +398,14 @@ export default function MatchDetailsPage() {
                 </p>
                 <div className="bg-blue-50 rounded-lg p-4">
                   <p className="text-blue-800 text-sm">
-                    🚧 En attendant, vous pouvez toujours noter le match via la sidebar →
+                    🚧 En attendant, vous pouvez toujours noter l'événement via la sidebar →
                   </p>
                 </div>
               </div>
             )}
           </div>
 
-          {/* Sidebar universelle - Notation du match */}
+          {/* Sidebar universelle - Notation de l'événement */}
           <div className="lg:col-span-1 space-y-6">
             <MatchRatingSidebar
               match={match}
@@ -430,19 +450,34 @@ function MatchRatingSidebar({
     return emojis[sport as keyof typeof emojis] || '🏆'
   }
 
+  const getSportLabel = (sport: string) => {
+    const labels = {
+      'FOOTBALL': 'Match de Football',
+      'BASKETBALL': 'Match de Basketball', 
+      'MMA': 'Combat MMA',
+      'RUGBY': 'Match de Rugby',
+      'F1': 'Grand Prix F1'
+    }
+    return labels[sport as keyof typeof labels] || 'Événement'
+  }
+
   return (
     <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-      <div className="bg-gradient-to-r from-indigo-500 to-purple-600 p-6 text-white">
+      <div className={`p-6 text-white ${
+        match.sport === 'F1' ? 'bg-gradient-to-r from-red-500 to-orange-600' :
+        match.sport === 'BASKETBALL' ? 'bg-gradient-to-r from-orange-500 to-red-600' :
+        'bg-gradient-to-r from-indigo-500 to-purple-600'
+      }`}>
         <div className="flex items-center space-x-3">
           <span className="text-3xl">{getSportEmoji(match.sport)}</span>
           <div>
-            <h3 className="text-lg font-semibold">Noter ce match</h3>
-            <p className="text-indigo-100 text-sm">Sport: {match.sport}</p>
+            <h3 className="text-lg font-semibold">Noter cet événement</h3>
+            <p className="text-white/90 text-sm">{getSportLabel(match.sport)}</p>
           </div>
         </div>
       </div>
       
-      {/* Stats du match */}
+      {/* Stats de l'événement */}
       <div className="px-6 py-4 bg-gray-50 border-b">
         <div className="flex items-center justify-between text-sm">
           <div className="text-center">
@@ -495,7 +530,7 @@ function MatchRatingSidebar({
               onChange={(e) => setComment(e.target.value)}
               className="w-full p-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all resize-none"
               rows={4}
-              placeholder={`Qu'avez-vous pensé de ce match ${getSportEmoji(match.sport)} ?`}
+              placeholder={`Qu'avez-vous pensé de cet événement ${getSportEmoji(match.sport)} ?`}
               maxLength={300}
             />
             <div className="text-xs text-gray-500 mt-1 text-right">
@@ -509,10 +544,12 @@ function MatchRatingSidebar({
             className={`w-full py-3 px-4 rounded-xl font-semibold transition-all duration-200 ${
               userRating === 0
                 ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                : match.sport === 'F1' 
+                ? 'bg-gradient-to-r from-red-500 to-orange-600 hover:from-red-600 hover:to-orange-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105'
                 : 'bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105'
             }`}
           >
-            {userRating > 0 ? '✏️ Mettre à jour' : '⭐ Noter'} le match
+            {userRating > 0 ? '✏️ Mettre à jour' : '⭐ Noter'} l'événement
           </button>
         </div>
       ) : (
@@ -521,7 +558,7 @@ function MatchRatingSidebar({
             <Star className="w-8 h-8 text-gray-400" />
           </div>
           <p className="text-gray-600 mb-4">
-            Connectez-vous pour noter ce match
+            Connectez-vous pour noter cet événement
           </p>
           <Link 
             href="/auth/signin" 
@@ -535,7 +572,7 @@ function MatchRatingSidebar({
   )
 }
 
-// Composant d'informations sur le match
+// Composant d'informations sur l'événement
 function MatchInfoCard({ match }: { match: MatchData }) {
   return (
     <div className="bg-white rounded-xl shadow-lg p-6">
@@ -559,7 +596,7 @@ function MatchInfoCard({ match }: { match: MatchData }) {
           <span className="text-sm text-gray-600">Compétition</span>
           <span className="font-medium text-gray-900">{match.competition}</span>
         </div>
-        {match.referee && (
+        {match.referee && match.sport !== 'F1' && (
           <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
             <span className="text-sm text-gray-600">Arbitre</span>
             <span className="font-medium text-gray-900">{match.referee}</span>
@@ -572,6 +609,28 @@ function MatchInfoCard({ match }: { match: MatchData }) {
               {match.attendance.toLocaleString()}
             </span>
           </div>
+        )}
+        
+        {/* Infos spécifiques F1 */}
+        {match.sport === 'F1' && match.details && (
+          <>
+            {match.details.circuit?.length && (
+              <div className="flex justify-between items-center p-3 bg-red-50 rounded-lg">
+                <span className="text-sm text-red-600">Longueur circuit</span>
+                <span className="font-medium text-red-800">
+                  {(match.details.circuit.length / 1000).toFixed(2)} km
+                </span>
+              </div>
+            )}
+            {match.details.fastest_lap && (
+              <div className="flex justify-between items-center p-3 bg-yellow-50 rounded-lg">
+                <span className="text-sm text-yellow-600">Meilleur tour</span>
+                <span className="font-medium text-yellow-800">
+                  {match.details.fastest_lap.time}
+                </span>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

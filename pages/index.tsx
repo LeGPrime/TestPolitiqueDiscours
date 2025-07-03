@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useSession, signIn, signOut } from 'next-auth/react'
-import { Star, Trophy, LogOut, RefreshCw, Search, Users, Calendar, Filter, BarChart3 } from 'lucide-react'
+import { Star, Trophy, LogOut, RefreshCw, Search, Users, Calendar, Filter, BarChart3, Eye } from 'lucide-react'
 import axios from 'axios'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import ThemeToggle from '../components/ThemeToggle'
 import Navbar from '../components/Navbar'
-
 
 interface Match {
   id: string
@@ -43,6 +42,7 @@ export default function Home() {
   const [sportFilter, setSportFilter] = useState<'all' | 'football' | 'basketball' | 'mma' | 'rugby' | 'f1'>('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [stats, setStats] = useState<any>(null)
+  const [showFilters, setShowFilters] = useState(false)
 
   useEffect(() => {
     if (session) {
@@ -78,11 +78,37 @@ export default function Home() {
     try {
       await axios.post('/api/ratings', { matchId, rating, comment })
       fetchMatches()
-      alert('Événement noté avec succès! 🎉')
+      // Mobile-friendly notification
+      showMobileNotification('⭐ Événement noté avec succès !', 'success')
     } catch (error) {
       console.error('Erreur notation:', error)
-      alert('Erreur lors de la notation')
+      showMobileNotification('❌ Erreur lors de la notation', 'error')
     }
+  }
+
+  const showMobileNotification = (message: string, type: 'success' | 'error') => {
+    const notification = document.createElement('div')
+    notification.className = `fixed top-4 left-4 right-4 z-50 px-4 py-3 rounded-xl shadow-lg transform transition-all duration-300 ${
+      type === 'success' 
+        ? 'bg-green-500 text-white' 
+        : 'bg-red-500 text-white'
+    }`
+    notification.innerHTML = `
+      <div class="flex items-center justify-center space-x-2">
+        <span class="font-medium">${message}</span>
+      </div>
+    `
+    document.body.appendChild(notification)
+    
+    setTimeout(() => {
+      notification.style.transform = 'translateY(-100px)'
+      notification.style.opacity = '0'
+      setTimeout(() => {
+        if (document.body.contains(notification)) {
+          document.body.removeChild(notification)
+        }
+      }, 300)
+    }, 3000)
   }
 
   const handleSearch = (e: React.FormEvent) => {
@@ -91,14 +117,6 @@ export default function Home() {
       fetchMatches()
     }
   }
-
-  // Navigation items
-  const navigationItems = [
-    { href: '/', label: 'Accueil', icon: Trophy, active: true },
-    { href: '/search', label: 'Recherche', icon: Search, active: false },
-    { href: '/friends', label: 'Amis', icon: Users, active: false },
-    { href: '/top-matches', label: 'Top', icon: Trophy, active: false },
-  ]
 
   // Sports disponibles
   const sports = [
@@ -114,25 +132,25 @@ export default function Home() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
         <div className="flex min-h-screen items-center justify-center px-4">
-          <div className="bg-white p-8 rounded-xl shadow-lg text-center max-w-md w-full">
-            <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-green-500 rounded-xl flex items-center justify-center mx-auto mb-6">
+          <div className="bg-white p-6 rounded-2xl shadow-xl text-center max-w-sm w-full border border-gray-100">
+            <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-green-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
               <Trophy className="w-8 h-8 text-white" />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">SportRate</h1>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">SportRate</h1>
             <p className="text-lg text-gray-600 mb-2">Letterboxd du Sport</p>
             <p className="text-sm text-gray-500 mb-8">⚽🏀🥊🏉🏎️ Notez tous vos événements sportifs</p>
             
             <div className="space-y-3">
               <Link
                 href="/auth/signin"
-                className="block w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 text-lg font-medium transition-colors"
+                className="block w-full bg-blue-600 text-white px-6 py-4 rounded-xl hover:bg-blue-700 text-lg font-medium transition-all duration-200 active:scale-95"
               >
                 🔐 Se connecter
               </Link>
               
               <Link
                 href="/auth/register"
-                className="block w-full bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 text-lg font-medium transition-colors"
+                className="block w-full bg-green-600 text-white px-6 py-4 rounded-xl hover:bg-green-700 text-lg font-medium transition-all duration-200 active:scale-95"
               >
                 ✨ Créer un compte
               </Link>
@@ -141,7 +159,7 @@ export default function Home() {
                 <span>Ou </span>
                 <button
                   onClick={() => signIn('github')}
-                  className="text-blue-600 hover:text-blue-700 font-medium"
+                  className="text-blue-600 hover:text-blue-700 font-medium active:scale-95 transition-all"
                 >
                   continuer avec GitHub
                 </button>
@@ -154,113 +172,139 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
       {/* Header */}
       <Navbar activeTab="home" />
 
       {/* Content */}
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        <div className="mb-8">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-            <div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">Événements à noter</h2>
-              <p className="text-gray-600">⚽🏀🥊🏉🏎️ Tous vos sports favoris en un endroit</p>
-            </div>
-            
-            <div className="flex items-center space-x-4 mt-4 md:mt-0">
-              {/* Filtre période */}
-              <div className="flex bg-gray-100 rounded-lg p-1">
-                <button
-                  onClick={() => setFilter('recent')}
-                  className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                    filter === 'recent' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'
-                  }`}
-                >
-                  <Calendar className="w-4 h-4 mr-2 inline" />
-                  Récents
-                </button>
-                <button
-                  onClick={() => setFilter('today')}
-                  className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                    filter === 'today' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'
-                  }`}
-                >
-                  Aujourd'hui
-                </button>
-              </div>
+      <main className="max-w-7xl mx-auto px-4 py-4 md:py-8 safe-bottom">
+        {/* 📱 MOBILE-FIRST HEADER */}
+        <div className="mb-6">
+          <div className="mb-4">
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2">
+              Événements à noter
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400 text-sm md:text-base">
+              ⚽🏀🥊🏉🏎️ Tous vos sports favoris
+            </p>
+          </div>
+          
+          {/* 📱 MOBILE: Search + Filter button */}
+          <div className="space-y-3">
+            {/* Search bar */}
+            <form onSubmit={handleSearch} className="flex gap-2">
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Rechercher équipe, fighter..."
+                className="flex-1 input-mobile text-sm"
+              />
+              <button
+                type="submit"
+                className="btn-mobile-primary px-4"
+              >
+                <Search className="w-4 h-4" />
+              </button>
+            </form>
+
+            {/* 📱 Filter toggle button */}
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className="flex items-center space-x-2 px-4 py-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl shadow-sm active:scale-95 transition-all"
+              >
+                <Filter className="w-4 h-4" />
+                <span className="text-sm font-medium">Filtres</span>
+                <span className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 px-2 py-1 rounded-full">
+                  {sportFilter === 'all' ? 'Tous' : sports.find(s => s.id === sportFilter)?.name}
+                </span>
+              </button>
               
               <button
                 onClick={fetchMatches}
                 disabled={refreshing}
-                className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl transition-colors active:scale-95"
               >
-                <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-                <span>Actualiser</span>
+                <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
               </button>
             </div>
           </div>
 
-          {/* Filtres Sports */}
-          <div className="mb-6">
-            <div className="flex flex-wrap gap-2">
-              {sports.map((sport) => (
-                <button
-                  key={sport.id}
-                  onClick={() => setSportFilter(sport.id as any)}
-                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
-                    sportFilter === sport.id
-                      ? 'bg-blue-500 text-white shadow-md'
-                      : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
-                  }`}
-                >
-                  <span className="text-lg">{sport.emoji}</span>
-                  <span className="font-medium">{sport.name}</span>
-                  {stats?.bySport && (
-                    <span className={`text-xs px-2 py-1 rounded-full ${
-                      sportFilter === sport.id ? 'bg-white/20' : 'bg-gray-100'
-                    }`}>
-                      {sport.id === 'all' 
-                        ? stats.total
-                        : stats.bySport.find((s: any) => s.sport === sport.id)?.count || 0
-                      }
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
+          {/* 📱 COLLAPSIBLE FILTERS */}
+          {showFilters && (
+            <div className="mt-4 p-4 bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 space-y-4">
+              {/* Period filters */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Période</h3>
+                <div className="flex bg-gray-100 dark:bg-slate-700 rounded-lg p-1">
+                  <button
+                    onClick={() => setFilter('recent')}
+                    className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
+                      filter === 'recent' ? 'bg-white dark:bg-slate-600 text-gray-900 dark:text-white shadow-sm' : 'text-gray-600 dark:text-gray-400'
+                    }`}
+                  >
+                    Récents
+                  </button>
+                  <button
+                    onClick={() => setFilter('today')}
+                    className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
+                      filter === 'today' ? 'bg-white dark:bg-slate-600 text-gray-900 dark:text-white shadow-sm' : 'text-gray-600 dark:text-gray-400'
+                    }`}
+                  >
+                    Aujourd'hui
+                  </button>
+                </div>
+              </div>
 
-          {/* Barre de recherche */}
-          <form onSubmit={handleSearch} className="flex max-w-md">
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Rechercher une équipe, fighter, pilote..."
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-l-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-            <button
-              type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-r-lg hover:bg-blue-700 transition-colors"
-            >
-              <Search className="w-4 h-4" />
-            </button>
-          </form>
+              {/* Sport filters */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Sports</h3>
+                <div className="grid grid-cols-2 gap-2">
+                  {sports.map((sport) => (
+                    <button
+                      key={sport.id}
+                      onClick={() => setSportFilter(sport.id as any)}
+                      className={`flex items-center space-x-2 p-3 rounded-lg transition-all duration-200 ${
+                        sportFilter === sport.id
+                          ? 'bg-blue-500 text-white shadow-md'
+                          : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600'
+                      }`}
+                    >
+                      <span className="text-lg">{sport.emoji}</span>
+                      <span className="font-medium text-sm">{sport.name}</span>
+                      {stats?.bySport && (
+                        <span className={`text-xs px-2 py-1 rounded-full ${
+                          sportFilter === sport.id ? 'bg-white/20' : 'bg-white dark:bg-slate-600'
+                        }`}>
+                          {sport.id === 'all' 
+                            ? stats.total
+                            : stats.bySport.find((s: any) => s.sport === sport.id)?.count || 0
+                          }
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
+        {/* Loading */}
         {loading ? (
           <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Chargement des événements multi-sports...</p>
-            <p className="text-sm text-gray-500 mt-2">Football, Basketball, MMA, Rugby, F1...</p>
+            <div className="loading-spinner w-8 h-8 mx-auto mb-4 text-blue-600"></div>
+            <p className="text-gray-600 dark:text-gray-400">Chargement des événements...</p>
+            <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">⚽🏀🥊🏉🏎️</p>
           </div>
         ) : matches.length === 0 ? (
           <div className="text-center py-12">
             <Trophy className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-xl font-medium text-gray-900 mb-2">
+            <h3 className="text-xl font-medium text-gray-900 dark:text-white mb-2">
               {searchTerm ? 'Aucun événement trouvé' : 'Aucun événement disponible'}
             </h3>
-            <p className="text-gray-600 mb-4">
+            <p className="text-gray-600 dark:text-gray-400 mb-4 px-4">
               {searchTerm 
                 ? `Aucun événement trouvé pour "${searchTerm}" en ${sportFilter === 'all' ? 'tous sports' : sportFilter}`
                 : 'Les événements apparaîtront ici une fois terminés'
@@ -272,24 +316,16 @@ export default function Home() {
                   setSearchTerm('')
                   fetchMatches()
                 }}
-                className="text-blue-600 hover:text-blue-700"
+                className="btn-mobile-primary"
               >
                 Voir tous les événements
               </button>
             )}
-            <div className="mt-6">
-              <Link
-                href="/admin/sports-dashboard"
-                className="inline-flex items-center space-x-2 text-purple-600 hover:text-purple-700 font-medium"
-              >
-                <span>⚙️ Importer des données</span>
-              </Link>
-            </div>
           </div>
         ) : (
-          <div className="grid gap-6">
+          <div className="space-y-4">
             {matches.map((match) => (
-              <MatchCard
+              <MobileMatchCard
                 key={match.id}
                 match={match}
                 onRate={rateMatch}
@@ -303,8 +339,8 @@ export default function Home() {
   )
 }
 
-// Composant MatchCard adapté multi-sports
-function MatchCard({ match, onRate, currentUserId }: {
+// 📱 COMPOSANT MATCH CARD OPTIMISÉ MOBILE
+function MobileMatchCard({ match, onRate, currentUserId }: {
   match: Match
   onRate: (matchId: string, rating: number, comment?: string) => void
   currentUserId?: string
@@ -312,15 +348,21 @@ function MatchCard({ match, onRate, currentUserId }: {
   const [selectedRating, setSelectedRating] = useState(0)
   const [comment, setComment] = useState('')
   const [showRatingForm, setShowRatingForm] = useState(false)
+  const [isRating, setIsRating] = useState(false)
 
   const userRating = match.ratings.find(r => r.user.id === currentUserId)
 
-  const handleRate = () => {
-    if (selectedRating > 0) {
-      onRate(match.id, selectedRating, comment)
-      setShowRatingForm(false)
-      setSelectedRating(0)
-      setComment('')
+  const handleRate = async () => {
+    if (selectedRating > 0 && !isRating) {
+      setIsRating(true)
+      try {
+        await onRate(match.id, selectedRating, comment)
+        setShowRatingForm(false)
+        setSelectedRating(0)
+        setComment('')
+      } finally {
+        setIsRating(false)
+      }
     }
   }
 
@@ -348,86 +390,85 @@ function MatchCard({ match, onRate, currentUserId }: {
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow p-6">
+    <div className="card-responsive hover:shadow-md transition-all duration-200">
+      {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-2">
           <span className="text-lg">{getSportEmoji(match.sport)}</span>
-          <span className="text-sm font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded">
+          <span className="text-xs font-medium text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-lg">
             {match.competition}
           </span>
         </div>
-        <div className="text-sm text-gray-500">
+        <div className="text-xs text-gray-500 dark:text-gray-400">
           {new Date(match.date).toLocaleDateString('fr-FR', {
             day: 'numeric',
-            month: 'short',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
+            month: 'short'
           })}
         </div>
       </div>
 
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center space-x-3 flex-1">
-          {match.homeTeamLogo && (
-            <img src={match.homeTeamLogo} alt="" className="w-8 h-8" />
-          )}
-          <span className="font-semibold text-lg">{match.homeTeam}</span>
-        </div>
-        
-        <div className="mx-6 text-center">
-          <div className="text-3xl font-bold text-gray-900">
-            {formatScore(match.homeScore, match.awayScore, match.sport)}
+      {/* Score */}
+      <div className="mb-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2 flex-1 min-w-0">
+            {match.homeTeamLogo && (
+              <img src={match.homeTeamLogo} alt="" className="w-6 h-6 flex-shrink-0" />
+            )}
+            <span className="font-semibold text-gray-900 dark:text-white truncate">
+              {match.homeTeam}
+            </span>
           </div>
-          <div className="text-sm text-green-600 font-medium">Terminé</div>
-        </div>
-        
-        <div className="flex items-center space-x-3 flex-1 justify-end">
-          <span className="font-semibold text-lg">{match.awayTeam}</span>
-          {match.awayTeamLogo && (
-            <img src={match.awayTeamLogo} alt="" className="w-8 h-8" />
-          )}
+          
+          <div className="mx-4 text-center">
+            <div className="text-xl font-bold text-gray-900 dark:text-white">
+              {formatScore(match.homeScore, match.awayScore, match.sport)}
+            </div>
+          </div>
+          
+          <div className="flex items-center space-x-2 flex-1 justify-end min-w-0">
+            <span className="font-semibold text-gray-900 dark:text-white truncate">
+              {match.awayTeam}
+            </span>
+            {match.awayTeamLogo && (
+              <img src={match.awayTeamLogo} alt="" className="w-6 h-6 flex-shrink-0" />
+            )}
+          </div>
         </div>
       </div>
 
-      {match.venue && (
-        <p className="text-sm text-gray-600 mb-4 flex items-center">
-          <span className="mr-1">📍</span>
-          {match.venue}
-        </p>
-      )}
-
-      <div className="border-t pt-4">
+      {/* Rating & Actions */}
+      <div className="border-t border-gray-200 dark:border-slate-700 pt-4">
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-3">
             <div className="flex items-center space-x-1">
               <Star className="w-4 h-4 text-yellow-400 fill-current" />
-              <span className="font-medium">
+              <span className="font-medium text-sm">
                 {match.totalRatings > 0 ? match.avgRating.toFixed(1) : '—'}
               </span>
             </div>
-            <span className="text-sm text-gray-600">
+            <span className="text-xs text-gray-500 dark:text-gray-400">
               {match.totalRatings} note{match.totalRatings > 1 ? 's' : ''}
             </span>
           </div>
           
           <Link
             href={`/match/${match.id}`}
-            className="flex items-center space-x-1 px-3 py-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors text-sm font-medium"
+            className="flex items-center space-x-1 px-3 py-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors text-sm font-medium active:scale-95"
           >
-            <BarChart3 className="w-4 h-4" />
+            <Eye className="w-4 h-4" />
             <span>Détails</span>
           </Link>
         </div>
 
+        {/* Rating Section */}
         {!match.canRate ? (
-          <div className="text-sm text-gray-500 italic">
+          <div className="text-sm text-gray-500 dark:text-gray-400 italic">
             Cet événement ne peut pas encore être noté
           </div>
         ) : userRating ? (
-          <div className="bg-blue-50 rounded-lg p-4">
+          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="font-medium text-blue-800">✅ Votre note</span>
+              <span className="font-medium text-blue-800 dark:text-blue-200 text-sm">✅ Votre note</span>
               <div className="flex space-x-1">
                 {Array.from({ length: 5 }, (_, i) => (
                   <Star
@@ -440,7 +481,7 @@ function MatchCard({ match, onRate, currentUserId }: {
               </div>
             </div>
             {userRating.comment && (
-              <p className="text-sm text-blue-700">"{userRating.comment}"</p>
+              <p className="text-sm text-blue-700 dark:text-blue-300">"{userRating.comment}"</p>
             )}
           </div>
         ) : (
@@ -448,21 +489,21 @@ function MatchCard({ match, onRate, currentUserId }: {
             {!showRatingForm ? (
               <button
                 onClick={() => setShowRatingForm(true)}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                className="w-full btn-mobile-primary"
               >
                 ⭐ Noter cet événement
               </button>
             ) : (
-              <div className="space-y-4 bg-gray-50 rounded-lg p-4">
+              <div className="space-y-4 bg-gray-50 dark:bg-slate-700 rounded-xl p-4">
                 <div>
-                  <p className="text-sm font-medium mb-3">Votre note :</p>
-                  <div className="flex space-x-1">
+                  <p className="text-sm font-medium mb-3 text-gray-900 dark:text-white">Votre note :</p>
+                  <div className="flex justify-center space-x-2">
                     {Array.from({ length: 5 }, (_, i) => (
                       <Star
                         key={i}
-                        className={`w-7 h-7 cursor-pointer transition-colors ${
-                          i < selectedRating ? 'text-yellow-400 fill-current' : 'text-gray-300'
-                        } hover:text-yellow-400`}
+                        className={`w-8 h-8 cursor-pointer transition-all duration-200 touch-target ${
+                          i < selectedRating ? 'text-yellow-400 fill-current scale-110' : 'text-gray-300'
+                        } hover:text-yellow-400 active:scale-125`}
                         onClick={() => setSelectedRating(i + 1)}
                       />
                     ))}
@@ -470,25 +511,32 @@ function MatchCard({ match, onRate, currentUserId }: {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-2">
+                  <label className="block text-sm font-medium mb-2 text-gray-900 dark:text-white">
                     Commentaire (optionnel)
                   </label>
                   <textarea
                     value={comment}
                     onChange={(e) => setComment(e.target.value)}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="input-mobile resize-none"
                     rows={3}
                     placeholder={`Qu'avez-vous pensé de cet événement ${getSportEmoji(match.sport)} ?`}
                   />
                 </div>
                 
-                <div className="flex space-x-3">
+                <div className="flex space-x-2">
                   <button
                     onClick={handleRate}
-                    disabled={selectedRating === 0}
-                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
+                    disabled={selectedRating === 0 || isRating}
+                    className="flex-1 btn-mobile-primary disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    ✅ Confirmer
+                    {isRating ? (
+                      <div className="flex items-center justify-center">
+                        <div className="loading-spinner mr-2"></div>
+                        Notation...
+                      </div>
+                    ) : (
+                      `✅ Noter ${selectedRating > 0 ? selectedRating + '/5' : ''}`
+                    )}
                   </button>
                   <button
                     onClick={() => {
@@ -496,9 +544,9 @@ function MatchCard({ match, onRate, currentUserId }: {
                       setSelectedRating(0)
                       setComment('')
                     }}
-                    className="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition-colors"
+                    className="px-4 btn-mobile-secondary"
                   >
-                    ❌ Annuler
+                    ✕
                   </button>
                 </div>
               </div>

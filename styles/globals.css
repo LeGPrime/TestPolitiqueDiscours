@@ -48,29 +48,267 @@
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+    /* 📱 Prevent rubber band scrolling on iOS */
+    overscroll-behavior-y: none;
+    /* 📱 Improve text rendering on mobile */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* 📱 Prevent zoom on form inputs (iOS Safari) */
+  input[type="text"], 
+  input[type="email"], 
+  input[type="password"], 
+  input[type="number"],
+  input[type="tel"],
+  input[type="url"],
+  textarea, 
+  select {
+    font-size: 16px;
+  }
+
+  /* 📱 Improve button touch targets */
+  button, 
+  [role="button"],
+  input[type="submit"],
+  input[type="button"] {
+    min-height: 44px; /* iOS recommandation */
+    min-width: 44px;
   }
 }
 
-/* Custom scrollbar - compatible mode sombre */
+/* 📱 CUSTOM SCROLLBAR - Mobile friendly */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 4px;
+  height: 4px;
 }
 
 ::-webkit-scrollbar-track {
   @apply bg-muted;
-  border-radius: 3px;
+  border-radius: 2px;
 }
 
 ::-webkit-scrollbar-thumb {
   @apply bg-muted-foreground/40;
-  border-radius: 3px;
+  border-radius: 2px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   @apply bg-muted-foreground/60;
 }
 
+/* 📱 MOBILE OPTIMISATIONS */
+@media (max-width: 768px) {
+  /* Reduce padding on mobile */
+  .container {
+    @apply px-4;
+  }
+
+  /* Better touch targets */
+  .touch-target {
+    min-height: 48px;
+    min-width: 48px;
+  }
+
+  /* Prevent text overflow */
+  .text-responsive {
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    hyphens: auto;
+  }
+
+  /* Mobile-first grid layouts */
+  .mobile-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  /* Reduce font sizes slightly on very small screens */
+  @media (max-width: 380px) {
+    .text-sm { font-size: 0.8rem; }
+    .text-base { font-size: 0.9rem; }
+    .text-lg { font-size: 1rem; }
+    .text-xl { font-size: 1.1rem; }
+    .text-2xl { font-size: 1.3rem; }
+    .text-3xl { font-size: 1.6rem; }
+  }
+}
+
+/* 📱 TOUCH IMPROVEMENTS */
+@media (hover: none) and (pointer: coarse) {
+  /* Remove hover effects on touch devices */
+  .hover-touch-none:hover {
+    background-color: initial;
+    color: initial;
+    transform: initial;
+  }
+
+  /* Enhance focus states for touch */
+  button:focus,
+  [role="button"]:focus,
+  input:focus,
+  textarea:focus,
+  select:focus {
+    outline: 2px solid rgb(var(--ring));
+    outline-offset: 2px;
+  }
+}
+
+/* 📱 SAFE AREA SUPPORT (iPhone X+) */
+@supports (padding-top: env(safe-area-inset-top)) {
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  .safe-area-left {
+    padding-left: env(safe-area-inset-left);
+  }
+  
+  .safe-area-right {
+    padding-right: env(safe-area-inset-right);
+  }
+}
+
+/* 📱 BOTTOM NAVIGATION SPACE (si tu utilises une nav bottom) */
+.has-bottom-nav {
+  padding-bottom: 80px; /* Space for bottom navigation */
+}
+
+/* 📱 IMPROVED MODALS FOR MOBILE */
+@media (max-width: 768px) {
+  .modal-mobile {
+    margin: 1rem;
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+    border-radius: 1rem;
+  }
+
+  .modal-mobile .modal-content {
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+}
+
+/* 📱 CARD LAYOUTS RESPONSIVE */
+.card-responsive {
+  @apply bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700;
+  @apply p-4 md:p-6;
+  @apply mb-4 md:mb-6;
+}
+
+/* 📱 BUTTON IMPROVEMENTS */
+.btn-mobile {
+  @apply px-4 py-3 rounded-xl font-medium transition-all duration-200;
+  @apply active:scale-95; /* Touch feedback */
+  min-height: 48px;
+  touch-action: manipulation; /* Disable double-tap zoom */
+}
+
+.btn-mobile-primary {
+  @apply btn-mobile bg-blue-600 text-white hover:bg-blue-700;
+  @apply focus:ring-4 focus:ring-blue-500/25;
+}
+
+.btn-mobile-secondary {
+  @apply btn-mobile bg-gray-100 dark:bg-slate-700 text-gray-900 dark:text-white;
+  @apply hover:bg-gray-200 dark:hover:bg-slate-600;
+  @apply focus:ring-4 focus:ring-gray-500/25;
+}
+
+/* 📱 INPUT IMPROVEMENTS */
+.input-mobile {
+  @apply w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-slate-600;
+  @apply bg-white dark:bg-slate-700 text-gray-900 dark:text-white;
+  @apply focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+  @apply placeholder-gray-500 dark:placeholder-gray-400;
+  font-size: 16px; /* Prevent zoom on iOS */
+  min-height: 48px;
+}
+
+/* 📱 LOADING STATES */
+.loading-spinner {
+  @apply inline-block w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin;
+}
+
+.loading-pulse {
+  @apply animate-pulse bg-gray-200 dark:bg-slate-700 rounded;
+}
+
+/* 📱 NOTIFICATION OPTIMISATIONS */
+.notification-mobile {
+  @apply fixed top-4 left-4 right-4 z-50;
+  @apply bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700;
+  @apply rounded-xl shadow-lg p-4;
+  @apply transform transition-all duration-300;
+}
+
+/* 📱 SWIPE GESTURES SUPPORT */
+.swipe-container {
+  touch-action: pan-x pan-y;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 📱 IMPROVED FOCUS STATES */
+.focus-visible {
+  @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+  @apply dark:focus:ring-offset-slate-800;
+}
+
+/* 📱 PREVENT TEXT SELECTION ON BUTTONS */
+button, 
+[role="button"] {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* 📱 IMPROVE TAP HIGHLIGHTING */
+button, 
+[role="button"],
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
 /* Transitions fluides pour le changement de thème */
 * {
   transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+/* 📱 UTILITY CLASSES FOR MOBILE */
+@layer utilities {
+  .text-touch {
+    font-size: 16px;
+    line-height: 1.5;
+  }
+
+  .safe-top {
+    padding-top: max(1rem, env(safe-area-inset-top));
+  }
+
+  .safe-bottom {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+
+  .touch-action-none {
+    touch-action: none;
+  }
+
+  .touch-action-manipulation {
+    touch-action: manipulation;
+  }
+
+  .overscroll-none {
+    overscroll-behavior: none;
+  }
+
+  .scroll-smooth-mobile {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
 }
