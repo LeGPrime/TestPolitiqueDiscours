@@ -1,4 +1,4 @@
-// pages/match/[id].tsx - VERSION AVEC F1 INTÉGRÉE
+// pages/match/[id].tsx - VERSION AVEC REVIEWS INTÉGRÉES
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { useSession } from 'next-auth/react'
@@ -12,6 +12,7 @@ import axios from 'axios'
 import FootballMatchDetails from '../../components/FootballMatchDetails'
 import BasketballMatchDetails from '../../components/BasketballMatchDetails'
 import F1MatchDetails from '../../components/F1MatchDetails'
+import MatchReviews from '../../components/MatchReviews'
 
 interface MatchData {
   id: string
@@ -357,7 +358,7 @@ export default function MatchDetailsPage() {
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Contenu principal - Varie selon le sport */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 space-y-8">
             {match.sport === 'FOOTBALL' && (
               <FootballMatchDetails
                 matchDetails={matchData.data}
@@ -376,7 +377,7 @@ export default function MatchDetailsPage() {
               />
             )}
 
-            {/* 🏁 NOUVEAU : Interface F1 */}
+            {/* Interface F1 */}
             {match.sport === 'F1' && (
               <F1MatchDetails
                 matchDetails={matchData.data}
@@ -385,6 +386,14 @@ export default function MatchDetailsPage() {
                 currentUserId={session?.user?.id}
               />
             )}
+
+            {/* 🆕 NOUVEAU : Section Reviews & Commentaires */}
+            <MatchReviews
+              matchId={match.id}
+              matchTitle={match.sport === 'F1' ? match.homeTeam : `${match.homeTeam} vs ${match.awayTeam}`}
+              currentUserId={session?.user?.id}
+              userHasRated={!!userRating}
+            />
 
             {/* Sports pas encore implémentés */}
             {!['FOOTBALL', 'BASKETBALL', 'F1'].includes(match.sport) && (
@@ -420,6 +429,9 @@ export default function MatchDetailsPage() {
             />
             
             <MatchInfoCard match={match} />
+
+            {/* 🆕 Widget statistiques de la communauté */}
+            <CommunityStatsWidget matchId={match.id} />
           </div>
         </div>
       </div>
@@ -633,6 +645,106 @@ function MatchInfoCard({ match }: { match: MatchData }) {
           </>
         )}
       </div>
+    </div>
+  )
+}
+
+// Widget statistiques de la communauté
+function CommunityStatsWidget({ matchId }: { matchId: string }) {
+  const [stats, setStats] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetchCommunityStats()
+  }, [matchId])
+
+  const fetchCommunityStats = async () => {
+    try {
+      const response = await axios.get(`/api/match-community-stats?matchId=${matchId}`)
+      setStats(response.data.stats)
+    } catch (error) {
+      console.error('Erreur stats communauté:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-xl shadow-lg p-6">
+        <div className="animate-pulse space-y-3">
+          <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+          <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+          <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!stats) return null
+
+  return (
+    <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl shadow-lg p-6 border border-purple-200">
+      <h4 className="font-bold text-gray-900 mb-4 flex items-center space-x-2">
+        <Users className="w-5 h-5 text-purple-600" />
+        <span>Activité Communauté</span>
+      </h4>
+      
+      <div className="space-y-4">
+        {/* Répartition des notes */}
+        <div>
+          <p className="text-sm text-gray-600 mb-2">Notes de la communauté</p>
+          <div className="space-y-1">
+            {stats.ratingDistribution?.map((dist: any) => (
+              <div key={dist.rating} className="flex items-center space-x-2">
+                <span className="text-xs text-gray-600 w-6">{dist.rating}⭐</span>
+                <div className="flex-1 bg-gray-200 rounded-full h-2">
+                  <div 
+                    className="bg-gradient-to-r from-purple-400 to-indigo-500 h-2 rounded-full transition-all"
+                    style={{ width: `${dist.percentage}%` }}
+                  ></div>
+                </div>
+                <span className="text-xs text-gray-600 w-8">{dist.count}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Stats rapides */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="text-center p-3 bg-white/50 rounded-lg">
+            <div className="text-lg font-bold text-purple-700">{stats.totalComments}</div>
+            <div className="text-xs text-gray-600">Commentaires</div>
+          </div>
+          <div className="text-center p-3 bg-white/50 rounded-lg">
+            <div className="text-lg font-bold text-purple-700">{stats.totalLikes}</div>
+            <div className="text-xs text-gray-600">Likes</div>
+          </div>
+        </div>
+
+        {/* Top reviewer du match */}
+        {stats.topReviewer && (
+          <div className="bg-white/60 rounded-lg p-3">
+            <p className="text-xs text-gray-600 mb-2">🏆 Top reviewer</p>
+            <div className="flex items-center space-x-2">
+              <div className="w-6 h-6 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center text-xs font-bold text-white">
+                {stats.topReviewer.name?.[0]?.toUpperCase()}
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-900">{stats.topReviewer.name}</p>
+                <p className="text-xs text-gray-600">{stats.topReviewer.likes} likes reçus</p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <Link 
+        href={`/match/${matchId}/reviews`}
+        className="block w-full text-center mt-4 bg-gradient-to-r from-purple-500 to-indigo-600 text-white py-2 rounded-lg hover:from-purple-600 hover:to-indigo-700 transition-all text-sm font-medium"
+      >
+        💬 Voir toutes les reviews
+      </Link>
     </div>
   )
 }
