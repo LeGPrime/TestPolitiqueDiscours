@@ -1,4 +1,4 @@
-// components/Navbar.tsx - Version avec logo personnalisé
+// components/Navbar.tsx - Version corrigée avec AvatarDisplay
 import { useSession, signOut } from 'next-auth/react'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import ThemeToggle from './ThemeToggle'
 import NotificationCenter from './NotificationCenter'
+import AvatarDisplay from './AvatarDisplay' // 🆕 Import du composant AvatarDisplay
 
 interface NavbarProps {
   activeTab?: string
@@ -166,21 +167,13 @@ export default function Navbar({ activeTab }: NavbarProps) {
                   className="flex items-center space-x-2 text-sm text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
                   title="Mon profil"
                 >
-                  {session.user?.image ? (
-                    <Image 
-                      src={session.user.image} 
-                      alt="Profil" 
-                      width={24}
-                      height={24}
-                      className="rounded-full border border-gray-200 dark:border-slate-600"
-                    />
-                  ) : (
-                    <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                      <span className="text-xs font-bold text-white">
-                        {(session.user?.name || session.user?.email || 'U')[0].toUpperCase()}
-                      </span>
-                    </div>
-                  )}
+                  {/* 🆕 REMPLACEMENT: Utiliser AvatarDisplay au lieu de Image */}
+                  <AvatarDisplay
+                    image={session.user?.image}
+                    name={session.user?.name || session.user?.email || 'User'}
+                    size="sm"
+                    showBorder={true}
+                  />
                   <span className="hidden lg:inline">
                     {session.user?.name?.split(' ')[0] || 'Profil'}
                   </span>
@@ -284,21 +277,13 @@ export default function Navbar({ activeTab }: NavbarProps) {
                 onClick={() => setMobileMenuOpen(false)}
                 className="flex items-center space-x-3 px-3 py-3 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-slate-700 rounded-lg transition-colors"
               >
-                {session.user?.image ? (
-                  <Image 
-                    src={session.user.image} 
-                    alt="Profil" 
-                    width={20}
-                    height={20}
-                    className="rounded-full border border-gray-200 dark:border-slate-600"
-                  />
-                ) : (
-                  <div className="w-5 h-5 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                    <span className="text-xs font-bold text-white">
-                      {(session.user?.name || session.user?.email || 'U')[0].toUpperCase()}
-                    </span>
-                  </div>
-                )}
+                {/* 🆕 REMPLACEMENT: Utiliser AvatarDisplay au lieu de Image */}
+                <AvatarDisplay
+                  image={session.user?.image}
+                  name={session.user?.name || session.user?.email || 'User'}
+                  size="sm"
+                  showBorder={true}
+                />
                 <div className="flex-1">
                   <div className="font-medium">Mon profil</div>
                   <div className="text-xs text-gray-500 dark:text-gray-400">{session.user?.name || session.user?.email}</div>
