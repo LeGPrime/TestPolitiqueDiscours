@@ -1,11 +1,12 @@
-// components/Navbar.tsx - Version mobile-first optimisée
+// components/Navbar.tsx - Version avec logo personnalisé
 import { useSession, signOut } from 'next-auth/react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter } from 'next/router'
 import { useState } from 'react'
 import {
   Trophy, Search, Users, LogOut, Bell, Settings, 
-  User, BarChart3, Calendar, Target, Menu, X, Home
+  User, BarChart3, Calendar, Target, Menu, X, Home, Crown
 } from 'lucide-react'
 import ThemeToggle from './ThemeToggle'
 import NotificationCenter from './NotificationCenter'
@@ -42,6 +43,13 @@ export default function Navbar({ activeTab }: NavbarProps) {
       description: 'Réseau social'
     },
     { 
+      href: '/top-reviews', 
+      label: 'Hall of Fame', 
+      icon: Crown, 
+      active: activeTab === 'hall-of-fame' || router.pathname === '/top-reviews',
+      description: 'Meilleurs commentaires'
+    },
+    { 
       href: '/top-matches', 
       label: 'Top', 
       icon: BarChart3, 
@@ -62,13 +70,26 @@ export default function Navbar({ activeTab }: NavbarProps) {
       <header className="bg-white dark:bg-slate-800 shadow-sm border-b border-gray-200 dark:border-slate-700">
         <div className="max-w-7xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-green-500 rounded-lg flex items-center justify-center">
-                <Trophy className="w-5 h-5 text-white" />
+            <Link href="/" className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
+              {/* 🆕 LOGO PERSONNALISÉ */}
+              <div className="relative">
+                <Image
+                  src="/logosporating.svg" // ou /logo.png
+                  alt="Sporating Logo"
+                  width={40}
+                  height={40}
+                  className="rounded-lg"
+                  priority
+                />
+                {/* Badge sport optionnel */}
+                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-gradient-to-r from-blue-500 to-green-500 rounded-full flex items-center justify-center">
+                  <Trophy className="w-2.5 h-2.5 text-white" />
+                </div>
               </div>
+              
               <div>
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white">SportRate</h1>
-                <p className="text-xs text-gray-500 dark:text-gray-400 hidden sm:block">Un œil sur le jeu.</p>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white">Sporating</h1>
+                <p className="text-xs text-gray-500 dark:text-gray-400 hidden sm:block">Ton œil sur le jeu.</p>
               </div>
             </Link>
             
@@ -93,23 +114,39 @@ export default function Navbar({ activeTab }: NavbarProps) {
       <header className="bg-white dark:bg-slate-800 shadow-sm border-b border-gray-200 dark:border-slate-700 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
-            {/* Logo */}
-            <Link href="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-green-500 rounded-lg flex items-center justify-center">
-                <Trophy className="w-5 h-5 text-white" />
+            {/* Logo avec vraie image */}
+            <Link href="/" className="flex items-center space-x-3 hover:opacity-80 transition-opacity group">
+              <div className="relative">
+                {/* 🎨 TON LOGO ICI */}
+                <Image
+                  src="/logosporating.svg" // Remplace par ton fichier logo
+                  alt="Sporating Logo"
+                  width={40}
+                  height={40}
+                  className="rounded-lg group-hover:scale-105 transition-transform"
+                  priority
+                />
+                
+                {/* Badge animé optionnel */}
+                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-gradient-to-r from-blue-500 to-green-500 rounded-full flex items-center justify-center group-hover:rotate-12 transition-transform">
+                  <Trophy className="w-2.5 h-2.5 text-white" />
+                </div>
               </div>
+              
               <div>
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white">SportRate</h1>
-                <p className="text-xs text-gray-500 dark:text-gray-400 hidden sm:block">Un œil sur le jeu.</p>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                  Sporating
+                </h1>
+                <p className="text-xs text-gray-500 dark:text-gray-400 hidden sm:block">
+                  Un œil sur le jeu.
+                </p>
               </div>
             </Link>
             
             {/* Actions droite */}
             <div className="flex items-center space-x-2">
-              {/* Notifications */}
               <NotificationCenter userId={session?.user?.id || session?.user?.email || 'user'} />
 
-              {/* Lien Admin (si besoin) */}
               {session.user?.email === 'admin@sporating.com' && (
                 <Link 
                   href="/admin/sports-dashboard-2025"
@@ -130,10 +167,12 @@ export default function Navbar({ activeTab }: NavbarProps) {
                   title="Mon profil"
                 >
                   {session.user?.image ? (
-                    <img 
+                    <Image 
                       src={session.user.image} 
                       alt="Profil" 
-                      className="w-6 h-6 rounded-full border border-gray-200 dark:border-slate-600"
+                      width={24}
+                      height={24}
+                      className="rounded-full border border-gray-200 dark:border-slate-600"
                     />
                   ) : (
                     <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
@@ -170,21 +209,31 @@ export default function Navbar({ activeTab }: NavbarProps) {
           <nav className="hidden md:flex space-x-6 mt-4">
             {navigationItems.map((item) => {
               const Icon = item.icon
+              const isHallOfFame = item.href === '/top-reviews'
+              
               return (
                 <Link
                   key={item.href}
                   href={item.href}
                   className={`group flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-200 ${
                     item.active 
-                      ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 font-medium shadow-sm' 
+                      ? isHallOfFame
+                        ? 'text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 font-medium shadow-sm'
+                        : 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 font-medium shadow-sm'
                       : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-slate-700'
                   }`}
                   title={item.description}
                 >
-                  <Icon className={`w-4 h-4 ${item.active ? 'text-blue-600 dark:text-blue-400' : 'group-hover:scale-110 transition-transform'}`} />
+                  <Icon className={`w-4 h-4 ${
+                    item.active 
+                      ? isHallOfFame ? 'text-yellow-600 dark:text-yellow-400' : 'text-blue-600 dark:text-blue-400'
+                      : 'group-hover:scale-110 transition-transform'
+                  }`} />
                   <span>{item.label}</span>
                   {item.active && (
-                    <div className="w-1 h-1 bg-blue-600 dark:bg-blue-400 rounded-full"></div>
+                    <div className={`w-1 h-1 rounded-full ${
+                      isHallOfFame ? 'bg-yellow-600 dark:bg-yellow-400' : 'bg-blue-600 dark:bg-blue-400'
+                    }`}></div>
                   )}
                 </Link>
               )
@@ -198,6 +247,8 @@ export default function Navbar({ activeTab }: NavbarProps) {
             <nav className="px-4 py-3 space-y-1">
               {navigationItems.map((item) => {
                 const Icon = item.icon
+                const isHallOfFame = item.href === '/top-reviews'
+                
                 return (
                   <Link
                     key={item.href}
@@ -205,7 +256,9 @@ export default function Navbar({ activeTab }: NavbarProps) {
                     onClick={() => setMobileMenuOpen(false)}
                     className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${
                       item.active 
-                        ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 font-medium' 
+                        ? isHallOfFame
+                          ? 'text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 font-medium'
+                          : 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 font-medium'
                         : 'text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-slate-700'
                     }`}
                   >
@@ -215,26 +268,29 @@ export default function Navbar({ activeTab }: NavbarProps) {
                       <div className="text-xs text-gray-500 dark:text-gray-400">{item.description}</div>
                     </div>
                     {item.active && (
-                      <div className="w-2 h-2 bg-blue-600 dark:bg-blue-400 rounded-full"></div>
+                      <div className={`w-2 h-2 rounded-full ${
+                        isHallOfFame ? 'bg-yellow-600 dark:bg-yellow-400' : 'bg-blue-600 dark:bg-blue-400'
+                      }`}></div>
                     )}
                   </Link>
                 )
               })}
               
-              {/* Séparateur */}
+              {/* Profil et déconnexion sur mobile */}
               <div className="border-t border-gray-200 dark:border-slate-700 my-3"></div>
               
-              {/* Profil et déconnexion sur mobile */}
               <Link
                 href="/profile"
                 onClick={() => setMobileMenuOpen(false)}
                 className="flex items-center space-x-3 px-3 py-3 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-slate-700 rounded-lg transition-colors"
               >
                 {session.user?.image ? (
-                  <img 
+                  <Image 
                     src={session.user.image} 
                     alt="Profil" 
-                    className="w-5 h-5 rounded-full border border-gray-200 dark:border-slate-600"
+                    width={20}
+                    height={20}
+                    className="rounded-full border border-gray-200 dark:border-slate-600"
                   />
                 ) : (
                   <div className="w-5 h-5 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
@@ -266,35 +322,6 @@ export default function Navbar({ activeTab }: NavbarProps) {
           </div>
         )}
       </header>
-
-      {/* 📱 NAVIGATION MOBILE BOTTOM BAR (optionnelle) */}
-      {/* Tu peux décommenter cette section si tu préfères une nav bottom sur mobile */}
-      {/*
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700 z-40">
-        <div className="flex items-center justify-around py-2">
-          {navigationItems.slice(0, 4).map((item) => {
-            const Icon = item.icon
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex flex-col items-center space-y-1 px-3 py-2 rounded-lg transition-colors min-w-0 ${
-                  item.active 
-                    ? 'text-blue-600 dark:text-blue-400' 
-                    : 'text-gray-600 dark:text-gray-300'
-                }`}
-              >
-                <Icon className="w-5 h-5" />
-                <span className="text-xs font-medium truncate">{item.label}</span>
-                {item.active && (
-                  <div className="w-1 h-1 bg-blue-600 dark:bg-blue-400 rounded-full"></div>
-                )}
-              </Link>
-            )
-          })}
-        </div>
-      </nav>
-      */}
     </>
   )
 }

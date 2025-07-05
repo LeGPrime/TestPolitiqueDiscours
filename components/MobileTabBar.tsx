@@ -1,7 +1,7 @@
-// components/MobileTabBar.tsx - Navigation bottom mobile
+// components/MobileTabBar.tsx - Navigation bottom mobile avec Hall of Fame
 import Link from 'next/link'
 import { useRouter } from 'next/router'
-import { Home, Search, Users, Trophy, User } from 'lucide-react'
+import { Home, Search, Users, Trophy, User, Crown } from 'lucide-react'
 
 export function MobileTabBar() {
   const router = useRouter()
@@ -9,8 +9,8 @@ export function MobileTabBar() {
   const tabs = [
     { icon: Home, label: 'Accueil', href: '/', active: router.pathname === '/' },
     { icon: Search, label: 'Recherche', href: '/search', active: router.pathname.startsWith('/search') },
+    { icon: Crown, label: 'Hall of Fame', href: '/top-reviews', active: router.pathname === '/top-reviews' },
     { icon: Users, label: 'Amis', href: '/friends', active: router.pathname === '/friends' },
-    { icon: Trophy, label: 'Top', href: '/top-matches', active: router.pathname === '/top-matches' },
     { icon: User, label: 'Profil', href: '/profile', active: router.pathname === '/profile' }
   ]
 
@@ -19,20 +19,26 @@ export function MobileTabBar() {
       <div className="flex items-center justify-around py-2">
         {tabs.map((tab) => {
           const Icon = tab.icon
+          const isHallOfFame = tab.href === '/top-reviews'
+          
           return (
             <Link
               key={tab.href}
               href={tab.href}
               className={`flex flex-col items-center space-y-1 px-3 py-2 rounded-lg transition-colors min-w-0 touch-target ${
                 tab.active 
-                  ? 'text-blue-600 dark:text-blue-400' 
+                  ? isHallOfFame
+                    ? 'text-yellow-600 dark:text-yellow-400' 
+                    : 'text-blue-600 dark:text-blue-400'
                   : 'text-gray-600 dark:text-gray-300'
               }`}
             >
               <Icon className="w-5 h-5" />
               <span className="text-xs font-medium truncate">{tab.label}</span>
               {tab.active && (
-                <div className="w-1 h-1 bg-blue-600 dark:bg-blue-400 rounded-full"></div>
+                <div className={`w-1 h-1 rounded-full ${
+                  isHallOfFame ? 'bg-yellow-600 dark:bg-yellow-400' : 'bg-blue-600 dark:bg-blue-400'
+                }`}></div>
               )}
             </Link>
           )

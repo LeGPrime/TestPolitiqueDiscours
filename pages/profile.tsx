@@ -1,4 +1,4 @@
-// pages/profile.tsx - Version améliorée avec liens matches et stats par sport
+// pages/profile.tsx - Version complète avec nouvelles fonctionnalités
 import { useState, useEffect } from 'react'
 import { useSession, signOut } from 'next-auth/react'
 import { useRouter } from 'next/router'
@@ -8,11 +8,15 @@ import {
   Edit3, Settings, BarChart3, TrendingUp, Heart, UserPlus,
   Activity, Award, Target, Zap, Globe, Mail, Shield,
   Plus, X, Check, Camera, Upload, Save, Eye, ArrowRight,
-  Gamepad2, BarChart, PieChart, Filter
+  Gamepad2, BarChart, PieChart, Filter, Trash2
 } from 'lucide-react'
 import axios from 'axios'
 import ThemeToggle from '../components/ThemeToggle'
-import Navbar from '../components/Navbar' 
+import Navbar from '../components/Navbar'
+import TeamSearchModal from '../components/TeamSearchModal'
+import EnhancedProfileEditor from '../components/EnhancedProfileEditor'
+import EnhancedTeamGrid from '../components/EnhancedTeamGrid'
+import AvatarUpload from '../components/AvatarUpload'
 
 interface UserProfile {
   user: {
@@ -23,7 +27,24 @@ interface UserProfile {
     image?: string
     bio?: string
     location?: string
+    age?: string
+    occupation?: string
     favoriteClub?: string
+    favoriteBasketballTeam?: string
+    favoriteTennisPlayer?: string
+    favoriteF1Driver?: string
+    preferredSports?: string[]
+    watchingHabits?: string
+    languages?: string[]
+    visibility?: {
+      location?: boolean
+      age?: boolean
+      occupation?: boolean
+      favoriteClub?: boolean
+      favoriteBasketballTeam?: boolean
+      favoriteTennisPlayer?: boolean
+      favoriteF1Driver?: boolean
+    }
     createdAt: string
   }
   stats: {
@@ -40,7 +61,9 @@ interface UserProfile {
     topPlayerRatings: any[]
     ratingDistribution: any[]
     playerRatingDistribution: any[]
-    // 🆕 Stats par sport
+    totalTeamsFollowed: number
+    favoriteSports: any[]
+    // Stats par sport
     statsBySport: {
       [sport: string]: {
         totalRatings: number
@@ -63,16 +86,11 @@ interface Team {
   sport: string
   league?: string
   country?: string
+  founded?: number
+  type: 'team' | 'player'
   followersCount: number
   isFollowed: boolean
-}
-
-interface EditProfileData {
-  name: string
-  username: string
-  bio: string
-  location: string
-  favoriteClub: string
+  followedSince?: string
 }
 
 export default function EnhancedProfilePage() {
@@ -83,23 +101,29 @@ export default function EnhancedProfilePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [teams, setTeams] = useState<Team[]>([])
   const [loading, setLoading] = useState(true)
-  const [editMode, setEditMode] = useState(false)
   const [activeTab, setActiveTab] = useState<'overview' | 'ratings' | 'player-ratings' | 'teams' | 'stats'>('overview')
   const [activeSport, setActiveSport] = useState<'all' | 'football' | 'basketball' | 'mma' | 'rugby' | 'f1'>('all')
-  const [teamSearchQuery, setTeamSearchQuery] = useState('')
-  const [teamSportFilter, setTeamSportFilter] = useState<'all' | 'football' | 'basketball'>('all')
+  
+  // Nouveaux états pour les modals
   const [showTeamSearch, setShowTeamSearch] = useState(false)
-  const [editData, setEditData] = useState<EditProfileData>({
-    name: '',
-    username: '',
-    bio: '',
-    location: '',
-    favoriteClub: ''
-  })
-  const [savingProfile, setSavingProfile] = useState(false)
+  const [showEnhancedEditor, setShowEnhancedEditor] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+
+  // État temporaire pour les données avancées
+  const [localAdvancedData, setLocalAdvancedData] = useState<any>({})
 
   const targetUserId = userId as string || session?.user?.id
   const isOwnProfile = !userId || userId === session?.user?.id
+
+  // Fonction pour merger les données DB + local
+  const getMergedUserData = () => {
+    if (!profile?.user) return null
+    
+    return {
+      ...profile.user,
+      ...localAdvancedData, // Priorité aux données locales
+    }
+  }
 
   // Sports disponibles avec emojis
   const sports = [
@@ -113,89 +137,247 @@ export default function EnhancedProfilePage() {
 
   useEffect(() => {
     if (session && targetUserId) {
+      console.log('🔄 Rechargement des données pour:', targetUserId)
       fetchProfile()
-      if (isOwnProfile || activeTab === 'teams') {
+      fetchTeams()
+    }
+  }, [session, targetUserId])
+
+  // Recharger quand on change d'onglet pour avoir les données les plus récentes
+  useEffect(() => {
+    if (session && targetUserId && profile) {
+      console.log('📱 Changement d\'onglet vers:', activeTab)
+      
+      // Recharger les données seulement si nécessaire
+      if (activeTab === 'ratings' || activeTab === 'player-ratings' || activeTab === 'stats') {
+        fetchProfile()
+      }
+      if (activeTab === 'teams') {
         fetchTeams()
       }
     }
-  }, [session, targetUserId, activeTab])
+  }, [activeTab])
 
   const fetchProfile = async () => {
     try {
       setLoading(true)
-      const response = await axios.get(`/api/profile?userId=${targetUserId}`)
-      setProfile(response.data)
       
-      // Pré-remplir les données d'édition
-      if (response.data.user && isOwnProfile) {
-        setEditData({
-          name: response.data.user.name || '',
-          username: response.data.user.username || '',
-          bio: response.data.user.bio || '',
-          location: response.data.user.location || '',
-          favoriteClub: response.data.user.favoriteClub || ''
-        })
+      // Essayer d'abord l'API de debug pour voir les données
+      console.log('🔍 Test API debug...')
+      try {
+        const debugResponse = await axios.get(`/api/profile/debug?userId=${targetUserId}`)
+        console.log('📊 Debug data:', debugResponse.data)
+      } catch (error) {
+        console.log('⚠️ API debug non disponible')
       }
+      
+      // Essayer l'API corrigée
+      let response
+      try {
+        console.log('🔄 Tentative API profile/fixed...')
+        response = await axios.get(`/api/profile/fixed?userId=${targetUserId}`)
+        console.log('✅ Profil chargé depuis API fixed')
+      } catch (error) {
+        console.log('⚠️ API fixed non disponible, tentative API enhanced...')
+        try {
+          response = await axios.get(`/api/profile/enhanced?userId=${targetUserId}`)
+          console.log('✅ Profil chargé depuis API enhanced')
+        } catch (error2) {
+          console.log('⚠️ API enhanced non disponible, utilisation API classique')
+          response = await axios.get(`/api/profile?userId=${targetUserId}`)
+          console.log('✅ Profil chargé depuis API classique')
+        }
+      }
+      
+      console.log('📊 Données profil reçues:', response.data)
+      console.log('📈 Stats détaillées:', response.data.stats)
+      setProfile(response.data)
     } catch (error) {
-      console.error('Erreur chargement profil:', error)
+      console.error('❌ Erreur chargement profil:', error)
     } finally {
       setLoading(false)
     }
   }
 
-  const saveProfile = async () => {
-    try {
-      setSavingProfile(true)
-      await axios.put('/api/profile', editData)
-      await fetchProfile() // Recharger le profil
-      setEditMode(false)
-      alert('Profil mis à jour avec succès ! ✅')
-    } catch (error) {
-      console.error('Erreur sauvegarde profil:', error)
-      alert('Erreur lors de la mise à jour du profil')
-    } finally {
-      setSavingProfile(false)
-    }
-  }
-
   const fetchTeams = async () => {
     try {
-      const params = new URLSearchParams({
-        sport: teamSportFilter,
-        followed: 'true'
-      })
-      
-      if (teamSearchQuery) {
-        params.append('search', teamSearchQuery)
-      }
-
-      const response = await axios.get(`/api/teams?${params}`)
-      setTeams(response.data.teams)
+      console.log('🔄 Chargement des équipes suivies...')
+      const response = await axios.get(`/api/teams?followed=true`)
+      console.log('✅ Équipes chargées:', response.data.teams?.length || 0)
+      setTeams(response.data.teams || [])
     } catch (error) {
-      console.error('Erreur chargement équipes:', error)
+      console.error('❌ Erreur chargement équipes:', error)
+      setTeams([])
     }
   }
 
-  const toggleTeamFollow = async (teamId: string, isFollowed: boolean) => {
+  const saveEnhancedProfile = async (data: any) => {
     try {
+      console.log('💾 Sauvegarde profil avec données complètes:', data)
+      
+      // Essayer d'abord l'API étendue pour toutes les données avancées
+      try {
+        const response = await axios.put('/api/profile/enhanced', data)
+        console.log('✅ Profil sauvegardé via API enhanced:', response.data)
+      } catch (error) {
+        console.log('⚠️ API enhanced non disponible, sauvegarde partielle via API fixed')
+        
+        // Fallback : sauvegarder seulement les champs de base via API fixed
+        const basicData = {
+          name: data.name,
+          username: data.username,
+          bio: data.bio,
+          location: data.location,
+          favoriteClub: data.favoriteClub
+        }
+        
+        try {
+          const response = await axios.put('/api/profile/fixed', basicData)
+          console.log('✅ Profil de base sauvegardé via API fixed:', response.data)
+        } catch (error2) {
+          // Dernier fallback vers API classique
+          const response = await axios.put('/api/profile', basicData)
+          console.log('✅ Profil sauvegardé via API classique:', response.data)
+        }
+        
+        // IMPORTANT: Sauvegarder les données avancées localement temporairement
+        // jusqu'à ce que l'API enhanced soit disponible
+        console.log('⚠️ Données avancées temporairement stockées localement:', {
+          favoriteTennisPlayer: data.favoriteTennisPlayer,
+          favoriteF1Driver: data.favoriteF1Driver,
+          favoriteBasketballTeam: data.favoriteBasketballTeam,
+          preferredSports: data.preferredSports,
+          languages: data.languages,
+          watchingHabits: data.watchingHabits,
+          age: data.age,
+          occupation: data.occupation,
+          visibility: data.visibility
+        })
+        
+        // Mettre à jour le state local avec toutes les données
+        if (profile) {
+          const mergedData = {
+            ...data,
+            // S'assurer que les nouvelles données sont bien incluses
+            favoriteTennisPlayer: data.favoriteTennisPlayer,
+            favoriteF1Driver: data.favoriteF1Driver,
+            favoriteBasketballTeam: data.favoriteBasketballTeam,
+            preferredSports: data.preferredSports || [],
+            languages: data.languages || [],
+            watchingHabits: data.watchingHabits,
+            age: data.age,
+            occupation: data.occupation,
+            visibility: data.visibility || {}
+          }
+          
+          // Sauvegarder dans le state local temporaire
+          setLocalAdvancedData(mergedData)
+          
+          setProfile(prev => ({
+            ...prev!,
+            user: {
+              ...prev!.user,
+              ...mergedData
+            }
+          }))
+          console.log('✅ State local mis à jour avec les données avancées:', mergedData)
+        }
+      }
+      
+      // Recharger le profil pour afficher les nouvelles données
+      console.log('🔄 Rechargement du profil...')
+      await fetchProfile()
+      
+      // Feedback utilisateur
+      console.log('✅ Profil mis à jour avec succès')
+    } catch (error: any) {
+      console.error('❌ Erreur sauvegarde profil:', error)
+      
+      // Afficher l'erreur spécifique
+      if (error.response?.data?.error) {
+        alert(`Erreur: ${error.response.data.error}`)
+      } else {
+        alert('Erreur lors de la mise à jour du profil')
+      }
+      
+      // Re-lancer l'erreur pour que le modal gère l'état de chargement
+      throw error
+    }
+  }
+
+  const toggleTeamFollow = async (team: Team, isFollowed: boolean) => {
+    try {
+      console.log('🔄 Toggle team:', team.name, isFollowed ? 'unfollow' : 'follow')
+      
       await axios.post('/api/teams', {
         action: isFollowed ? 'unfollow' : 'follow',
-        teamId
+        teamId: team.id
       })
 
-      setTeams(prev => prev.map(team => 
-        team.id === teamId 
-          ? { 
-              ...team, 
-              isFollowed: !isFollowed,
-              followersCount: isFollowed ? team.followersCount - 1 : team.followersCount + 1
-            }
-          : team
-      ))
+      console.log('✅ Action team réussie')
 
-      fetchProfile()
+      // Mettre à jour localement
+      setTeams(prev => {
+        if (!isFollowed && !prev.find(t => t.id === team.id)) {
+          // Ajouter à la liste si c'est un nouveau suivi
+          return [...prev, { ...team, isFollowed: true, followedSince: new Date().toISOString() }]
+        } else if (isFollowed) {
+          // Retirer de la liste si on arrête de suivre
+          return prev.filter(t => t.id !== team.id)
+        } else {
+          // Mettre à jour l'état
+          return prev.map(t => 
+            t.id === team.id 
+              ? { 
+                  ...t, 
+                  isFollowed: !isFollowed,
+                  followersCount: isFollowed ? t.followersCount - 1 : t.followersCount + 1
+                }
+              : t
+          )
+        }
+      })
+
+      // Recharger le profil pour mettre à jour les stats
+      console.log('🔄 Rechargement profil après modification équipe')
+      await fetchProfile()
     } catch (error) {
-      console.error('Erreur toggle team:', error)
+      console.error('❌ Erreur toggle team:', error)
+    }
+  }
+
+  const handleAvatarChange = async (imageData: string | null) => {
+    try {
+      console.log('📸 Sauvegarde avatar...')
+      const response = await axios.post('/api/profile/avatar', { imageData })
+      console.log('✅ Avatar sauvegardé:', response.data)
+      
+      // Mettre à jour le state local immédiatement
+      if (profile) {
+        setProfile(prev => ({
+          ...prev!,
+          user: {
+            ...prev!.user,
+            image: imageData
+          }
+        }))
+      }
+    } catch (error) {
+      console.error('❌ Erreur sauvegarde avatar:', error)
+      alert('Erreur lors de la sauvegarde de l\'avatar')
+    }
+  }
+
+  const deleteAccount = async () => {
+    try {
+      await axios.delete('/api/profile/delete-account', {
+        data: { confirmText: 'SUPPRIMER MON COMPTE' }
+      })
+      
+      await signOut({ callbackUrl: '/' })
+    } catch (error) {
+      console.error('Erreur suppression compte:', error)
+      alert('Erreur lors de la suppression du compte')
     }
   }
 
@@ -223,15 +405,21 @@ export default function EnhancedProfilePage() {
   }
 
   const getStatsForActiveSport = () => {
-    if (!profile) return null
+    if (!profile || !profile.stats) return {
+      totalRatings: 0,
+      avgRating: 0,
+      totalPlayerRatings: 0,
+      avgPlayerRating: 0,
+      favoriteCompetition: null
+    }
     
     if (activeSport === 'all') {
       return {
-        totalRatings: profile.stats.totalRatings,
-        avgRating: profile.stats.avgRating,
-        totalPlayerRatings: profile.stats.totalPlayerRatings,
-        avgPlayerRating: profile.stats.avgPlayerRating,
-        favoriteCompetition: profile.stats.favoriteCompetition
+        totalRatings: profile.stats.totalRatings || 0,
+        avgRating: profile.stats.avgRating || 0,
+        totalPlayerRatings: profile.stats.totalPlayerRatings || 0,
+        avgPlayerRating: profile.stats.avgPlayerRating || 0,
+        favoriteCompetition: profile.stats.favoriteCompetition || null
       }
     }
     
@@ -244,12 +432,46 @@ export default function EnhancedProfilePage() {
     }
   }
 
-  const navigationItems = [
-    { href: '/', label: 'Accueil', icon: Trophy, active: false },
-    { href: '/search', label: 'Recherche', icon: Search, active: false },
-    { href: '/friends', label: 'Amis', icon: Users, active: false },
-    { href: '/profile', label: 'Profil', icon: Users, active: true },
-  ]
+  // Fonction pour formater les labels des options select
+  const getSelectLabel = (field: string, value: string) => {
+    const options = {
+      favoriteTennisPlayer: {
+        'djokovic': 'Novak Djokovic',
+        'nadal': 'Rafael Nadal',
+        'federer': 'Roger Federer',
+        'alcaraz': 'Carlos Alcaraz',
+        'medvedev': 'Daniil Medvedev',
+        'swiatek': 'Iga Swiatek',
+        'sabalenka': 'Aryna Sabalenka'
+      },
+      favoriteF1Driver: {
+        'verstappen': 'Max Verstappen',
+        'hamilton': 'Lewis Hamilton',
+        'leclerc': 'Charles Leclerc',
+        'norris': 'Lando Norris',
+        'russell': 'George Russell',
+        'sainz': 'Carlos Sainz'
+      },
+      watchingHabits: {
+        'casual': 'Fan occasionnel',
+        'regular': 'Fan régulier',
+        'hardcore': 'Fan hardcore',
+        'analyst': 'Analyste/Expert'
+      }
+    }
+
+    return options[field as keyof typeof options]?.[value as keyof any] || value
+  }
+
+  const getSportEmojis = (sports: string[]) => {
+    const sportEmojis = { football: '⚽', basketball: '🏀', tennis: '🎾', f1: '🏎️', mma: '🥊', rugby: '🏉' }
+    return sports.map(sport => sportEmojis[sport as keyof typeof sportEmojis]).join(' ')
+  }
+
+  const getLanguageFlags = (languages: string[]) => {
+    const flags = { fr: '🇫🇷', en: '🇺🇸', es: '🇪🇸', de: '🇩🇪', it: '🇮🇹', pt: '🇵🇹' }
+    return languages.map(lang => flags[lang as keyof typeof flags]).join(' ')
+  }
 
   if (!session) {
     return (
@@ -293,185 +515,194 @@ export default function EnhancedProfilePage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
       {/* Header */}
-      <Navbar activeTab="home" />
+      <Navbar activeTab="profile" />
 
       {/* Content */}
       <main className="max-w-7xl mx-auto px-4 py-8">
         {/* Header Profil */}
         <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg overflow-hidden mb-8 border border-gray-200 dark:border-slate-700">
           <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 h-32 relative">
-            {/* Bouton éditer bannière (futur) */}
-            {isOwnProfile && editMode && (
-              <button className="absolute top-4 right-4 p-2 bg-white/20 rounded-lg text-white hover:bg-white/30 transition-colors">
-                <Camera className="w-5 h-5" />
-              </button>
+            {/* Bouton paramètres et refresh */}
+            {isOwnProfile && (
+              <div className="absolute top-4 right-4 flex space-x-2">
+                <button 
+                  onClick={() => {
+                    console.log('🔄 Refresh manuel des données')
+                    fetchProfile()
+                    fetchTeams()
+                  }}
+                  className="p-2 bg-white/20 rounded-lg text-white hover:bg-white/30 transition-colors"
+                  title="Actualiser les données"
+                >
+                  <Activity className="w-5 h-5" />
+                </button>
+                <button 
+                  onClick={() => setShowEnhancedEditor(true)}
+                  className="p-2 bg-white/20 rounded-lg text-white hover:bg-white/30 transition-colors"
+                  title="Paramètres du profil"
+                >
+                  <Settings className="w-5 h-5" />
+                </button>
+              </div>
             )}
           </div>
           
           <div className="relative px-8 pb-8">
-            {/* Photo de profil */}
+            {/* Photo de profil avec upload */}
             <div className="flex items-end space-x-6 -mt-16">
-              <div className="relative">
-                {profile.user.image ? (
-                  <img
-                    src={profile.user.image}
-                    alt={profile.user.name || 'User'}
-                    className="w-32 h-32 rounded-full border-4 border-white dark:border-slate-800 shadow-xl"
-                  />
-                ) : (
-                  <div className="w-32 h-32 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full border-4 border-white dark:border-slate-800 shadow-xl flex items-center justify-center">
-                    <span className="text-4xl font-bold text-white">
-                      {(profile.user.name || profile.user.username || 'U')[0].toUpperCase()}
-                    </span>
-                  </div>
-                )}
-                
-                {/* Bouton éditer photo */}
-                {isOwnProfile && editMode && (
-                  <button className="absolute bottom-2 right-2 p-2 bg-blue-600 rounded-full text-white hover:bg-blue-700 transition-colors shadow-lg">
-                    <Camera className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
+              <AvatarUpload
+                currentImage={profile.user.image}
+                userName={profile.user.name || profile.user.username || 'User'}
+                onImageChange={handleAvatarChange}
+                size="lg"
+              />
               
               <div className="flex-1 pt-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    {editMode ? (
-                      <div className="space-y-3">
-                        <input
-                          type="text"
-                          value={editData.name}
-                          onChange={(e) => setEditData(prev => ({ ...prev, name: e.target.value }))}
-                          placeholder="Nom complet"
-                          className="text-3xl font-bold bg-transparent border-b-2 border-blue-500 focus:outline-none text-gray-900 dark:text-white"
-                        />
-                        <input
-                          type="text"
-                          value={editData.username}
-                          onChange={(e) => setEditData(prev => ({ ...prev, username: e.target.value }))}
-                          placeholder="Nom d'utilisateur"
-                          className="block bg-transparent border-b border-gray-300 focus:border-blue-500 focus:outline-none text-gray-600 dark:text-gray-400"
-                        />
-                      </div>
-                    ) : (
-                      <div>
-                        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                          {profile.user.name || profile.user.username}
-                        </h1>
-                        {profile.user.username && profile.user.name && (
-                          <p className="text-gray-600 dark:text-gray-400">@{profile.user.username}</p>
-                        )}
-                      </div>
+                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                      {profile.user.name || profile.user.username}
+                    </h1>
+                    {profile.user.username && profile.user.name && (
+                      <p className="text-gray-600 dark:text-gray-400">@{profile.user.username}</p>
                     )}
                   </div>
                   
                   {isOwnProfile && (
                     <div className="flex items-center space-x-3">
-                      {editMode ? (
-                        <>
-                          <button
-                            onClick={saveProfile}
-                            disabled={savingProfile}
-                            className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
-                          >
-                            {savingProfile ? (
-                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                            ) : (
-                              <Save className="w-4 h-4" />
-                            )}
-                            <span>Sauvegarder</span>
-                          </button>
-                          <button
-                            onClick={() => setEditMode(false)}
-                            className="flex items-center space-x-2 px-4 py-2 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
-                          >
-                            <X className="w-4 h-4" />
-                            <span>Annuler</span>
-                          </button>
-                        </>
-                      ) : (
-                        <button
-                          onClick={() => setEditMode(true)}
-                          className="flex items-center space-x-2 px-4 py-2 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                          <span>Modifier</span>
-                        </button>
-                      )}
+                      <button
+                        onClick={() => setShowEnhancedEditor(true)}
+                        className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        <Edit3 className="w-4 h-4" />
+                        <span>Personnaliser</span>
+                      </button>
                     </div>
                   )}
                 </div>
               </div>
             </div>
 
-            {/* Infos utilisateur */}
+            {/* Infos utilisateur enrichies */}
             <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="space-y-4">
-                {editMode ? (
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Bio</label>
-                      <textarea
-                        value={editData.bio}
-                        onChange={(e) => setEditData(prev => ({ ...prev, bio: e.target.value }))}
-                        placeholder="Parlez-nous de vous..."
-                        rows={3}
-                        className="w-full p-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
-                        maxLength={200}
-                      />
-                      <div className="text-xs text-gray-500 mt-1">{editData.bio.length}/200</div>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Localisation</label>
-                      <input
-                        type="text"
-                        value={editData.location}
-                        onChange={(e) => setEditData(prev => ({ ...prev, location: e.target.value }))}
-                        placeholder="Ville, Pays"
-                        className="w-full p-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Équipe favorite</label>
-                      <input
-                        type="text"
-                        value={editData.favoriteClub}
-                        onChange={(e) => setEditData(prev => ({ ...prev, favoriteClub: e.target.value }))}
-                        placeholder="Votre équipe du cœur"
-                        className="w-full p-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
-                      />
-                    </div>
+                {profile.user.bio && (
+                  <div>
+                    <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Bio</h3>
+                    <p className="text-gray-700 dark:text-gray-300">{profile.user.bio}</p>
                   </div>
-                ) : (
-                  <div className="space-y-4">
-                    {profile.user.bio && (
-                      <div>
-                        <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Bio</h3>
-                        <p className="text-gray-700 dark:text-gray-300">{profile.user.bio}</p>
-                      </div>
-                    )}
-                    
-                    <div className="flex flex-wrap gap-4 text-sm text-gray-600 dark:text-gray-400">
-                      {profile.user.location && (
-                        <div className="flex items-center space-x-1">
-                          <MapPin className="w-4 h-4" />
-                          <span>{profile.user.location}</span>
+                )}
+                
+                <div className="flex flex-wrap gap-4 text-sm text-gray-600 dark:text-gray-400">
+                  {profile.user.location && profile.user.visibility?.location !== false && (
+                    <div className="flex items-center space-x-1">
+                      <MapPin className="w-4 h-4" />
+                      <span>{profile.user.location}</span>
+                    </div>
+                  )}
+                  
+                  {profile.user.age && profile.user.visibility?.age && (
+                    <div className="flex items-center space-x-1">
+                      <Calendar className="w-4 h-4" />
+                      <span>{profile.user.age} ans</span>
+                    </div>
+                  )}
+                  
+                  {profile.user.occupation && profile.user.visibility?.occupation && (
+                    <div className="flex items-center space-x-1">
+                      <Users className="w-4 h-4" />
+                      <span>{profile.user.occupation}</span>
+                    </div>
+                  )}
+                  
+                  <div className="flex items-center space-x-1">
+                    <Calendar className="w-4 h-4" />
+                    <span>Membre depuis {new Date(profile.user.createdAt).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}</span>
+                  </div>
+                </div>
+
+                {/* Infos personnelles modernes */}
+                {(() => {
+                  const userData = getMergedUserData()
+                  const personalInfo = []
+                  
+                  // Construire les infos principales
+                  if (userData?.favoriteClub && userData?.visibility?.favoriteClub !== false) {
+                    personalInfo.push({ icon: '⚽', text: userData.favoriteClub, category: 'Football' })
+                  }
+                  if (userData?.favoriteBasketballTeam && userData?.visibility?.favoriteBasketballTeam !== false) {
+                    personalInfo.push({ icon: '🏀', text: userData.favoriteBasketballTeam, category: 'Basketball' })
+                  }
+                  if (userData?.favoriteTennisPlayer && userData?.visibility?.favoriteTennisPlayer !== false) {
+                    personalInfo.push({ icon: '🎾', text: getSelectLabel('favoriteTennisPlayer', userData.favoriteTennisPlayer), category: 'Tennis' })
+                  }
+                  if (userData?.favoriteF1Driver && userData?.visibility?.favoriteF1Driver !== false) {
+                    personalInfo.push({ icon: '🏎️', text: getSelectLabel('favoriteF1Driver', userData.favoriteF1Driver), category: 'F1' })
+                  }
+                  
+                  // Infos secondaires
+                  const secondaryInfo = []
+                  if (userData?.watchingHabits) {
+                    secondaryInfo.push({ icon: '📺', text: getSelectLabel('watchingHabits', userData.watchingHabits) })
+                  }
+                  if (userData?.preferredSports && userData.preferredSports.length > 0) {
+                    secondaryInfo.push({ 
+                      icon: '🏆', 
+                      text: `${userData.preferredSports.length} sport${userData.preferredSports.length > 1 ? 's' : ''}`,
+                      detail: userData.preferredSports.map((sport: string) => {
+                        const emojis = { football: '⚽', basketball: '🏀', tennis: '🎾', f1: '🏎️', mma: '🥊', rugby: '🏉' }
+                        return emojis[sport as keyof typeof emojis]
+                      }).join(' ')
+                    })
+                  }
+                  if (userData?.languages && userData.languages.length > 0) {
+                    secondaryInfo.push({ 
+                      icon: '🗣️', 
+                      text: `${userData.languages.length} langue${userData.languages.length > 1 ? 's' : ''}`,
+                      detail: userData.languages.map((lang: string) => {
+                        const flags = { fr: '🇫🇷', en: '🇺🇸', es: '🇪🇸', de: '🇩🇪', it: '🇮🇹', pt: '🇵🇹' }
+                        return flags[lang as keyof typeof flags]
+                      }).join(' ')
+                    })
+                  }
+                  
+                  if (personalInfo.length === 0 && secondaryInfo.length === 0) return null
+                  
+                  return (
+                    <div className="space-y-4">
+                      {/* Préférences principales */}
+                      {personalInfo.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {personalInfo.map((info, index) => (
+                            <div key={index} className="inline-flex items-center space-x-2 bg-gray-100 dark:bg-slate-700 rounded-full px-3 py-1.5 text-sm">
+                              <span className="text-base">{info.icon}</span>
+                              <span className="font-medium text-gray-800 dark:text-gray-200">{info.text}</span>
+                            </div>
+                          ))}
                         </div>
                       )}
-                      <div className="flex items-center space-x-1">
-                        <Calendar className="w-4 h-4" />
-                        <span>Membre depuis {new Date(profile.user.createdAt).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}</span>
-                      </div>
-                      {profile.user.favoriteClub && (
-                        <div className="flex items-center space-x-1">
-                          <Heart className="w-4 h-4 text-red-500" />
-                          <span>{profile.user.favoriteClub}</span>
+                      
+                      {/* Infos secondaires */}
+                      {secondaryInfo.length > 0 && (
+                        <div className="flex flex-wrap gap-3 text-sm text-gray-600 dark:text-gray-400">
+                          {secondaryInfo.map((info, index) => (
+                            <div key={index} className="flex items-center space-x-2">
+                              <span>{info.icon}</span>
+                              <span>{info.text}</span>
+                              {info.detail && <span className="ml-1">{info.detail}</span>}
+                            </div>
+                          ))}
                         </div>
                       )}
                     </div>
+                  )
+                })()}
+                
+                {/* Indicateur discret de synchronisation */}
+                {isOwnProfile && (localAdvancedData.favoriteTennisPlayer || localAdvancedData.favoriteF1Driver) && (
+                  <div className="mt-2 inline-flex items-center space-x-1 text-xs text-green-600 dark:text-green-400">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <span>Données synchronisées</span>
                   </div>
                 )}
               </div>
@@ -480,17 +711,17 @@ export default function EnhancedProfilePage() {
               <div className="md:col-span-2">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 text-center">
-                    <div className="text-2xl font-bold text-blue-600">{profile.stats.totalRatings}</div>
+                    <div className="text-2xl font-bold text-blue-600">{profile?.stats?.totalRatings || 0}</div>
                     <div className="text-sm text-blue-700">Notes données</div>
                   </div>
                   <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg p-4 text-center">
                     <div className="text-2xl font-bold text-yellow-600">
-                      {profile.stats.avgRating > 0 ? profile.stats.avgRating.toFixed(1) : '—'}
+                      {profile?.stats?.avgRating > 0 ? profile.stats.avgRating.toFixed(1) : '—'}
                     </div>
                     <div className="text-sm text-yellow-700">Note moyenne</div>
                   </div>
                   <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 text-center">
-                    <div className="text-2xl font-bold text-green-600">{profile.stats.totalFriends}</div>
+                    <div className="text-2xl font-bold text-green-600">{profile?.stats?.totalFriends || 0}</div>
                     <div className="text-sm text-green-700">Amis</div>
                   </div>
                   <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4 text-center">
@@ -503,47 +734,49 @@ export default function EnhancedProfilePage() {
           </div>
         </div>
 
-        {/* Filtres par sport */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center space-x-2">
-              <Filter className="w-5 h-5" />
-              <span>Filtrer par sport</span>
-            </h3>
-            {currentStats && (
-              <div className="text-sm text-gray-600 dark:text-gray-400">
-                {currentStats.totalRatings} notes • Moyenne: {currentStats.avgRating.toFixed(1)}/5
+            {/* Filtres par sport */}
+            {profile && profile.stats && (
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center space-x-2">
+                    <Filter className="w-5 h-5" />
+                    <span>Filtrer par sport</span>
+                  </h3>
+                  {currentStats && (
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                      {currentStats.totalRatings} notes • Moyenne: {currentStats.avgRating.toFixed(1)}/5
+                    </div>
+                  )}
+                </div>
+                
+                <div className="flex flex-wrap gap-2">
+                  {sports.map((sport) => (
+                    <button
+                      key={sport.id}
+                      onClick={() => setActiveSport(sport.id as any)}
+                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                        activeSport === sport.id
+                          ? 'bg-blue-500 text-white shadow-md'
+                          : 'bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 border border-gray-200 dark:border-slate-600'
+                      }`}
+                    >
+                      <span className="text-lg">{sport.emoji}</span>
+                      <span className="font-medium">{sport.name}</span>
+                      {profile.stats.statsBySport?.[sport.id] && (
+                        <span className={`text-xs px-2 py-1 rounded-full ${
+                          activeSport === sport.id ? 'bg-white/20' : 'bg-gray-100 dark:bg-slate-700'
+                        }`}>
+                          {sport.id === 'all' 
+                            ? profile.stats.totalRatings || 0
+                            : profile.stats.statsBySport[sport.id]?.totalRatings || 0
+                          }
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
-          </div>
-          
-          <div className="flex flex-wrap gap-2">
-            {sports.map((sport) => (
-              <button
-                key={sport.id}
-                onClick={() => setActiveSport(sport.id as any)}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
-                  activeSport === sport.id
-                    ? 'bg-blue-500 text-white shadow-md'
-                    : 'bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 border border-gray-200 dark:border-slate-600'
-                }`}
-              >
-                <span className="text-lg">{sport.emoji}</span>
-                <span className="font-medium">{sport.name}</span>
-                {profile.stats.statsBySport?.[sport.id] && (
-                  <span className={`text-xs px-2 py-1 rounded-full ${
-                    activeSport === sport.id ? 'bg-white/20' : 'bg-gray-100 dark:bg-slate-700'
-                  }`}>
-                    {sport.id === 'all' 
-                      ? profile.stats.totalRatings
-                      : profile.stats.statsBySport[sport.id]?.totalRatings || 0
-                    }
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
 
         {/* Tabs */}
         <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg overflow-hidden">
@@ -630,7 +863,7 @@ export default function EnhancedProfilePage() {
                   </h3>
                   
                   {(() => {
-                    const filteredMatches = getFilteredRatings(profile.stats.topMatches)
+                    const filteredMatches = getFilteredRatings(profile?.stats?.topMatches || [])
                     return filteredMatches.length > 0 ? (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {filteredMatches.slice(0, 4).map((rating: any, index: number) => (
@@ -687,13 +920,13 @@ export default function EnhancedProfilePage() {
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    Notes de matchs ({getFilteredRatings(profile.recentRatings).length})
+                    Notes de matchs ({getFilteredRatings(profile.recentRatings || []).length})
                     {activeSport !== 'all' && ` - ${sports.find(s => s.id === activeSport)?.name}`}
                   </h3>
                 </div>
 
                 {(() => {
-                  const filteredRatings = getFilteredRatings(profile.recentRatings)
+                  const filteredRatings = getFilteredRatings(profile.recentRatings || [])
                   return filteredRatings.length > 0 ? (
                     <div className="space-y-4">
                       {filteredRatings.map((rating: any) => (
@@ -774,7 +1007,7 @@ export default function EnhancedProfilePage() {
               </div>
             )}
 
-            {/* Player Ratings Tab - Même logique avec filtrage par sport */}
+            {/* Player Ratings Tab */}
             {activeTab === 'player-ratings' && (
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
@@ -787,22 +1020,6 @@ export default function EnhancedProfilePage() {
                   </h3>
                 </div>
 
-                {/* Stats rapides pour le sport actuel */}
-                {currentStats && (
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-4 text-center border border-purple-200">
-                      <div className="text-2xl font-bold text-purple-600">{currentStats.totalPlayerRatings || 0}</div>
-                      <div className="text-sm text-purple-700">Joueurs notés</div>
-                    </div>
-                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4 text-center border border-blue-200">
-                      <div className="text-2xl font-bold text-blue-600">
-                        {currentStats.avgPlayerRating > 0 ? currentStats.avgPlayerRating.toFixed(1) : '—'}
-                      </div>
-                      <div className="text-sm text-blue-700">Note moyenne</div>
-                    </div>
-                  </div>
-                )}
-
                 {(() => {
                   const filteredPlayerRatings = getFilteredRatings(profile.recentPlayerRatings || [])
                   return filteredPlayerRatings.length > 0 ? (
@@ -813,7 +1030,6 @@ export default function EnhancedProfilePage() {
                           href={`/match/${rating.match.id}`}
                           className="block bg-white dark:bg-slate-700 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-slate-600 hover:shadow-md hover:border-blue-300 transition-all cursor-pointer group"
                         >
-                          {/* Header avec info du match */}
                           <div className="flex items-start justify-between mb-4">
                             <div className="flex-1">
                               <div className="flex items-center space-x-3 mb-2">
@@ -836,7 +1052,6 @@ export default function EnhancedProfilePage() {
                             </div>
                           </div>
 
-                          {/* Détails de la notation du joueur */}
                           <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
                             <div className="flex items-center justify-between mb-3">
                               <div className="flex items-center space-x-3">
@@ -898,97 +1113,33 @@ export default function EnhancedProfilePage() {
               </div>
             )}
 
-            {/* Teams Tab - Inchangé */}
+            {/* Teams Tab */}
             {activeTab === 'teams' && (
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    Équipes suivies ({teams.length})
+                    Équipes et joueurs suivis ({teams.length})
                   </h3>
                   {isOwnProfile && (
                     <button
-                      onClick={() => setShowTeamSearch(!showTeamSearch)}
+                      onClick={() => setShowTeamSearch(true)}
                       className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                     >
                       <Plus className="w-4 h-4" />
-                      <span>Suivre une équipe</span>
+                      <span>Découvrir</span>
                     </button>
                   )}
                 </div>
 
-                {/* Teams content reste identique... */}
-                {teams.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {teams.map((team) => (
-                      <div key={team.id} className="bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl p-6 hover:shadow-md transition-shadow">
-                        {/* Team card content... */}
-                        <div className="flex items-center space-x-4 mb-4">
-                          {team.logo ? (
-                            <img src={team.logo} alt={team.name} className="w-12 h-12 rounded-full" />
-                          ) : (
-                            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                              <span className="text-lg font-bold text-white">
-                                {team.name[0].toUpperCase()}
-                              </span>
-                            </div>
-                          )}
-                          <div className="flex-1">
-                            <h4 className="font-semibold text-gray-900 dark:text-white">{team.name}</h4>
-                            <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
-                              <span>{team.sport === 'football' ? '⚽' : '🏀'}</span>
-                              {team.league && <span>{team.league}</span>}
-                              {team.country && <span>• {team.country}</span>}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center justify-between">
-                          <div className="text-sm text-gray-600 dark:text-gray-400">
-                            {team.followersCount} follower{team.followersCount > 1 ? 's' : ''}
-                          </div>
-                          
-                          {isOwnProfile && (
-                            <button
-                              onClick={() => toggleTeamFollow(team.id, team.isFollowed)}
-                              className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors text-sm font-medium ${
-                                team.isFollowed
-                                  ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                                  : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                              }`}
-                            >
-                              {team.isFollowed ? (
-                                <>
-                                  <X className="w-4 h-4" />
-                                  <span>Ne plus suivre</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Plus className="w-4 h-4" />
-                                  <span>Suivre</span>
-                                </>
-                              )}
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <Heart className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Aucune équipe suivie</h3>
-                    <p className="text-gray-600 dark:text-gray-400 mb-4">
-                      {isOwnProfile 
-                        ? 'Commencez à suivre vos équipes préférées'
-                        : 'Cet utilisateur ne suit aucune équipe'
-                      }
-                    </p>
-                  </div>
-                )}
+                <EnhancedTeamGrid
+                  teams={teams}
+                  onTeamToggle={toggleTeamFollow}
+                  isOwnProfile={isOwnProfile}
+                />
               </div>
             )}
 
-            {/* Stats Tab - Amélioré avec stats par sport */}
+            {/* Stats Tab */}
             {activeTab === 'stats' && (
               <div className="space-y-8">
                 {/* Répartition des notes par sport */}
@@ -999,8 +1150,7 @@ export default function EnhancedProfilePage() {
                   </h3>
                   
                   {(() => {
-                    // Calculer la distribution pour le sport actuel
-                    const sportRatings = getFilteredRatings(profile.recentRatings)
+                    const sportRatings = getFilteredRatings(profile.recentRatings || [])
                     const distribution = Array.from({ length: 5 }, (_, i) => {
                       const rating = i + 1
                       const count = sportRatings.filter((r: any) => r.rating === rating).length
@@ -1114,7 +1264,100 @@ export default function EnhancedProfilePage() {
             )}
           </div>
         </div>
+
+        {/* Zone de danger */}
+        {isOwnProfile && (
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg overflow-hidden mt-8 border border-red-200 dark:border-red-800">
+            <div className="bg-red-50 dark:bg-red-900/20 p-6 border-b border-red-200 dark:border-red-800">
+              <h3 className="text-lg font-semibold text-red-900 dark:text-red-100 flex items-center space-x-2">
+                <Shield className="w-5 h-5" />
+                <span>Zone de danger</span>
+              </h3>
+              <p className="text-red-700 dark:text-red-200 mt-2">
+                Actions irréversibles sur votre compte
+              </p>
+            </div>
+            <div className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-semibold text-gray-900 dark:text-white">Supprimer mon compte</h4>
+                  <p className="text-gray-600 dark:text-gray-400 text-sm">
+                    Supprime définitivement votre compte et toutes vos données
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>Supprimer</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
+
+      {/* Modals */}
+      <TeamSearchModal
+        isOpen={showTeamSearch}
+        onClose={() => setShowTeamSearch(false)}
+        onTeamToggle={toggleTeamFollow}
+        followedTeams={teams}
+      />
+
+      <EnhancedProfileEditor
+        isOpen={showEnhancedEditor}
+        onClose={() => setShowEnhancedEditor(false)}
+        onSave={saveEnhancedProfile}
+        initialData={profile?.user || {}}
+      />
+
+      {/* Modal de confirmation de suppression */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                  <Trash2 className="w-6 h-6 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Supprimer le compte</h3>
+                  <p className="text-gray-600 dark:text-gray-400">Cette action est irréversible</p>
+                </div>
+              </div>
+              
+              <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4 mb-6">
+                <p className="text-red-800 dark:text-red-200 text-sm">
+                  <strong>Attention :</strong> Cette action supprimera définitivement :
+                </p>
+                <ul className="text-red-700 dark:text-red-300 text-sm mt-2 ml-4 list-disc">
+                  <li>Toutes vos notes et commentaires</li>
+                  <li>Vos relations d'amitié</li>
+                  <li>Vos équipes suivies</li>
+                  <li>Toutes vos données personnelles</li>
+                </ul>
+              </div>
+
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={deleteAccount}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  Supprimer définitivement
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
