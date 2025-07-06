@@ -79,7 +79,7 @@ export default function SignIn({ providers }: SignInPageProps) {
               <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur">
                 <Trophy className="w-6 h-6 text-white" />
               </div>
-              <span className="text-3xl font-bold">FootRate</span>
+              <span className="text-3xl font-bold">Sporating</span>
             </div>
             
             <h1 className="text-4xl font-bold mb-4">

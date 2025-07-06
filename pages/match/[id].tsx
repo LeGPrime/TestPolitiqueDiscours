@@ -542,7 +542,7 @@ function MatchRatingSidebar({
               onChange={(e) => setComment(e.target.value)}
               className="w-full p-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all resize-none"
               rows={4}
-              placeholder={`Qu'avez-vous pensé de cet événement ${getSportEmoji(match.sport)} ?`}
+              placeholder={`Qu'avez-vous pensé de cet événement ?${getSportEmoji(match.sport)}`}
               maxLength={300}
             />
             <div className="text-xs text-gray-500 mt-1 text-right">

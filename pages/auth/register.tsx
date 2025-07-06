@@ -101,7 +101,7 @@ export default function Register() {
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Compte créé !</h1>
           <p className="text-gray-600 mb-4">
-            Bienvenue sur FootRate ! Connexion en cours...
+            Bienvenue sur Sporating ! Connexion en cours...
           </p>
           <div className="flex items-center justify-center">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
@@ -121,7 +121,7 @@ export default function Register() {
               <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur">
                 <Trophy className="w-6 h-6 text-white" />
               </div>
-              <span className="text-3xl font-bold">FootRate</span>
+              <span className="text-3xl font-bold">Sporating</span>
             </div>
             
             <h1 className="text-4xl font-bold mb-4">
@@ -155,7 +155,7 @@ export default function Register() {
               <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-green-500 rounded-lg flex items-center justify-center">
                 <Trophy className="w-6 h-6 text-white" />
               </div>
-              <span className="text-2xl font-bold text-gray-900">FootRate</span>
+              <span className="text-2xl font-bold text-gray-900">Sporating</span>
             </div>
 
             <div className="text-center mb-8">
@@ -163,7 +163,7 @@ export default function Register() {
                 Créer un compte
               </h2>
               <p className="text-gray-600">
-                Rejoignez FootRate en quelques secondes
+                Rejoignez Sporating en quelques secondes
               </p>
             </div>
 

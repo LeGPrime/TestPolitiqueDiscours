@@ -10,7 +10,7 @@ function FootRateApp({ Component, pageProps: { session, ...pageProps } }: AppPro
   return (
     <>
       <Head>
-        <title>SportRate - Le Letterboxd du sport</title>
+        <title>Sporating - Ton oeil sur le jeu</title>
         <meta name="description" content="Notez et découvrez les meilleurs événements sportifs" />
         
         {/* 📱 META TAGS MOBILE ESSENTIELS */}

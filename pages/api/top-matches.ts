@@ -7,7 +7,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const { 
         period = 'all-time', 
         sortBy = 'rating', 
-        limit = '50' 
+        limit = '50',
+        sport = 'all'
       } = req.query
 
       // Filtre par période
@@ -32,6 +33,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           break
         default: // 'all-time'
           break
+      }
+
+      // Filtre par sport
+      let sportFilter = {}
+      if (sport !== 'all') {
+        sportFilter = { sport: sport.toString().toUpperCase() }
       }
 
       // Construire l'ordre de tri
@@ -60,6 +67,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const topMatches = await prisma.match.findMany({
         where: {
           ...dateFilter,
+          ...sportFilter,
           totalRatings: { gte: 1 }, // Au moins une note
           status: 'FINISHED'
         },
@@ -78,10 +86,57 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         take: parseInt(limit as string)
       })
 
-      res.status(200).json({ matches: topMatches })
+      // Ajouter des métadonnées pour les stats
+      const totalStats = await prisma.match.aggregate({
+        where: {
+          ...dateFilter,
+          ...sportFilter,
+          totalRatings: { gte: 1 },
+          status: 'FINISHED'
+        },
+        _count: { id: true },
+        _sum: { totalRatings: true },
+        _avg: { avgRating: true }
+      })
+
+      // Statistiques par sport si aucun filtre sport
+      let sportStats = null
+      if (sport === 'all') {
+        sportStats = await prisma.match.groupBy({
+          by: ['sport'],
+          where: {
+            ...dateFilter,
+            totalRatings: { gte: 1 },
+            status: 'FINISHED'
+          },
+          _count: { sport: true },
+          _avg: { avgRating: true },
+          _sum: { totalRatings: true }
+        })
+      }
+
+      console.log(`📊 Top Matches API called:`)
+      console.log(`   Period: ${period}`)
+      console.log(`   Sport: ${sport}`)
+      console.log(`   Sort: ${sortBy}`)
+      console.log(`   Found: ${topMatches.length} matches`)
+      console.log(`   Total ratings: ${totalStats._sum.totalRatings || 0}`)
+
+      res.status(200).json({ 
+        matches: topMatches,
+        stats: {
+          totalMatches: totalStats._count.id || 0,
+          totalRatings: totalStats._sum.totalRatings || 0,
+          averageRating: totalStats._avg.avgRating || 0,
+          sportBreakdown: sportStats
+        }
+      })
     } catch (error) {
-      console.error('Erreur top matchs:', error)
-      res.status(500).json({ error: 'Erreur serveur' })
+      console.error('❌ Erreur top matchs:', error)
+      res.status(500).json({ 
+        error: 'Erreur serveur',
+        details: error instanceof Error ? error.message : 'Erreur inconnue'
+      })
     }
   } else {
     res.setHeader('Allow', ['GET'])
