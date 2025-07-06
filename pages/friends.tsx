@@ -179,7 +179,7 @@ export default function FriendsPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
       {/* Header avec gradient */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-700 dark:to-purple-700 safe-top">
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-700 dark:to-purple-700">
         <Navbar activeTab="home" />
         
         {/* Hero Section */}

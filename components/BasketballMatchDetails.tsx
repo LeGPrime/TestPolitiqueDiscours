@@ -514,7 +514,7 @@ function BasketballPlayersTabFixed({ match, lineups, playerRatings, onRatePlayer
         <div className="p-6">
           {bench.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {bench.map((player, index) => (
+              {bench.map((player: any, index: number) => (
                 <NBABenchPlayerCardFixed
                   key={index}
                   player={player}

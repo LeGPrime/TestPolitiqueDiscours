@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/auto-import-sports",
+      "schedule": "0 */1 * * *"
+    }
+  ]
+}
