@@ -32,15 +32,20 @@
       "static/chunks/main.js",
       "static/chunks/pages/friends.js"
     ],
-    "/match/[id]": [
+    "/profile": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
-      "static/chunks/pages/match/[id].js"
+      "static/chunks/pages/profile.js"
     ],
-    "/search": [
+    "/top-matches": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
-      "static/chunks/pages/search.js"
+      "static/chunks/pages/top-matches.js"
+    ],
+    "/top-reviews": [
+      "static/chunks/webpack.js",
+      "static/chunks/main.js",
+      "static/chunks/pages/top-reviews.js"
     ]
   },
   "ampFirstPages": []

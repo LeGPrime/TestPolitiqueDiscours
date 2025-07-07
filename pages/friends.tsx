@@ -313,7 +313,7 @@ export default function FriendsPage() {
                             </h4>
                             <div className="flex items-center space-x-1 text-sm text-gray-600 dark:text-gray-400">
                               <Star className="w-3 h-3 text-yellow-500" />
-                              <span>{friend.totalRatings} notation{friend.totalRatings > 1 ? 's' : ''}</span>
+                              <span>{friend.totalRatings} Utilisateur récurrent{friend.totalRatings > 1 ? 's' : ''}</span>
                             </div>
                             <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-500 mt-1">
                               <Calendar className="w-3 h-3" />

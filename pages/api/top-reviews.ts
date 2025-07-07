@@ -1,7 +1,5 @@
-// pages/api/top-reviews.ts
+// pages/api/top-reviews.ts - VERSION SIMPLIFIÉE QUI MARCHE
 import { NextApiRequest, NextApiResponse } from 'next'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '../../lib/auth'
 import { prisma } from '../../lib/prisma'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -13,9 +11,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         limit = '50' 
       } = req.query
       
-      const session = await getServerSession(req, res, authOptions)
+      console.log('🏆 API Top Reviews appelée avec:', { period, sport, limit })
 
-      // Construire le filtre de date
+      // Construire le filtre de date simplement
       let dateFilter = {}
       const now = new Date()
       
@@ -42,24 +40,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         matchFilter = { sport: sport.toString().toUpperCase() }
       }
 
-      // Seuil minimum de likes pour apparaître dans le Hall of Fame
-      const MIN_LIKES_THRESHOLD = 3 // 🆕 Minimum 3 likes pour être visible
+      console.log('🔍 Filtres appliqués:', { dateFilter, matchFilter })
 
-      // Récupérer les reviews avec le plus de likes
-      const topReviews = await prisma.rating.findMany({
+      // Récupérer toutes les reviews avec commentaires (sans requête SQL complexe)
+      const reviews = await prisma.rating.findMany({
         where: {
           comment: {
             not: null,
             not: ''
           },
           ...dateFilter,
-          match: matchFilter,
-          // 🆕 Filtre par nombre de likes minimum
-          likes: {
-            _count: {
-              gte: MIN_LIKES_THRESHOLD
-            }
-          }
+          match: matchFilter
         },
         include: {
           user: {
@@ -67,14 +58,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               id: true,
               name: true,
               username: true,
-              image: true,
-              _count: {
-                select: { ratings: true }
-              },
-              ratings: {
-                select: { rating: true },
-                take: 100
-              }
+              image: true
             }
           },
           match: {
@@ -92,96 +76,91 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               awayTeamLogo: true
             }
           },
-          likes: session?.user?.id ? {
-            where: { userId: session.user.id }
-          } : false,
+          likes: true, // Récupérer tous les likes
           _count: {
             select: { likes: true }
           }
         },
-        orderBy: {
-          likes: {
-            _count: 'desc'
-          }
-        },
-        take: parseInt(limit as string)
+        orderBy: { createdAt: 'desc' }
       })
 
-      // Formater les données
-      const formattedReviews = topReviews.map((review: any) => ({
-        id: review.id,
-        rating: review.rating,
-        comment: review.comment,
-        createdAt: review.createdAt.toISOString(),
-        likes: review._count.likes,
-        isLiked: review.likes && review.likes.length > 0,
-        user: {
-          id: review.user.id,
-          name: review.user.name,
-          username: review.user.username,
-          image: review.user.image,
-          totalReviews: review.user._count.ratings,
-          avgRating: review.user.ratings.length > 0 
-            ? review.user.ratings.reduce((sum: number, r: any) => sum + r.rating, 0) / review.user.ratings.length
+      console.log(`📊 ${reviews.length} reviews trouvées avec commentaires`)
+
+      // Filtrer et trier par nombre de likes
+      const reviewsWithLikes = reviews
+        .filter(review => review._count.likes > 0) // Au moins 1 like
+        .sort((a, b) => b._count.likes - a._count.likes) // Trier par likes desc
+        .slice(0, parseInt(limit as string)) // Limiter les résultats
+
+      console.log(`❤️ ${reviewsWithLikes.length} reviews avec des likes trouvées`)
+
+      // Calculer les stats utilisateur de manière simple
+      const userIds = [...new Set(reviewsWithLikes.map(r => r.user.id))]
+      const userStatsMap = new Map()
+
+      // Pour chaque utilisateur, calculer ses stats
+      for (const userId of userIds) {
+        const userRatings = await prisma.rating.findMany({
+          where: { userId },
+          select: { rating: true }
+        })
+        
+        userStatsMap.set(userId, {
+          totalReviews: userRatings.length,
+          avgRating: userRatings.length > 0 
+            ? userRatings.reduce((sum, r) => sum + r.rating, 0) / userRatings.length 
             : 0
-        },
-        match: {
-          id: review.match.id,
-          sport: review.match.sport.toLowerCase(),
-          homeTeam: review.match.homeTeam,
-          awayTeam: review.match.awayTeam,
-          homeScore: review.match.homeScore,
-          awayScore: review.match.awayScore,
-          date: review.match.date.toISOString(),
-          competition: review.match.competition,
-          venue: review.match.venue,
-          homeTeamLogo: review.match.homeTeamLogo,
-          awayTeamLogo: review.match.awayTeamLogo
-        }
-      }))
+        })
+      }
 
-      // Calculer les statistiques globales
-      const statsPromises = [
-        // Total reviews avec commentaires
-        prisma.rating.count({
-          where: {
-            comment: { not: null, not: '' },
-            ...dateFilter,
-            match: matchFilter
+      // Formater les données finales
+      const formattedReviews = reviewsWithLikes.map((review: any) => {
+        const userStats = userStatsMap.get(review.user.id) || { totalReviews: 0, avgRating: 0 }
+
+        return {
+          id: review.id,
+          rating: review.rating,
+          comment: review.comment,
+          createdAt: review.createdAt.toISOString(),
+          likes: review._count.likes,
+          isLiked: false, // On ne peut pas déterminer sans session utilisateur
+          user: {
+            id: review.user.id,
+            name: review.user.name,
+            username: review.user.username,
+            image: review.user.image,
+            totalReviews: userStats.totalReviews,
+            avgRating: userStats.avgRating
+          },
+          match: {
+            id: review.match.id,
+            sport: review.match.sport.toLowerCase(),
+            homeTeam: review.match.homeTeam,
+            awayTeam: review.match.awayTeam,
+            homeScore: review.match.homeScore,
+            awayScore: review.match.awayScore,
+            date: review.match.date.toISOString(),
+            competition: review.match.competition,
+            venue: review.match.venue,
+            homeTeamLogo: review.match.homeTeamLogo,
+            awayTeamLogo: review.match.awayTeamLogo
           }
-        }),
-        
-        // Total likes
-        prisma.$queryRaw`
-          SELECT COUNT(*) as total
-          FROM review_likes rl
-          JOIN ratings r ON rl.review_id = r.id
-          JOIN matches m ON r.match_id = m.id
-          WHERE r.comment IS NOT NULL 
-            AND r.comment != ''
-            ${sport !== 'all' ? `AND m.sport = '${sport.toString().toUpperCase()}'` : ''}
-            ${period !== 'all' ? getDateFilterSQL(period) : ''}
-        ` as any[],
-        
-        // Utilisateurs actifs
-        prisma.$queryRaw`
-          SELECT COUNT(DISTINCT r.user_id) as total
-          FROM ratings r
-          JOIN matches m ON r.match_id = m.id
-          WHERE r.comment IS NOT NULL 
-            AND r.comment != ''
-            ${sport !== 'all' ? `AND m.sport = '${sport.toString().toUpperCase()}'` : ''}
-            ${period !== 'all' ? getDateFilterSQL(period) : ''}
-        ` as any[]
-      ]
+        }
+      })
 
-      const [totalReviews, totalLikesResult, activeUsersResult] = await Promise.all(statsPromises)
+      // Calculer les statistiques globales simplement
+      const totalReviews = reviews.length
+      const totalLikes = reviews.reduce((sum, review) => sum + review._count.likes, 0)
+      const activeUsers = new Set(reviews.map(r => r.user.id)).size
 
       const stats = {
         totalReviews,
-        totalLikes: parseInt(totalLikesResult[0]?.total || '0'),
-        activeUsers: parseInt(activeUsersResult[0]?.total || '0')
+        totalLikes,
+        activeUsers
       }
+
+      console.log('📈 Stats calculées:', stats)
+      console.log('✅ Retour de', formattedReviews.length, 'reviews formatées')
 
       res.status(200).json({
         success: true,
@@ -190,30 +169,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         meta: {
           period,
           sport,
-          total: formattedReviews.length
+          total: formattedReviews.length,
+          debug: {
+            allReviews: reviews.length,
+            withLikes: reviewsWithLikes.length,
+            userConnected: false
+          }
         }
       })
 
     } catch (error) {
-      console.error('Erreur top reviews:', error)
-      res.status(500).json({ error: 'Erreur serveur' })
+      console.error('❌ Erreur top reviews:', error)
+      res.status(500).json({ 
+        error: 'Erreur serveur',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      })
     }
   } else {
     res.setHeader('Allow', ['GET'])
     res.status(405).end(`Method ${req.method} Not Allowed`)
-  }
-}
-
-// Helper pour construire le filtre SQL de date
-function getDateFilterSQL(period: string): string {
-  switch (period) {
-    case 'week':
-      return `AND r.created_at >= NOW() - INTERVAL '7 days'`
-    case 'month':
-      return `AND r.created_at >= NOW() - INTERVAL '30 days'`
-    case 'year':
-      return `AND r.created_at >= NOW() - INTERVAL '365 days'`
-    default:
-      return ''
   }
 }
