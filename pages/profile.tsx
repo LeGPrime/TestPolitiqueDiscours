@@ -17,6 +17,7 @@ import TeamSearchModal from '../components/TeamSearchModal'
 import EnhancedProfileEditor from '../components/EnhancedProfileEditor'
 import EnhancedTeamGrid from '../components/EnhancedTeamGrid'
 import AvatarUpload from '../components/AvatarUpload'
+import DeleteAccountModal from '../components/DeleteAccountModal'
 
 interface UserProfile {
   user: {
@@ -107,7 +108,8 @@ export default function EnhancedProfilePage() {
   // Nouveaux états pour les modals
   const [showTeamSearch, setShowTeamSearch] = useState(false)
   const [showEnhancedEditor, setShowEnhancedEditor] = useState(false)
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false) // Modifié ici
+  const [userHasPassword, setUserHasPassword] = useState(false) // Nouveau state
 
   // État temporaire pour les données avancées
   const [localAdvancedData, setLocalAdvancedData] = useState<any>({})
@@ -140,6 +142,9 @@ export default function EnhancedProfilePage() {
       console.log('🔄 Rechargement des données pour:', targetUserId)
       fetchProfile()
       fetchTeams()
+      if (isOwnProfile) {
+        checkUserHasPassword()
+      }
     }
   }, [session, targetUserId])
 
@@ -208,6 +213,18 @@ export default function EnhancedProfilePage() {
     } catch (error) {
       console.error('❌ Erreur chargement équipes:', error)
       setTeams([])
+    }
+  }
+
+  // Nouvelle fonction pour vérifier si l'utilisateur a un mot de passe
+  const checkUserHasPassword = async () => {
+    try {
+      const response = await axios.get('/api/profile/check-password')
+      setUserHasPassword(response.data.hasPassword)
+      console.log('🔒 Utilisateur a un mot de passe:', response.data.hasPassword)
+    } catch (error) {
+      console.error('Erreur vérification mot de passe:', error)
+      setUserHasPassword(false) // Par défaut, assume qu'il n'y a pas de mot de passe
     }
   }
 
@@ -368,17 +385,9 @@ export default function EnhancedProfilePage() {
     }
   }
 
-  const deleteAccount = async () => {
-    try {
-      await axios.delete('/api/profile/delete-account', {
-        data: { confirmText: 'SUPPRIMER MON COMPTE' }
-      })
-      
-      await signOut({ callbackUrl: '/' })
-    } catch (error) {
-      console.error('Erreur suppression compte:', error)
-      alert('Erreur lors de la suppression du compte')
-    }
+  // Nouvelle fonction pour gérer l'ouverture du modal de suppression
+  const handleDeleteAccount = () => {
+    setShowDeleteModal(true)
   }
 
   // Filtrer les ratings par sport
@@ -1265,7 +1274,7 @@ export default function EnhancedProfilePage() {
           </div>
         </div>
 
-        {/* Zone de danger */}
+        {/* Zone de danger - Version améliorée */}
         {isOwnProfile && (
           <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg overflow-hidden mt-8 border border-red-200 dark:border-red-800">
             <div className="bg-red-50 dark:bg-red-900/20 p-6 border-b border-red-200 dark:border-red-800">
@@ -1280,14 +1289,20 @@ export default function EnhancedProfilePage() {
             <div className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="font-semibold text-gray-900 dark:text-white">Supprimer mon compte</h4>
-                  <p className="text-gray-600 dark:text-gray-400 text-sm">
-                    Supprime définitivement votre compte et toutes vos données
-                  </p>
+                  <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Supprimer mon compte</h4>
+                  <div className="text-gray-600 dark:text-gray-400 text-sm space-y-1">
+                    <p>Supprime définitivement votre compte et toutes vos données :</p>
+                    <ul className="ml-4 list-disc text-xs space-y-1">
+                      <li>{profile?.stats?.totalRatings || 0} notes de matchs</li>
+                      <li>{profile?.stats?.totalPlayerRatings || 0} notes de joueurs</li>
+                      <li>{profile?.stats?.totalFriends || 0} relations d'amitié</li>
+                      <li>{teams.length} équipes suivies</li>
+                    </ul>
+                  </div>
                 </div>
                 <button
-                  onClick={() => setShowDeleteConfirm(true)}
-                  className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                  onClick={handleDeleteAccount}
+                  className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
                 >
                   <Trash2 className="w-4 h-4" />
                   <span>Supprimer</span>
@@ -1313,51 +1328,13 @@ export default function EnhancedProfilePage() {
         initialData={profile?.user || {}}
       />
 
-      {/* Modal de confirmation de suppression */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-md w-full">
-            <div className="p-6">
-              <div className="flex items-center space-x-3 mb-4">
-                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-                  <Trash2 className="w-6 h-6 text-red-600" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Supprimer le compte</h3>
-                  <p className="text-gray-600 dark:text-gray-400">Cette action est irréversible</p>
-                </div>
-              </div>
-              
-              <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4 mb-6">
-                <p className="text-red-800 dark:text-red-200 text-sm">
-                  <strong>Attention :</strong> Cette action supprimera définitivement :
-                </p>
-                <ul className="text-red-700 dark:text-red-300 text-sm mt-2 ml-4 list-disc">
-                  <li>Toutes vos notes et commentaires</li>
-                  <li>Vos relations d'amitié</li>
-                  <li>Vos équipes suivies</li>
-                  <li>Toutes vos données personnelles</li>
-                </ul>
-              </div>
-
-              <div className="flex space-x-3">
-                <button
-                  onClick={() => setShowDeleteConfirm(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
-                >
-                  Annuler
-                </button>
-                <button
-                  onClick={deleteAccount}
-                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                >
-                  Supprimer définitivement
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Modal de suppression de compte amélioré */}
+      <DeleteAccountModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        userHasPassword={userHasPassword}
+        userEmail={profile?.user?.email || ''}
+      />
     </div>
   )
 }
