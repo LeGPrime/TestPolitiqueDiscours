@@ -229,12 +229,14 @@ export default function EnhancedLineupsTab({
             </div>
           </div>
 
-          {/* View modes - Mobile simplified */}
+          {/* View modes - Mobile simplified - COULEURS CORRIGÉES */}
           <div className="flex bg-gray-100 rounded-xl p-1">
             <button
               onClick={() => setViewMode('tactical')}
-              className={`flex-1 flex items-center justify-center space-x-1 py-2 px-2 rounded-lg transition-all text-xs md:text-sm ${
-                viewMode === 'tactical' ? 'bg-white shadow-md font-bold' : 'text-gray-600'
+              className={`flex-1 flex items-center justify-center space-x-1 py-2 px-2 rounded-lg transition-all text-xs md:text-sm font-medium ${
+                viewMode === 'tactical' 
+                  ? 'bg-white text-gray-900 shadow-md font-bold' // ✅ CORRIGÉ: texte noir sur fond blanc
+                  : 'text-gray-600 hover:text-gray-800'
               }`}
             >
               <Shirt className="w-3 h-3 md:w-4 md:h-4" />
@@ -242,8 +244,10 @@ export default function EnhancedLineupsTab({
             </button>
             <button
               onClick={() => setViewMode('list')}
-              className={`flex-1 flex items-center justify-center space-x-1 py-2 px-2 rounded-lg transition-all text-xs md:text-sm ${
-                viewMode === 'list' ? 'bg-white shadow-md font-bold' : 'text-gray-600'
+              className={`flex-1 flex items-center justify-center space-x-1 py-2 px-2 rounded-lg transition-all text-xs md:text-sm font-medium ${
+                viewMode === 'list' 
+                  ? 'bg-white text-gray-900 shadow-md font-bold' // ✅ CORRIGÉ: texte noir sur fond blanc
+                  : 'text-gray-600 hover:text-gray-800'
               }`}
             >
               <Users className="w-3 h-3 md:w-4 md:h-4" />
@@ -356,6 +360,7 @@ function MobileTacticalView({
   homeTeam,
   awayTeam
 }: any) {
+  const [showBench, setShowBench] = useState(false) // 🆕 État pour afficher/masquer le banc
   return (
     <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg overflow-hidden border border-gray-100">
       {/* Header compact */}
@@ -518,27 +523,106 @@ function MobileTacticalView({
         </div>
       </div>
 
-      {/* Remplaçants mobile-optimized */}
-      <div className="bg-gradient-to-br from-slate-50 to-gray-100 p-4 md:p-6">
-        <div className="flex items-center space-x-2 mb-4">
-          <Users className="w-5 h-5 text-slate-600" />
-          <h4 className="text-lg font-bold text-gray-900">Banc</h4>
-          <span className="bg-slate-200 text-slate-700 px-2 py-1 rounded-full text-xs font-medium">
-            {currentLineup.substitutes.length}
-          </span>
-        </div>
+      {/* Remplaçants mobile-optimized - Avec système de déroulement */}
+      <div className="bg-gradient-to-br from-slate-50 to-gray-100 border-t border-gray-200">
+        {/* Header cliquable pour dérouler/fermer */}
+        <button
+          onClick={() => setShowBench(!showBench)}
+          className="w-full p-4 md:p-6 flex items-center justify-between hover:bg-gray-100/50 transition-colors"
+        >
+          <div className="flex items-center space-x-3">
+            <Users className="w-5 h-5 text-slate-600" />
+            <h4 className="text-lg font-bold text-gray-900">Banc de touche</h4>
+            <span className="bg-slate-200 text-slate-700 px-3 py-1 rounded-full text-sm font-medium">
+              {currentLineup.substitutes.length} remplaçants
+            </span>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <span className="text-sm text-gray-600 font-medium">
+              {showBench ? 'Masquer' : 'Afficher'}
+            </span>
+            <div className={`transition-transform duration-300 ${showBench ? 'rotate-180' : ''}`}>
+              <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </div>
+        </button>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-          {currentLineup.substitutes.map((player: any, index: number) => (
-            <MobileSubstituteCard
-              key={index}
-              player={player}
-              playerStats={getPlayerStats(player)}
-              userRating={getUserRatingForPlayer(player)}
-              activeTeam={activeTeam}
-              onSelect={onPlayerSelect}
-            />
-          ))}
+        {/* Contenu du banc - Collapsible */}
+        <div className={`overflow-hidden transition-all duration-500 ease-in-out ${
+          showBench 
+            ? 'max-h-[2000px] opacity-100' 
+            : 'max-h-0 opacity-0'
+        }`}>
+          <div className="px-4 pb-4 md:px-6 md:pb-6">
+            {currentLineup.substitutes.length > 0 ? (
+              <>
+                {/* Info banc */}
+                <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <p className="text-sm text-blue-800 font-medium flex items-center space-x-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>Cliquez sur un remplaçant pour le noter ⭐</span>
+                  </p>
+                </div>
+
+                {/* Grille des remplaçants */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                  {currentLineup.substitutes.map((player: any, index: number) => (
+                    <MobileSubstituteCard
+                      key={index}
+                      player={player}
+                      playerStats={getPlayerStats(player)}
+                      userRating={getUserRatingForPlayer(player)}
+                      activeTeam={activeTeam}
+                      onSelect={onPlayerSelect}
+                    />
+                  ))}
+                </div>
+
+                {/* Stats du banc */}
+                <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="bg-white/60 rounded-lg p-3 text-center">
+                    <div className="text-lg font-bold text-gray-700">{currentLineup.substitutes.length}</div>
+                    <div className="text-xs text-gray-600">Remplaçants</div>
+                  </div>
+                  <div className="bg-white/60 rounded-lg p-3 text-center">
+                    <div className="text-lg font-bold text-green-600">
+                      {currentLineup.substitutes.filter(player => getUserRatingForPlayer(player)).length}
+                    </div>
+                    <div className="text-xs text-gray-600">Notés</div>
+                  </div>
+                  <div className="bg-white/60 rounded-lg p-3 text-center">
+                    <div className="text-lg font-bold text-blue-600">
+                      {currentLineup.substitutes.length - currentLineup.substitutes.filter(player => getUserRatingForPlayer(player)).length}
+                    </div>
+                    <div className="text-xs text-gray-600">À noter</div>
+                  </div>
+                  <div className="bg-white/60 rounded-lg p-3 text-center">
+                    <div className="text-lg font-bold text-purple-600">
+                      {currentLineup.substitutes.filter(player => getUserRatingForPlayer(player)).length > 0
+                        ? (currentLineup.substitutes
+                            .filter(player => getUserRatingForPlayer(player))
+                            .reduce((sum, player) => sum + getUserRatingForPlayer(player).rating, 0) / 
+                           currentLineup.substitutes.filter(player => getUserRatingForPlayer(player)).length
+                          ).toFixed(1)
+                        : '—'
+                      }
+                    </div>
+                    <div className="text-xs text-gray-600">Moy. banc</div>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-8">
+                <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-500 font-medium">Aucun remplaçant disponible</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -661,6 +745,7 @@ function MobileSubstituteCard({ player, playerStats, userRating, activeTeam, onS
 
 // Vue liste mobile
 function MobileListView({ currentLineup, activeTeam, getPlayerStats, getUserRatingForPlayer, onPlayerSelect }: any) {
+  const [showBench, setShowBench] = useState(false) // 🆕 État pour le banc en vue liste
   return (
     <div className="space-y-4">
       {/* Titulaires */}
@@ -694,29 +779,104 @@ function MobileListView({ currentLineup, activeTeam, getPlayerStats, getUserRati
         </div>
       </div>
 
-      {/* Remplaçants */}
+      {/* Remplaçants - Avec système de déroulement */}
       <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg overflow-hidden border border-gray-100">
-        <div className="bg-gradient-to-r from-gray-500 to-gray-600 p-4 text-white">
-          <h3 className="text-lg font-bold flex items-center space-x-2">
+        {/* Header cliquable pour dérouler/fermer */}
+        <button
+          onClick={() => setShowBench(!showBench)}
+          className="w-full bg-gradient-to-r from-gray-500 to-gray-600 p-4 text-white flex items-center justify-between hover:from-gray-600 hover:to-gray-700 transition-all"
+        >
+          <div className="flex items-center space-x-2">
             <Users className="w-5 h-5" />
-            <span>Banc de touche</span>
-            <span className="bg-white/20 px-2 py-1 rounded-full text-sm">{currentLineup.substitutes.length}</span>
-          </h3>
-        </div>
+            <span className="text-lg font-bold">Banc de touche</span>
+            <span className="bg-white/20 px-3 py-1 rounded-full text-sm">
+              {currentLineup.substitutes.length}
+            </span>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <span className="text-sm font-medium opacity-90">
+              {showBench ? 'Masquer' : 'Afficher'}
+            </span>
+            <div className={`transition-transform duration-300 ${showBench ? 'rotate-180' : ''}`}>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </div>
+        </button>
         
-        <div className="p-4">
-          <div className="space-y-3">
-            {currentLineup.substitutes.map((player: any, index: number) => (
-              <MobileListPlayerCard
-                key={index}
-                player={player}
-                playerStats={getPlayerStats(player)}
-                userRating={getUserRatingForPlayer(player)}
-                activeTeam={activeTeam}
-                onSelect={onPlayerSelect}
-                isStarter={false}
-              />
-            ))}
+        {/* Contenu du banc - Collapsible */}
+        <div className={`overflow-hidden transition-all duration-500 ease-in-out ${
+          showBench 
+            ? 'max-h-[2000px] opacity-100' 
+            : 'max-h-0 opacity-0'
+        }`}>
+          <div className="p-4">
+            {currentLineup.substitutes.length > 0 ? (
+              <>
+                {/* Info pratique */}
+                <div className="mb-4 p-3 bg-amber-50 rounded-lg border border-amber-200">
+                  <p className="text-sm text-amber-800 font-medium flex items-center space-x-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.35 15.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                    <span>Notez les remplaçants pour une analyse complète ⭐</span>
+                  </p>
+                </div>
+
+                {/* Liste des remplaçants */}
+                <div className="space-y-3">
+                  {currentLineup.substitutes.map((player: any, index: number) => (
+                    <MobileListPlayerCard
+                      key={index}
+                      player={player}
+                      playerStats={getPlayerStats(player)}
+                      userRating={getUserRatingForPlayer(player)}
+                      activeTeam={activeTeam}
+                      onSelect={onPlayerSelect}
+                      isStarter={false}
+                    />
+                  ))}
+                </div>
+
+                {/* Statistiques du banc */}
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <p className="text-sm font-bold text-gray-700 mb-3 flex items-center space-x-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    <span>Statistiques du banc</span>
+                  </p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-gray-50 rounded-lg p-3 text-center">
+                      <div className="text-lg font-bold text-green-600">
+                        {currentLineup.substitutes.filter(player => getUserRatingForPlayer(player)).length}
+                      </div>
+                      <div className="text-xs text-gray-600">Remplaçants notés</div>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-3 text-center">
+                      <div className="text-lg font-bold text-purple-600">
+                        {currentLineup.substitutes.filter(player => getUserRatingForPlayer(player)).length > 0
+                          ? (currentLineup.substitutes
+                              .filter(player => getUserRatingForPlayer(player))
+                              .reduce((sum, player) => sum + getUserRatingForPlayer(player).rating, 0) / 
+                             currentLineup.substitutes.filter(player => getUserRatingForPlayer(player)).length
+                            ).toFixed(1)
+                          : '—'
+                        }
+                      </div>
+                      <div className="text-xs text-gray-600">Note moyenne banc</div>
+                    </div>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-8">
+                <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-500 font-medium">Aucun remplaçant dans cette équipe</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

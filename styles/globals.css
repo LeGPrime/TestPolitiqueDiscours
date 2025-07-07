@@ -77,6 +77,55 @@
   }
 }
 
+/* 🔧 CORRECTION UNIVERSELLE MODE SOMBRE - TOUS LES CHAMPS DE SAISIE */
+/* Force TOUS les inputs à être lisibles en mode sombre */
+input {
+  background-color: white !important;
+  color: #1f2937 !important;
+}
+
+.dark input {
+  background-color: #1e293b !important;
+  color: white !important;
+}
+
+textarea {
+  background-color: white !important;
+  color: #1f2937 !important;
+}
+
+.dark textarea {
+  background-color: #1e293b !important;
+  color: white !important;
+}
+
+select {
+  background-color: white !important;
+  color: #1f2937 !important;
+}
+
+.dark select {
+  background-color: #334155 !important;
+  color: white !important;
+}
+
+/* Placeholders universels */
+input::placeholder,
+textarea::placeholder {
+  color: #6b7280 !important;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #9ca3af !important;
+}
+
+/* Options des select en mode sombre */
+.dark select option {
+  background-color: #334155 !important;
+  color: white !important;
+}
+
 /* 📱 CUSTOM SCROLLBAR - Mobile friendly */
 ::-webkit-scrollbar {
   width: 4px;
@@ -171,6 +220,30 @@
   
   .safe-area-right {
     padding-right: env(safe-area-inset-right);
+  }
+
+  /* 📱 SAFE AREA SUPPORT POUR iOS - Version plus conservative */
+  .pt-safe-area-inset-top {
+    padding-top: max(1.5rem, env(safe-area-inset-top));
+  }
+  
+  .pb-safe-area-inset-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  .pl-safe-area-inset-left {
+    padding-left: env(safe-area-inset-left);
+  }
+  
+  .pr-safe-area-inset-right {
+    padding-right: env(safe-area-inset-right);
+  }
+}
+
+/* 📱 FALLBACK pour les devices sans safe-area */
+@media screen and (max-width: 768px) {
+  .pt-safe-area-inset-top {
+    padding-top: 1.5rem; /* 24px minimum même sans encoche */
   }
 }
 
@@ -278,6 +351,58 @@ a {
 /* Transitions fluides pour le changement de thème */
 * {
   transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+/* 📱 MOBILE BOTTOM NAVIGATION */
+@media screen and (max-width: 768px) {
+  /* Assurer que le contenu ne soit pas masqué par la nav bottom */
+  .main-content {
+    padding-bottom: 80px;
+  }
+  
+  /* Améliorer les touch targets sur mobile */
+  .touch-manipulation {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    /* Agrandir la zone de clic */
+    min-height: 48px;
+    min-width: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  /* Feedback tactile pour les boutons */
+  .touch-manipulation:active {
+    transform: scale(0.95);
+    transition: transform 0.1s ease;
+  }
+
+  /* Header mobile plus accessible */
+  .mobile-header-button {
+    min-height: 48px;
+    min-width: 48px;
+    padding: 12px;
+    border-radius: 12px;
+  }
+}
+
+/* 📱 CAPACITOR SPECIFIC STYLES */
+.capacitor-app {
+  /* Désactiver le rubber band scrolling sur iOS */
+  overscroll-behavior: none;
+}
+
+.capacitor-app .mobile-header {
+  /* Backdrop blur plus prononcé dans l'app */
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.capacitor-app .mobile-bottom-nav {
+  /* Style natif iOS/Android dans l'app */
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
 /* 📱 UTILITY CLASSES FOR MOBILE */
