@@ -27,10 +27,10 @@
       "static/chunks/main.js",
       "static/chunks/pages/_error.js"
     ],
-    "/match/[id]": [
+    "/friends": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
-      "static/chunks/pages/match/[id].js"
+      "static/chunks/pages/friends.js"
     ],
     "/profile": [
       "static/chunks/webpack.js",
