@@ -7,8 +7,8 @@ export default function SecretLogin() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (password === 'MonAccesSecret2025!') {
-      document.cookie = `secret_access=MonAccesSecret2025!; path=/; max-age=${30*24*60*60}`
+    if (password === 'motdepasse') {
+      document.cookie = `secret_access=motdepasse; path=/; max-age=${30*24*60*60}`
       router.push('/')
     } else {
       alert('❌ Accès refusé')

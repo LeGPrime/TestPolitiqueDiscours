@@ -1,4 +1,4 @@
-// components/BasketballMatchDetails.tsx - VERSION CORRIGÉE ET FONCTIONNELLE
+// components/BasketballMatchDetails.tsx - VERSION MOBILE OPTIMISÉE
 import { useState } from 'react'
 import { 
   BarChart3, Activity, Users, Trophy, Target, 
@@ -87,15 +87,15 @@ export default function BasketballMatchDetails({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 lg:space-y-6">
       {/* Score par quart-temps */}
       <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-        <div className="bg-gradient-to-r from-orange-500 to-red-600 p-6 text-white">
-          <h3 className="text-xl font-semibold mb-2">🏀 Score par quart-temps</h3>
+        <div className="bg-gradient-to-r from-orange-500 to-red-600 p-4 lg:p-6 text-white">
+          <h3 className="text-lg lg:text-xl font-semibold mb-2">🏀 Score par quart-temps</h3>
         </div>
         
-        <div className="p-6">
-          <div className="grid grid-cols-5 gap-4">
+        <div className="p-4 lg:p-6">
+          <div className="grid grid-cols-5 gap-2 lg:gap-4">
             {['Q1', 'Q2', 'Q3', 'Q4', 'FINAL'].map((period, index) => {
               const homeScore = period === 'FINAL' ? match.homeScore : 
                                period === 'Q1' ? quartersData.quarter1.home :
@@ -109,24 +109,24 @@ export default function BasketballMatchDetails({
                                quartersData.quarter4.away
 
               return (
-                <div key={period} className={`text-center rounded-lg p-4 border ${
+                <div key={period} className={`text-center rounded-lg p-2 lg:p-4 border ${
                   period === 'FINAL' 
                     ? 'bg-gradient-to-br from-yellow-50 to-orange-100 border-2 border-yellow-300' 
                     : 'bg-orange-50 border border-orange-200'
                 }`}>
-                  <div className={`text-sm font-medium mb-2 ${
+                  <div className={`text-xs lg:text-sm font-medium mb-1 lg:mb-2 ${
                     period === 'FINAL' ? 'text-yellow-700' : 'text-orange-700'
                   }`}>
                     {period}
                   </div>
                   <div className="space-y-1">
                     <div className={`font-bold ${
-                      period === 'FINAL' ? 'text-xl text-blue-600' : 'text-lg text-blue-600'
+                      period === 'FINAL' ? 'text-lg lg:text-xl text-blue-600' : 'text-sm lg:text-lg text-blue-600'
                     }`}>
                       {homeScore}
                     </div>
                     <div className={`font-bold ${
-                      period === 'FINAL' ? 'text-xl text-red-600' : 'text-lg text-red-600'
+                      period === 'FINAL' ? 'text-lg lg:text-xl text-red-600' : 'text-sm lg:text-lg text-red-600'
                     }`}>
                       {awayScore}
                     </div>
@@ -137,17 +137,17 @@ export default function BasketballMatchDetails({
           </div>
 
           {quartersData.overtime && (
-            <div className="mt-6 p-4 bg-purple-50 rounded-lg border border-purple-200">
+            <div className="mt-4 lg:mt-6 p-3 lg:p-4 bg-purple-50 rounded-lg border border-purple-200">
               <div className="text-center">
-                <h4 className="font-semibold text-purple-800 mb-3">⏱️ Prolongation</h4>
-                <div className="flex justify-center space-x-8">
+                <h4 className="font-semibold text-purple-800 mb-2 lg:mb-3 text-sm lg:text-base">⏱️ Prolongation</h4>
+                <div className="flex justify-center space-x-4 lg:space-x-8">
                   <div className="text-center">
-                    <div className="text-sm text-purple-600">{match.homeTeam}</div>
-                    <div className="text-2xl font-bold text-purple-800">{quartersData.overtime.home}</div>
+                    <div className="text-xs lg:text-sm text-purple-600">{match.homeTeam}</div>
+                    <div className="text-lg lg:text-2xl font-bold text-purple-800">{quartersData.overtime.home}</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-sm text-purple-600">{match.awayTeam}</div>
-                    <div className="text-2xl font-bold text-purple-800">{quartersData.overtime.away}</div>
+                    <div className="text-xs lg:text-sm text-purple-600">{match.awayTeam}</div>
+                    <div className="text-lg lg:text-2xl font-bold text-purple-800">{quartersData.overtime.away}</div>
                   </div>
                 </div>
               </div>
@@ -156,20 +156,20 @@ export default function BasketballMatchDetails({
         </div>
       </div>
 
-      {/* Tabs Navigation */}
+      {/* Tabs Navigation - Mobile Optimized */}
       <div className="bg-white border-b rounded-t-xl">
-        <div className="flex space-x-8 px-6">
+        <div className="flex overflow-x-auto px-4 lg:px-6">
           {[
-            { id: 'players', label: 'Joueurs NBA & Compositions', icon: Users },
-            { id: 'quarters', label: 'Performance par quart', icon: BarChart3 },
-            { id: 'stats', label: 'Statistiques Équipes', icon: Target }
+            { id: 'players', label: 'Joueurs NBA', icon: Users },
+            { id: 'quarters', label: 'Quart-temps', icon: BarChart3 },
+            { id: 'stats', label: 'Statistiques', icon: Target }
           ].map((tab) => {
             const Icon = tab.icon
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`flex items-center space-x-2 py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+                className={`flex items-center space-x-2 py-3 lg:py-4 px-3 lg:px-2 border-b-2 font-medium text-xs lg:text-sm transition-colors whitespace-nowrap ${
                   activeTab === tab.id
                     ? 'border-orange-500 text-orange-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -186,7 +186,7 @@ export default function BasketballMatchDetails({
       {/* Contenu des tabs */}
       <div className="bg-white rounded-b-xl">
         {activeTab === 'players' && (
-          <BasketballPlayersTabFixed 
+          <BasketballPlayersTabMobile 
             match={match}
             lineups={lineups}
             playerRatings={playerRatings}
@@ -214,8 +214,8 @@ export default function BasketballMatchDetails({
   )
 }
 
-// TAB JOUEURS ENTIÈREMENT RECODÉ ET FONCTIONNEL
-function BasketballPlayersTabFixed({ match, lineups, playerRatings, onRatePlayer, currentUserId }: any) {
+// TAB JOUEURS OPTIMISÉ MOBILE
+function BasketballPlayersTabMobile({ match, lineups, playerRatings, onRatePlayer, currentUserId }: any) {
   const [activeTeam, setActiveTeam] = useState<'home' | 'away'>('home')
   const [selectedPlayer, setSelectedPlayer] = useState<any>(null)
   const [showRatingsOverlay, setShowRatingsOverlay] = useState(true)
@@ -242,158 +242,158 @@ function BasketballPlayersTabFixed({ match, lineups, playerRatings, onRatePlayer
   }
 
   return (
-    <div className="space-y-6 p-6">
-      {/* Header de contrôle */}
-      <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
+    <div className="space-y-4 lg:space-y-6 p-4 lg:p-6">
+      {/* Header de contrôle - Mobile Optimized */}
+      <div className="flex flex-col space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0 lg:gap-6">
         {/* Sélecteur d'équipe */}
-        <div className="flex bg-gradient-to-r from-gray-100 to-gray-50 rounded-2xl p-2 shadow-inner">
+        <div className="flex bg-gradient-to-r from-gray-100 to-gray-50 rounded-2xl p-1 lg:p-2 shadow-inner">
           <button
             onClick={() => setActiveTeam('home')}
-            className={`flex items-center space-x-3 px-6 py-4 rounded-xl transition-all duration-300 ${
+            className={`flex items-center justify-center space-x-2 lg:space-x-3 px-3 lg:px-6 py-2 lg:py-4 rounded-xl transition-all duration-300 flex-1 lg:flex-none ${
               activeTeam === 'home'
                 ? 'bg-white text-orange-600 shadow-lg transform scale-105 font-bold'
                 : 'text-gray-600 hover:text-gray-800'
             }`}
           >
-            <div className="w-5 h-5 bg-gradient-to-br from-orange-400 to-red-500 rounded-full shadow-sm"></div>
-            <span className="text-lg">{match.homeTeam}</span>
-            <div className="bg-orange-100 text-orange-700 px-2 py-1 rounded-full text-xs font-bold">
+            <div className="w-4 h-4 lg:w-5 lg:h-5 bg-gradient-to-br from-orange-400 to-red-500 rounded-full shadow-sm"></div>
+            <span className="text-sm lg:text-lg truncate">{match.homeTeam}</span>
+            <div className="bg-orange-100 text-orange-700 px-1 lg:px-2 py-1 rounded-full text-xs font-bold hidden lg:block">
               🏀 NBA
             </div>
           </button>
           <button
             onClick={() => setActiveTeam('away')}
-            className={`flex items-center space-x-3 px-6 py-4 rounded-xl transition-all duration-300 ${
+            className={`flex items-center justify-center space-x-2 lg:space-x-3 px-3 lg:px-6 py-2 lg:py-4 rounded-xl transition-all duration-300 flex-1 lg:flex-none ${
               activeTeam === 'away'
                 ? 'bg-white text-blue-600 shadow-lg transform scale-105 font-bold'
                 : 'text-gray-600 hover:text-gray-800'
             }`}
           >
-            <div className="w-5 h-5 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full shadow-sm"></div>
-            <span className="text-lg">{match.awayTeam}</span>
-            <div className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs font-bold">
+            <div className="w-4 h-4 lg:w-5 lg:h-5 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full shadow-sm"></div>
+            <span className="text-sm lg:text-lg truncate">{match.awayTeam}</span>
+            <div className="bg-blue-100 text-blue-700 px-1 lg:px-2 py-1 rounded-full text-xs font-bold hidden lg:block">
               🏀 NBA
             </div>
           </button>
         </div>
 
         {/* Contrôles d'affichage */}
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center justify-center lg:justify-start space-x-3">
           <button
             onClick={() => setShowRatingsOverlay(!showRatingsOverlay)}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all ${
+            className={`flex items-center space-x-2 px-3 lg:px-4 py-2 rounded-lg transition-all text-sm ${
               showRatingsOverlay 
                 ? 'bg-yellow-100 text-yellow-700 border border-yellow-300' 
                 : 'bg-gray-100 text-gray-600'
             }`}
           >
             <Star className="w-4 h-4" />
-            <span className="text-sm font-medium">Notes joueurs</span>
+            <span className="font-medium">Notes</span>
           </button>
         </div>
       </div>
 
-      {/* TERRAIN DE BASKETBALL RÉALISTE CORRIGÉ */}
-      <div className="bg-gradient-to-br from-orange-500 via-red-600 to-red-700 p-8 text-white relative overflow-hidden rounded-xl">
+      {/* TERRAIN DE BASKETBALL MOBILE OPTIMISÉ */}
+      <div className="bg-gradient-to-br from-orange-500 via-red-600 to-red-700 p-4 lg:p-8 text-white relative overflow-hidden rounded-xl">
         <div className="absolute inset-0 bg-black/10"></div>
         <div className="relative z-10">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center space-x-6">
-              <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
-                <Trophy className="w-9 h-9 text-white" />
+          <div className="flex flex-col lg:flex-row items-center justify-between mb-4 lg:mb-6">
+            <div className="flex items-center space-x-3 lg:space-x-6 mb-2 lg:mb-0">
+              <div className="w-12 h-12 lg:w-16 lg:h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
+                <Trophy className="w-6 h-6 lg:w-9 lg:h-9 text-white" />
               </div>
               <div>
-                <h3 className="text-3xl font-bold mb-1">
+                <h3 className="text-xl lg:text-3xl font-bold mb-1">
                   {activeTeam === 'home' ? match.homeTeam : match.awayTeam}
                 </h3>
-                <div className="flex items-center space-x-4">
-                  <span className="bg-white/20 px-4 py-1 rounded-full text-sm font-medium">
+                <div className="flex items-center space-x-2 lg:space-x-4">
+                  <span className="bg-white/20 px-2 lg:px-4 py-1 rounded-full text-xs lg:text-sm font-medium">
                     🏀 TEAM NBA
                   </span>
-                  <span className="bg-white/20 px-4 py-1 rounded-full text-sm">
+                  <span className="bg-white/20 px-2 lg:px-4 py-1 rounded-full text-xs lg:text-sm">
                     {starters.length}/5 titulaires
                   </span>
                 </div>
               </div>
             </div>
             
-            <div className="text-right">
-              <div className="text-xl font-bold mb-1">5 Majeur de départ</div>
-              <div className="text-orange-100 text-sm opacity-90">
-                Cliquez sur un joueur pour le noter ⭐
+            <div className="text-center lg:text-right">
+              <div className="text-lg lg:text-xl font-bold mb-1">5 Majeur</div>
+              <div className="text-orange-100 text-xs lg:text-sm opacity-90">
+                Cliquez pour noter ⭐
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* DEMI-TERRAIN NBA ORIENTÉ DÉFENSE - RAQUETTE EN BAS */}
-      <div className="relative bg-gradient-to-b from-amber-200 via-amber-300 to-amber-400 rounded-xl overflow-hidden" style={{ height: '600px' }}>
-        {/* Texture parquet plus claire */}
+      {/* DEMI-TERRAIN NBA MOBILE - HAUTEUR ADAPTÉE */}
+      <div className="relative bg-gradient-to-b from-amber-200 via-amber-300 to-amber-400 rounded-xl overflow-hidden" style={{ height: window.innerWidth < 768 ? '400px' : '600px' }}>
+        {/* Texture parquet */}
         <div className="absolute inset-0 opacity-15">
           <div className="w-full h-full" style={{
             backgroundImage: `repeating-linear-gradient(
               0deg,
               transparent,
-              transparent 10px,
-              rgba(139,69,19,0.2) 10px,
-              rgba(139,69,19,0.2) 11px
+              transparent 8px,
+              rgba(139,69,19,0.2) 8px,
+              rgba(139,69,19,0.2) 9px
             )`
           }}></div>
         </div>
 
-        {/* LIGNES EXACTES ORIENTÉES DÉFENSE - RAQUETTE EN BAS - PROPORTIONS ADAPTÉES */}
+        {/* LIGNES DE TERRAIN MOBILE ADAPTÉES */}
         <div className="absolute inset-0 opacity-90">
-          {/* Ligne médiane (en haut) */}
-          <div className="absolute top-8 left-8 right-8 h-1.5 bg-white"></div>
+          {/* Ligne médiane */}
+          <div className="absolute top-4 lg:top-8 left-4 lg:left-8 right-4 lg:right-8 h-1 lg:h-1.5 bg-white"></div>
           
-          {/* Demi-cercle central (en haut) */}
-          <div className="absolute top-8 left-1/2 w-24 h-12 transform -translate-x-1/2">
-            <div className="w-full h-full border-[3px] border-white border-t-0 rounded-b-full"></div>
+          {/* Demi-cercle central */}
+          <div className="absolute top-4 lg:top-8 left-1/2 w-16 lg:w-24 h-8 lg:h-12 transform -translate-x-1/2">
+            <div className="w-full h-full border-2 lg:border-[3px] border-white border-t-0 rounded-b-full"></div>
           </div>
           
           {/* Lignes latérales */}
-          <div className="absolute top-8 bottom-8 left-8 w-1.5 bg-white"></div>
-          <div className="absolute top-8 bottom-8 right-8 w-1.5 bg-white"></div>
+          <div className="absolute top-4 lg:top-8 bottom-4 lg:bottom-8 left-4 lg:left-8 w-1 lg:w-1.5 bg-white"></div>
+          <div className="absolute top-4 lg:top-8 bottom-4 lg:bottom-8 right-4 lg:right-8 w-1 lg:w-1.5 bg-white"></div>
           
-          {/* Arc à trois points (grand demi-cercle orienté vers le bas) - Taille NBA maximale comme sur l'image */}
-          <div className="absolute bottom-8 left-1/2 w-[560px] h-72 transform -translate-x-1/2">
-            <div className="w-full h-full border-[3px] border-white border-b-0 rounded-t-full"></div>
+          {/* Arc à trois points - Taille mobile */}
+          <div className="absolute bottom-4 lg:bottom-8 left-1/2 w-72 lg:w-[560px] h-32 lg:h-72 transform -translate-x-1/2">
+            <div className="w-full h-full border-2 lg:border-[3px] border-white border-b-0 rounded-t-full"></div>
           </div>
           
-          {/* Cercle des lancers francs (orienté vers le bas) */}
-          <div className="absolute bottom-52 left-1/2 w-24 h-24 border-[3px] border-white rounded-full transform -translate-x-1/2 translate-y-1/2"></div>
+          {/* Cercle des lancers francs */}
+          <div className="absolute bottom-24 lg:bottom-52 left-1/2 w-16 lg:w-24 h-16 lg:h-24 border-2 lg:border-[3px] border-white rounded-full transform -translate-x-1/2 translate-y-1/2"></div>
           
           {/* Ligne des lancers francs */}
-          <div className="absolute bottom-52 left-1/2 w-40 h-1.5 bg-white transform -translate-x-1/2"></div>
+          <div className="absolute bottom-24 lg:bottom-52 left-1/2 w-24 lg:w-40 h-1 lg:h-1.5 bg-white transform -translate-x-1/2"></div>
           
-          {/* Zone restrictive (rectangle + demi-cercle orienté vers le bas) - Plus grande */}
-          <div className="absolute bottom-32 left-1/2 w-40 h-20 transform -translate-x-1/2">
-            <div className="w-full h-full border-[3px] border-white border-b-0 rounded-t-full"></div>
+          {/* Zone restrictive */}
+          <div className="absolute bottom-16 lg:bottom-32 left-1/2 w-24 lg:w-40 h-8 lg:h-20 transform -translate-x-1/2">
+            <div className="w-full h-full border-2 lg:border-[3px] border-white border-b-0 rounded-t-full"></div>
           </div>
-          <div className="absolute bottom-8 left-1/2 w-40 h-24 transform -translate-x-1/2 border-[3px] border-white border-b-0"></div>
+          <div className="absolute bottom-4 lg:bottom-8 left-1/2 w-24 lg:w-40 h-12 lg:h-24 transform -translate-x-1/2 border-2 lg:border-[3px] border-white border-b-0"></div>
           
-          {/* Ligne de base (en bas) */}
-          <div className="absolute bottom-8 left-8 right-8 h-1.5 bg-white"></div>
+          {/* Ligne de base */}
+          <div className="absolute bottom-4 lg:bottom-8 left-4 lg:left-8 right-4 lg:right-8 h-1 lg:h-1.5 bg-white"></div>
           
-          {/* Panier (en bas) */}
-          <div className="absolute bottom-6 left-1/2 w-8 h-2 bg-orange-600 transform -translate-x-1/2 rounded-sm shadow-lg"></div>
+          {/* Panier */}
+          <div className="absolute bottom-2 lg:bottom-6 left-1/2 w-6 lg:w-8 h-1 lg:h-2 bg-orange-600 transform -translate-x-1/2 rounded-sm shadow-lg"></div>
           
-          {/* Panneau (en bas) */}
-          <div className="absolute bottom-4 left-1/2 w-20 h-1.5 bg-gray-800 transform -translate-x-1/2"></div>
+          {/* Panneau */}
+          <div className="absolute bottom-1 lg:bottom-4 left-1/2 w-12 lg:w-20 h-1 lg:h-1.5 bg-gray-800 transform -translate-x-1/2"></div>
         </div>
 
-        {/* POSITIONNEMENT DÉFENSIF - RAQUETTE EN BAS */}
-        <div className="absolute inset-0 p-8">
+        {/* POSITIONNEMENT JOUEURS MOBILE OPTIMISÉ */}
+        <div className="absolute inset-0 p-4 lg:p-8">
           <div className="relative w-full h-full">
             
-            {/* Positions défensives par rapport à la raquette en bas */}
+            {/* Positions défensives adaptées mobile */}
             {starters.length > 0 && (
               <>
-                {/* 5 - PIVOT (Center) - Sous le panier en défense */}
+                {/* 5 - PIVOT */}
                 {starters[4] && (
-                  <div className="absolute bottom-[-5%] right-[20%]">
-                    <NBAPlayerCardSimple
+                  <div className="absolute bottom-[2%] lg:bottom-[-5%] right-[15%] lg:right-[20%]">
+                    <NBAPlayerCardMobile
                       player={starters[4]}
                       number="5"
                       position="Pivot"
@@ -405,10 +405,10 @@ function BasketballPlayersTabFixed({ match, lineups, playerRatings, onRatePlayer
                   </div>
                 )}
 
-                {/* 4 - AILIER FORT (Power Forward) - Côté gauche de la raquette */}
+                {/* 4 - AILIER FORT */}
                 {starters[3] && (
-                  <div className="absolute bottom-[-5%] left-[20%]">
-                    <NBAPlayerCardSimple
+                  <div className="absolute bottom-[2%] lg:bottom-[-5%] left-[15%] lg:left-[20%]">
+                    <NBAPlayerCardMobile
                       player={starters[3]}
                       number="4"
                       position="Ailier Fort"
@@ -420,10 +420,10 @@ function BasketballPlayersTabFixed({ match, lineups, playerRatings, onRatePlayer
                   </div>
                 )}
 
-                {/* 3 - AILIER (Small Forward) - Côté droit de la raquette */}
+                {/* 3 - AILIER */}
                 {starters[2] && (
-                  <div className="absolute bottom-[25%] right-[75%]">
-                    <NBAPlayerCardSimple
+                  <div className="absolute bottom-[25%] right-[75%] lg:right-[75%]">
+                    <NBAPlayerCardMobile
                       player={starters[2]}
                       number="3"
                       position="Ailier"
@@ -435,10 +435,10 @@ function BasketballPlayersTabFixed({ match, lineups, playerRatings, onRatePlayer
                   </div>
                 )}
 
-                {/* 2 - ARRIÈRE (Shooting Guard) - Côté droit périphérie plus éloigné */}
+                {/* 2 - ARRIÈRE */}
                 {starters[1] && (
-                  <div className="absolute bottom-[25%] right-[10%]">
-                    <NBAPlayerCardSimple
+                  <div className="absolute bottom-[25%] right-[5%] lg:right-[10%]">
+                    <NBAPlayerCardMobile
                       player={starters[1]}
                       number="2"
                       position="Arrière"
@@ -450,10 +450,10 @@ function BasketballPlayersTabFixed({ match, lineups, playerRatings, onRatePlayer
                   </div>
                 )}
 
-                {/* 1 - MENEUR (Point Guard) - En haut de la défense bien à l'extérieur de l'arc */}
+                {/* 1 - MENEUR */}
                 {starters[0] && (
                   <div className="absolute bottom-[50%] left-1/2 transform -translate-x-1/2">
-                    <NBAPlayerCardSimple
+                    <NBAPlayerCardMobile
                       player={starters[0]}
                       number="1"
                       position="Meneur"
@@ -467,33 +467,35 @@ function BasketballPlayersTabFixed({ match, lineups, playerRatings, onRatePlayer
               </>
             )}
 
-            {/* Coach */}
-            <div className="absolute bottom-4 left-4">
-              <div className="bg-black/60 backdrop-blur-md rounded-xl p-3 text-center border border-white/30">
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white text-lg font-bold shadow-lg mb-2 ${
+            {/* Coach - Mobile Position */}
+            <div className="absolute bottom-50 lg:bottom-4 left-0 lg:left-4">
+              <div className="bg-black/60 backdrop-blur-md rounded-lg lg:rounded-xl p-2 lg:p-3 text-center border border-white/30">
+                <div className={`w-8 h-8 lg:w-12 lg:h-12 rounded-lg lg:rounded-xl flex items-center justify-center text-white text-sm lg:text-lg font-bold shadow-lg mb-1 lg:mb-2 ${
                   activeTeam === 'home' ? 'bg-orange-700' : 'bg-blue-700'
                 }`}>
                   👨‍💼
                 </div>
-                <div className="text-xs text-white font-bold">Head Coach</div>
-                <div className="text-xs text-white opacity-80">{currentLineup?.coach || 'Coach NBA'}</div>
+                <div className="text-xs text-white font-bold">Coach</div>
+                <div className="text-xs text-white opacity-80 truncate max-w-16 lg:max-w-none">{currentLineup?.coach || 'NBA'}</div>
               </div>
             </div>
 
-            {/* Légende mise à jour avec orientation défensive */}
-            <div className="absolute -top-2 -right-2">
-              <div className="bg-black/60 backdrop-blur-md rounded-xl p-3 border border-white/30">
+            {/* Légende mobile */}
+            <div className="absolute top-1 lg:-top-2 right-1 lg:-right-2">
+              <div className="bg-black/60 backdrop-blur-md rounded-lg lg:rounded-xl p-2 lg:p-3 border border-white/30">
                 <div className="text-white text-xs">
-                  <div className="font-bold mb-2 flex items-center space-x-2">
-                    <User className="w-3 h-3" />
-                    <span>Formation Défensive</span>
+                  <div className="font-bold mb-1 lg:mb-2 flex items-center space-x-1 lg:space-x-2">
+                    <User className="w-2 h-2 lg:w-3 lg:h-3" />
+                    <span className="text-xs lg:text-sm">Formation</span>
                   </div>
-                  <div className="space-y-1 text-xs text-white">
-                    <div>🔵 1 - Meneur (PG)</div>
-                    <div>🔵 2 - Arrière (SG)</div>
-                    <div>🔵 3 - Ailier (SF)</div>
-                    <div>🔵 4 - Ailier Fort (PF)</div>
-                    <div>🔵 5 - Pivot (C)©</div>
+                  <div className="space-y-0.5 lg:space-y-1 text-xs lg:text-xs text-white">
+                    <div className="hidden lg:block">🔵 1 - Meneur (PG)</div>
+                    <div className="hidden lg:block">🔵 2 - Arrière (SG)</div>
+                    <div className="hidden lg:block">🔵 3 - Ailier (SF)</div>
+                    <div className="hidden lg:block">🔵 4 - Ailier Fort (PF)</div>
+                    <div className="hidden lg:block">🔵 5 - Pivot (C)</div>
+                    {/* Version mobile compacte */}
+                    <div className="lg:hidden">🔵 5 de départ</div>
                   </div>
                 </div>
               </div>
@@ -502,40 +504,18 @@ function BasketballPlayersTabFixed({ match, lineups, playerRatings, onRatePlayer
         </div>
       </div>
 
-      {/* Banc NBA */}
-      <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-        <div className="bg-gradient-to-r from-gray-500 to-gray-600 p-6 text-white">
-          <h3 className="text-xl font-semibold flex items-center space-x-2">
-            <Users className="w-6 h-6" />
-            <span>Banc NBA ({bench.length} remplaçants)</span>
-          </h3>
-        </div>
-        
-        <div className="p-6">
-          {bench.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {bench.map((player: any, index: number) => (
-                <NBABenchPlayerCardFixed
-                  key={index}
-                  player={player}
-                  userRating={getUserRatingForPlayer(player)}
-                  onSelect={setSelectedPlayer}
-                  teamColor={activeTeam}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8 text-gray-500">
-              <Users className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-              <p>Aucun remplaçant disponible</p>
-            </div>
-          )}
-        </div>
-      </div>
+      {/* Banc NBA - Mobile Grid */}
+      {/* Banc NBA - Menu Déroulant */}
+<BenchDropdownMenu 
+  bench={bench}
+  activeTeam={activeTeam}
+  getUserRatingForPlayer={getUserRatingForPlayer}
+  setSelectedPlayer={setSelectedPlayer}
+/>
 
       {/* Modal de notation */}
       {selectedPlayer && (
-        <NBAPlayerRatingModalFixed
+        <NBAPlayerRatingModalMobile
           player={selectedPlayer}
           userRating={selectedPlayer.userRating}
           onRate={onRatePlayer}
@@ -546,12 +526,58 @@ function BasketballPlayersTabFixed({ match, lineups, playerRatings, onRatePlayer
     </div>
   )
 }
+// MENU DÉROULANT POUR LE BANC
+function BenchDropdownMenu({ bench, activeTeam, getUserRatingForPlayer, setSelectedPlayer }: any) {
+  const [isOpen, setIsOpen] = useState(false)
 
-// COMPOSANT JOUEUR SIMPLE COMME SUR L'IMAGE
-function NBAPlayerCardSimple({ player, number, position, color, userRating, onSelect, showRatingsOverlay }: any) {
+  return (
+    <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+      {/* Header cliquable */}
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full bg-gradient-to-r from-gray-500 to-gray-600 p-4 lg:p-6 text-white flex items-center justify-between hover:from-gray-600 hover:to-gray-700 transition-all"
+      >
+        <div className="flex items-center space-x-2">
+          <Users className="w-5 h-5 lg:w-6 lg:h-6" />
+          <span className="text-lg lg:text-xl font-semibold">Banc NBA ({bench.length})</span>
+        </div>
+        <div className={`transform transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}>
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
+      </button>
+      
+      {/* Contenu déroulant */}
+      {isOpen && (
+        <div className="p-4 lg:p-6 bg-gray-50">
+          {bench.length > 0 ? (
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3 lg:gap-4">
+              {bench.map((player: any, index: number) => (
+                <NBABenchPlayerCardMobile
+                  key={index}
+                  player={player}
+                  userRating={getUserRatingForPlayer(player)}
+                  onSelect={setSelectedPlayer}
+                  teamColor={activeTeam}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-6 lg:py-8 text-gray-500">
+              <Users className="w-10 h-10 lg:w-12 lg:h-12 mx-auto mb-3 lg:mb-4 text-gray-400" />
+              <p className="text-sm lg:text-base">Aucun remplaçant disponible</p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+// COMPOSANT JOUEUR MOBILE OPTIMISÉ
+function NBAPlayerCardMobile({ player, number, position, color, userRating, onSelect, showRatingsOverlay }: any) {
   if (!player) return null
 
-  // Obtenir le nom complet du joueur
   const getPlayerName = () => {
     if (player.player?.name) return player.player.name
     if (player.player?.firstname && player.player?.lastname) {
@@ -566,37 +592,35 @@ function NBAPlayerCardSimple({ player, number, position, color, userRating, onSe
   return (
     <div
       onClick={() => onSelect({...player, userRating, position})}
-      className="cursor-pointer group transition-all duration-300 hover:scale-110 flex flex-col items-center relative transform hover:-translate-y-2"
+      className="cursor-pointer group transition-all duration-300 hover:scale-110 flex flex-col items-center relative transform hover:-translate-y-1"
     >
-      {/* Cercle bleu avec numéro comme sur l'image */}
-      <div className={`w-16 h-16 rounded-full ${color} flex items-center justify-center text-white font-bold shadow-xl border-2 border-white transition-all duration-300 relative ${
-        userRating ? 'ring-3 ring-yellow-400/80' : ''
+      {/* Cercle bleu avec numéro - Taille mobile */}
+      <div className={`w-10 h-10 lg:w-16 lg:h-16 rounded-full ${color} flex items-center justify-center text-white font-bold shadow-xl border-2 border-white transition-all duration-300 relative ${
+        userRating ? 'ring-2 lg:ring-3 ring-yellow-400/80' : ''
       } group-hover:shadow-2xl group-hover:scale-105`}>
         
         {/* Numéro du joueur */}
-        <div className="text-xl font-black">{number}</div>
+        <div className="text-sm lg:text-xl font-black">{number}</div>
         
         {/* Badge de note utilisateur */}
         {userRating && showRatingsOverlay && (
-          <div className="absolute -top-1 -right-1 w-6 h-6 bg-gradient-to-br from-yellow-300 to-yellow-500 rounded-full flex items-center justify-center text-xs font-black text-gray-900 shadow-lg border-2 border-white">
+          <div className="absolute -top-0.5 lg:-top-1 -right-0.5 lg:-right-1 w-4 h-4 lg:w-6 lg:h-6 bg-gradient-to-br from-yellow-300 to-yellow-500 rounded-full flex items-center justify-center text-xs font-black text-gray-900 shadow-lg border border-white lg:border-2">
             {userRating.rating}
           </div>
         )}
       </div>
       
-      {/* Nom du poste en français comme sur l'image */}
-      <div className="mt-2 text-center">
-        <div className="bg-black/80 text-white text-xs px-3 py-1 rounded-lg font-bold shadow-lg backdrop-blur-md border border-white/20">
+      {/* Nom du poste */}
+      <div className="mt-1 lg:mt-2 text-center">
+        <div className="bg-black/80 text-white text-xs px-2 lg:px-3 py-1 rounded-lg font-bold shadow-lg backdrop-blur-md border border-white/20">
           {position}
         </div>
         
-        {/* Nom du joueur en plus petit */}
-        <div className="bg-black/70 text-white text-xs px-2 py-1 rounded-lg font-medium shadow-lg backdrop-blur-md border border-white/20 mt-1 max-w-32 truncate">
-          {playerName.split(' ').slice(-1)[0] || playerName}
-        </div>
+        {/* Nom du joueur */}
+        
         
         {/* Stats compactes */}
-        <div className="text-white text-xs bg-black/70 px-2 py-1 rounded-lg backdrop-blur-sm border border-white/20 mt-1">
+        <div className="text-white text-xs bg-black/70 px-1 lg:px-2 py-1 rounded-lg backdrop-blur-sm border border-white/20 mt-1">
           {player.points || 0}p • {player.rebounds || 0}r • {player.assists || 0}a
         </div>
       </div>
@@ -604,8 +628,8 @@ function NBAPlayerCardSimple({ player, number, position, color, userRating, onSe
   )
 }
 
-// COMPOSANT BANC NBA CORRIGÉ
-function NBABenchPlayerCardFixed({ player, userRating, onSelect, teamColor }: any) {
+// COMPOSANT BANC NBA MOBILE OPTIMISÉ
+function NBABenchPlayerCardMobile({ player, userRating, onSelect, teamColor }: any) {
   const getPositionColor = (pos: string) => {
     const colors = {
       'PG': 'from-purple-500 to-purple-700',
@@ -619,7 +643,6 @@ function NBABenchPlayerCardFixed({ player, userRating, onSelect, teamColor }: an
     return colors[pos as keyof typeof colors] || 'from-gray-500 to-gray-700'
   }
 
-  // Obtenir le nom complet du joueur - CORRIGÉ
   const getPlayerName = () => {
     if (player.player?.name) return player.player.name
     if (player.player?.firstname && player.player?.lastname) {
@@ -634,18 +657,18 @@ function NBABenchPlayerCardFixed({ player, userRating, onSelect, teamColor }: an
   return (
     <div
       onClick={() => onSelect({...player, userRating})}
-      className="group cursor-pointer bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-4 hover:shadow-xl transition-all duration-300 border border-gray-200 hover:border-gray-300 transform hover:-translate-y-1"
+      className="group cursor-pointer bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl lg:rounded-2xl p-3 lg:p-4 hover:shadow-xl transition-all duration-300 border border-gray-200 hover:border-gray-300 transform hover:-translate-y-1"
     >
       <div className="flex items-center space-x-3">
-        <div className={`w-14 h-14 rounded-2xl flex flex-col items-center justify-center text-white text-sm font-bold shadow-lg transition-transform group-hover:scale-110 relative bg-gradient-to-br ${getPositionColor(player.position)} ${
-          userRating ? 'ring-3 ring-yellow-400/60' : ''
+        <div className={`w-12 h-12 lg:w-14 lg:h-14 rounded-xl lg:rounded-2xl flex flex-col items-center justify-center text-white text-sm font-bold shadow-lg transition-transform group-hover:scale-110 relative bg-gradient-to-br ${getPositionColor(player.position)} ${
+          userRating ? 'ring-2 lg:ring-3 ring-yellow-400/60' : ''
         }`}>
-          <div className="text-lg font-black">{player.number || '?'}</div>
+          <div className="text-sm lg:text-lg font-black">{player.number || '?'}</div>
           <div className="text-xs">{player.position || 'G'}</div>
           
           {/* Badge Remplaçant */}
-          <div className="absolute -top-1 -right-1 bg-gray-600 text-white text-xs px-1.5 py-0.5 rounded-full font-bold">
-            BENCH
+          <div className="absolute -top-1 -right-1 bg-gray-600 text-white text-xs px-1 lg:px-1.5 py-0.5 rounded-full font-bold">
+            SUB
           </div>
         </div>
         
@@ -662,7 +685,7 @@ function NBABenchPlayerCardFixed({ player, userRating, onSelect, teamColor }: an
           
           {/* Stats détaillées */}
           {player.minutes && (
-            <div className="text-xs text-gray-500 mt-1">
+            <div className="text-xs text-gray-500 mt-1 hidden lg:block">
               ⏱️ {player.minutes} • FG: {player.fieldGoals || '0/0'}
             </div>
           )}
@@ -674,7 +697,7 @@ function NBABenchPlayerCardFixed({ player, userRating, onSelect, teamColor }: an
               </span>
             ) : (
               <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full font-medium">
-                Cliquez pour noter
+                Noter
               </span>
             )}
           </div>
@@ -684,8 +707,8 @@ function NBABenchPlayerCardFixed({ player, userRating, onSelect, teamColor }: an
   )
 }
 
-// MODAL DE NOTATION NBA CORRIGÉE
-function NBAPlayerRatingModalFixed({ player, userRating, onRate, onClose, teamColor }: any) {
+// MODAL DE NOTATION NBA MOBILE OPTIMISÉE
+function NBAPlayerRatingModalMobile({ player, userRating, onRate, onClose, teamColor }: any) {
   const [selectedRating, setSelectedRating] = useState(userRating?.rating || 0)
   const [comment, setComment] = useState(userRating?.comment || '')
   const [submitting, setSubmitting] = useState(false)
@@ -695,7 +718,6 @@ function NBAPlayerRatingModalFixed({ player, userRating, onRate, onClose, teamCo
 
     setSubmitting(true)
     try {
-      // Générer un ID joueur robuste
       const playerId = player.player?.id || 
                       player.player?.name || 
                       `${player.player?.firstname}_${player.player?.lastname}` ||
@@ -724,7 +746,6 @@ function NBAPlayerRatingModalFixed({ player, userRating, onRate, onClose, teamCo
 
   const ratingDesc = getRatingDescription(selectedRating)
   
-  // Obtenir le nom complet du joueur - CORRIGÉ
   const getPlayerName = () => {
     if (player.player?.name) return player.player.name
     if (player.player?.firstname && player.player?.lastname) {
@@ -738,25 +759,25 @@ function NBAPlayerRatingModalFixed({ player, userRating, onRate, onClose, teamCo
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-      <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl transform transition-all">
-        {/* Header */}
-        <div className={`${teamColor === 'orange' ? 'bg-gradient-to-r from-orange-600 to-red-700' : 'bg-gradient-to-r from-blue-600 to-blue-700'} p-8 rounded-t-3xl text-white`}>
-          <div className="flex items-center space-x-4">
-            <div className="w-20 h-20 bg-white bg-opacity-20 rounded-2xl flex flex-col items-center justify-center text-white backdrop-blur-sm">
-              <div className="text-xl font-black">{player.number || '?'}</div>
+      <div className="bg-white rounded-2xl lg:rounded-3xl max-w-md w-full shadow-2xl transform transition-all max-h-[90vh] overflow-y-auto">
+        {/* Header - Mobile Optimized */}
+        <div className={`${teamColor === 'orange' ? 'bg-gradient-to-r from-orange-600 to-red-700' : 'bg-gradient-to-r from-blue-600 to-blue-700'} p-4 lg:p-8 rounded-t-2xl lg:rounded-t-3xl text-white`}>
+          <div className="flex items-center space-x-3 lg:space-x-4">
+            <div className="w-16 h-16 lg:w-20 lg:h-20 bg-white bg-opacity-20 rounded-xl lg:rounded-2xl flex flex-col items-center justify-center text-white backdrop-blur-sm">
+              <div className="text-lg lg:text-xl font-black">{player.number || '?'}</div>
               <div className="text-xs font-bold">{player.position || 'NBA'}</div>
             </div>
-            <div className="flex-1">
-              <h3 className="text-2xl font-bold">{playerName}</h3>
-              <p className="text-orange-100 opacity-90">{player.position || 'Joueur NBA'}</p>
-              <div className="flex items-center space-x-3 mt-2 text-sm">
-                <span className="bg-white bg-opacity-20 px-3 py-1 rounded-full">
+            <div className="flex-1 min-w-0">
+              <h3 className="text-xl lg:text-2xl font-bold truncate">{playerName}</h3>
+              <p className="text-orange-100 opacity-90 text-sm lg:text-base">{player.position || 'Joueur NBA'}</p>
+              <div className="flex items-center space-x-2 lg:space-x-3 mt-2 text-sm">
+                <span className="bg-white bg-opacity-20 px-2 lg:px-3 py-1 rounded-full text-xs lg:text-sm">
                   {player.points || 0} pts
                 </span>
-                <span className="bg-white bg-opacity-20 px-3 py-1 rounded-full">
+                <span className="bg-white bg-opacity-20 px-2 lg:px-3 py-1 rounded-full text-xs lg:text-sm">
                   {player.rebounds || 0} reb
                 </span>
-                <span className="bg-white bg-opacity-20 px-3 py-1 rounded-full">
+                <span className="bg-white bg-opacity-20 px-2 lg:px-3 py-1 rounded-full text-xs lg:text-sm">
                   {player.assists || 0} ast
                 </span>
               </div>
@@ -769,18 +790,18 @@ function NBAPlayerRatingModalFixed({ player, userRating, onRate, onClose, teamCo
           </div>
         </div>
 
-        <div className="p-8 space-y-8">
-          {/* Système de notation NBA */}
+        <div className="p-4 lg:p-8 space-y-6 lg:space-y-8">
+          {/* Système de notation NBA - Mobile Grid */}
           <div>
-            <p className="text-sm font-bold mb-6 text-gray-700">🏀 Évaluation NBA sur 10 :</p>
+            <p className="text-sm font-bold mb-4 lg:mb-6 text-gray-700">🏀 Évaluation NBA sur 10 :</p>
             
-            {/* Grille de notation */}
-            <div className="grid grid-cols-5 gap-3 mb-6">
+            {/* Grille de notation mobile */}
+            <div className="grid grid-cols-5 gap-2 lg:gap-3 mb-4 lg:mb-6">
               {Array.from({ length: 10 }, (_, i) => (
                 <button
                   key={i}
                   onClick={() => setSelectedRating(i + 1)}
-                  className={`aspect-square rounded-xl text-sm font-black transition-all duration-200 ${
+                  className={`aspect-square rounded-lg lg:rounded-xl text-sm font-black transition-all duration-200 ${
                     i < selectedRating 
                       ? 'bg-gradient-to-br from-orange-400 to-red-500 text-white shadow-lg scale-105 ring-2 ring-orange-300' 
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:scale-105'
@@ -792,31 +813,31 @@ function NBAPlayerRatingModalFixed({ player, userRating, onRate, onClose, teamCo
             </div>
             
             {/* Barre de progression */}
-            <div className="w-full bg-gray-200 rounded-full h-3 mb-4">
+            <div className="w-full bg-gray-200 rounded-full h-2 lg:h-3 mb-3 lg:mb-4">
               <div 
-                className="bg-gradient-to-r from-orange-400 to-red-500 h-3 rounded-full transition-all duration-500"
+                className="bg-gradient-to-r from-orange-400 to-red-500 h-2 lg:h-3 rounded-full transition-all duration-500"
                 style={{ width: `${(selectedRating / 10) * 100}%` }}
               ></div>
             </div>
             
             {/* Description */}
-            <div className={`text-center text-sm font-bold ${ratingDesc.color} bg-gray-50 rounded-xl p-4`}>
-              <span className="text-3xl mr-3">{ratingDesc.emoji}</span>
-              {ratingDesc.text}
+            <div className={`text-center text-sm font-bold ${ratingDesc.color} bg-gray-50 rounded-xl p-3 lg:p-4`}>
+              <span className="text-2xl lg:text-3xl mr-2 lg:mr-3">{ratingDesc.emoji}</span>
+              <span className="text-xs lg:text-sm">{ratingDesc.text}</span>
             </div>
           </div>
           
-          {/* Commentaire */}
+          {/* Commentaire - Mobile Optimized */}
           <div>
-            <label className="block text-sm font-bold mb-4 text-gray-700">
+            <label className="block text-sm font-bold mb-3 lg:mb-4 text-gray-700">
               💭 Votre analyse NBA :
             </label>
             <textarea
               value={comment}
               onChange={(e) => setComment(e.target.value)}
-              className="w-full p-4 border-2 border-gray-200 rounded-xl resize-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all placeholder-gray-400"
+              className="w-full p-3 lg:p-4 border-2 border-gray-200 rounded-xl resize-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all placeholder-gray-400 text-sm lg:text-base"
               rows={3}
-              placeholder="Efficacité au tir, défense, rebonds, impact sur le match..."
+              placeholder="Efficacité au tir, défense, rebonds, impact..."
               maxLength={200}
             />
             <div className="text-xs text-gray-500 mt-2 text-right">
@@ -824,18 +845,18 @@ function NBAPlayerRatingModalFixed({ player, userRating, onRate, onClose, teamCo
             </div>
           </div>
           
-          {/* Actions */}
-          <div className="flex space-x-4 pt-4">
+          {/* Actions - Mobile Stack */}
+          <div className="flex flex-col lg:flex-row space-y-3 lg:space-y-0 lg:space-x-4 pt-4">
             <button
               onClick={onClose}
-              className="flex-1 px-6 py-4 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-all font-bold text-lg"
+              className="w-full lg:flex-1 px-4 lg:px-6 py-3 lg:py-4 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-all font-bold text-base lg:text-lg"
             >
               Annuler
             </button>
             <button
               onClick={handleRate}
               disabled={selectedRating === 0 || submitting}
-              className={`flex-1 px-6 py-4 rounded-xl transition-all font-bold text-lg text-white shadow-lg ${
+              className={`w-full lg:flex-1 px-4 lg:px-6 py-3 lg:py-4 rounded-xl transition-all font-bold text-base lg:text-lg text-white shadow-lg ${
                 selectedRating === 0 || submitting
                   ? 'bg-gray-400 cursor-not-allowed'
                   : teamColor === 'orange'
@@ -845,8 +866,8 @@ function NBAPlayerRatingModalFixed({ player, userRating, onRate, onClose, teamCo
             >
               {submitting ? (
                 <div className="flex items-center justify-center">
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                  Notation...
+                  <div className="w-4 h-4 lg:w-5 lg:h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                  <span className="text-sm lg:text-base">Notation...</span>
                 </div>
               ) : (
                 `🏀 ${userRating ? 'Modifier' : 'Noter'} (${selectedRating}/10)`
@@ -859,7 +880,7 @@ function NBAPlayerRatingModalFixed({ player, userRating, onRate, onClose, teamCo
   )
 }
 
-// TAB PERFORMANCE PAR QUART-TEMPS
+// TAB PERFORMANCE PAR QUART-TEMPS (reste identique)
 function BasketballQuartersTab({ match, quarters }: any) {
   const quartersArray = [
     { name: 'Q1', home: quarters.quarter1.home, away: quarters.quarter1.away },
@@ -869,12 +890,12 @@ function BasketballQuartersTab({ match, quarters }: any) {
   ]
 
   return (
-    <div className="space-y-6 p-6">
-      <div className="bg-gradient-to-r from-orange-50 to-red-50 px-6 py-4 border-b">
-        <h2 className="text-xl font-semibold text-gray-900">📊 Évolution du score</h2>
+    <div className="space-y-4 lg:space-y-6 p-4 lg:p-6">
+      <div className="bg-gradient-to-r from-orange-50 to-red-50 px-4 lg:px-6 py-3 lg:py-4 border-b">
+        <h2 className="text-lg lg:text-xl font-semibold text-gray-900">📊 Évolution du score</h2>
       </div>
       
-      <div className="space-y-4">
+      <div className="space-y-3 lg:space-y-4">
         {quartersArray.map((quarter, index) => {
           const homeScore = quarter.home || 0
           const awayScore = quarter.away || 0
@@ -883,8 +904,8 @@ function BasketballQuartersTab({ match, quarters }: any) {
           const awayPercent = total > 0 ? (awayScore / total) * 100 : 50
 
           return (
-            <div key={quarter.name} className="bg-gray-50 rounded-xl p-4">
-              <div className="flex justify-between items-center mb-3">
+            <div key={quarter.name} className="bg-gray-50 rounded-xl p-3 lg:p-4">
+              <div className="flex justify-between items-center mb-2 lg:mb-3">
                 <span className="text-lg font-bold text-blue-600">{homeScore}</span>
                 <div className="text-center">
                   <span className="text-sm font-bold text-gray-700">{quarter.name}</span>
@@ -893,7 +914,7 @@ function BasketballQuartersTab({ match, quarters }: any) {
                 <span className="text-lg font-bold text-red-600">{awayScore}</span>
               </div>
               
-              <div className="flex h-4 bg-gray-200 rounded-full overflow-hidden">
+              <div className="flex h-3 lg:h-4 bg-gray-200 rounded-full overflow-hidden">
                 <div 
                   className="bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-1000"
                   style={{ width: `${homePercent}%` }}
@@ -905,49 +926,49 @@ function BasketballQuartersTab({ match, quarters }: any) {
               </div>
               
               <div className="flex justify-between text-xs text-gray-500 mt-2">
-                <span>{match.homeTeam}</span>
-                <span>{match.awayTeam}</span>
+                <span className="truncate">{match.homeTeam}</span>
+                <span className="truncate">{match.awayTeam}</span>
               </div>
             </div>
           )
         })}
       </div>
 
-      {/* Stats des quart-temps */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-gradient-to-br from-green-50 to-emerald-100 rounded-xl p-6 border border-green-200">
+      {/* Stats des quart-temps - Mobile Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 lg:gap-4">
+        <div className="bg-gradient-to-br from-green-50 to-emerald-100 rounded-xl p-4 lg:p-6 border border-green-200">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-2xl font-bold text-green-600">
+              <div className="text-xl lg:text-2xl font-bold text-green-600">
                 {Math.max(...quartersArray.map(q => q.home + q.away))}
               </div>
               <div className="text-sm font-medium text-green-700">🔥 Meilleur quart</div>
             </div>
-            <TrendingUp className="w-8 h-8 text-green-500" />
+            <TrendingUp className="w-6 h-6 lg:w-8 lg:h-8 text-green-500" />
           </div>
         </div>
         
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-xl p-6 border border-blue-200">
+        <div className="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-xl p-4 lg:p-6 border border-blue-200">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-2xl font-bold text-blue-600">
+              <div className="text-xl lg:text-2xl font-bold text-blue-600">
                 {quartersArray.reduce((sum, q) => sum + q.home, 0)}
               </div>
-              <div className="text-sm font-medium text-blue-700">📊 {match.homeTeam}</div>
+              <div className="text-sm font-medium text-blue-700 truncate">📊 {match.homeTeam}</div>
             </div>
-            <Trophy className="w-8 h-8 text-blue-500" />
+            <Trophy className="w-6 h-6 lg:w-8 lg:h-8 text-blue-500" />
           </div>
         </div>
         
-        <div className="bg-gradient-to-br from-red-50 to-pink-100 rounded-xl p-6 border border-red-200">
+        <div className="bg-gradient-to-br from-red-50 to-pink-100 rounded-xl p-4 lg:p-6 border border-red-200">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-2xl font-bold text-red-600">
+              <div className="text-xl lg:text-2xl font-bold text-red-600">
                 {quartersArray.reduce((sum, q) => sum + q.away, 0)}
               </div>
-              <div className="text-sm font-medium text-red-700">📊 {match.awayTeam}</div>
+              <div className="text-sm font-medium text-red-700 truncate">📊 {match.awayTeam}</div>
             </div>
-            <Trophy className="w-8 h-8 text-red-500" />
+            <Trophy className="w-6 h-6 lg:w-8 lg:h-8 text-red-500" />
           </div>
         </div>
       </div>
@@ -955,7 +976,7 @@ function BasketballQuartersTab({ match, quarters }: any) {
   )
 }
 
-// TAB STATISTIQUES ÉQUIPES
+// TAB STATISTIQUES ÉQUIPES (reste identique avec quelques ajustements mobile)
 function BasketballStatsTab({ statistics, homeTeam, awayTeam }: any) {
   const basketballStats = {
     'Field Goals Made': 'Paniers réussis',
@@ -986,18 +1007,18 @@ function BasketballStatsTab({ statistics, homeTeam, awayTeam }: any) {
   ]
 
   return (
-    <div className="p-6">
-      <div className="bg-gradient-to-r from-orange-50 to-red-50 px-6 py-4 border-b mb-6">
-        <h2 className="text-xl font-semibold text-gray-900">🏀 Statistiques Basketball</h2>
+    <div className="p-4 lg:p-6">
+      <div className="bg-gradient-to-r from-orange-50 to-red-50 px-4 lg:px-6 py-3 lg:py-4 border-b mb-4 lg:mb-6">
+        <h2 className="text-lg lg:text-xl font-semibold text-gray-900">🏀 Statistiques Basketball</h2>
       </div>
       
       {Object.keys(statistics).length === 0 ? (
-        <div className="text-center py-12">
-          <BarChart3 className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+        <div className="text-center py-8 lg:py-12">
+          <BarChart3 className="w-12 h-12 lg:w-16 lg:h-16 text-gray-400 mx-auto mb-4" />
           <p className="text-gray-500 font-medium">Statistiques non disponibles</p>
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-4 lg:space-y-6">
           {importantBasketballStats.map((statKey) => {
             const homeValue = statistics.home?.[statKey] || '0'
             const awayValue = statistics.away?.[statKey] || '0'
@@ -1019,14 +1040,14 @@ function BasketballStatsTab({ statistics, homeTeam, awayTeam }: any) {
             }
 
             return (
-              <div key={statKey} className="bg-orange-50 rounded-xl p-4 border border-orange-200">
-                <div className="flex justify-between items-center mb-3">
+              <div key={statKey} className="bg-orange-50 rounded-xl p-3 lg:p-4 border border-orange-200">
+                <div className="flex justify-between items-center mb-2 lg:mb-3">
                   <span className="text-lg font-bold text-blue-600">{homeValue}</span>
-                  <span className="text-sm font-semibold text-gray-700">{label}</span>
+                  <span className="text-xs lg:text-sm font-semibold text-gray-700 text-center px-2">{label}</span>
                   <span className="text-lg font-bold text-red-600">{awayValue}</span>
                 </div>
                 
-                <div className="flex h-3 bg-gray-200 rounded-full overflow-hidden mb-2">
+                <div className="flex h-2 lg:h-3 bg-gray-200 rounded-full overflow-hidden mb-2">
                   <div 
                     className="bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-700"
                     style={{ width: `${homePercent}%` }}
@@ -1038,8 +1059,8 @@ function BasketballStatsTab({ statistics, homeTeam, awayTeam }: any) {
                 </div>
                 
                 <div className="flex justify-between text-xs text-gray-500">
-                  <span>{homeTeam}</span>
-                  <span>{awayTeam}</span>
+                  <span className="truncate max-w-[45%]">{homeTeam}</span>
+                  <span className="truncate max-w-[45%]">{awayTeam}</span>
                 </div>
               </div>
             )

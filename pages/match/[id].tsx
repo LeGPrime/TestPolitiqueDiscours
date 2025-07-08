@@ -1,4 +1,4 @@
-// pages/match/[id].tsx - VERSION AVEC BOUTON RETOUR CORRIGÉ POUR MOBILE
+// pages/match/[id].tsx - VERSION COMPLÈTE AVEC RUGBY ET MMA
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { useSession } from 'next-auth/react'
@@ -12,6 +12,8 @@ import axios from 'axios'
 import FootballMatchDetails from '../../components/FootballMatchDetails'
 import BasketballMatchDetails from '../../components/BasketballMatchDetails'
 import F1MatchDetails from '../../components/F1MatchDetails'
+import RugbyMatchDetails from '../../components/RugbyMatchDetails' // 🏉 RUGBY
+import MMAMatchDetails from '../../components/MMAMatchDetails' // 🥊 MMA
 import MatchReviews from '../../components/MatchReviews'
 
 interface MatchData {
@@ -42,6 +44,8 @@ interface MatchDetailsResponse {
       player: string
       detail?: string
       assist?: string
+      round?: number // Pour MMA
+      method?: string // Pour MMA
     }>
     lineups: {
       home: any
@@ -103,7 +107,7 @@ export default function MatchDetailsPage() {
       if (response.data.success) {
         setMatchData(response.data)
         
-        // Récupérer les notations des joueurs/pilotes
+        // Récupérer les notations des joueurs/pilotes/combattants
         try {
           const ratingsResponse = await axios.get(`/api/player-ratings?matchId=${id}`)
           setPlayerRatings(ratingsResponse.data.ratings || [])
@@ -148,7 +152,7 @@ export default function MatchDetailsPage() {
 
   const ratePlayer = async (playerId: string, rating: number, comment?: string) => {
     try {
-      console.log('🎯 Notation joueur/pilote:', { playerId, rating, comment, matchId: id })
+      console.log('🎯 Notation joueur/pilote/combattant:', { playerId, rating, comment, matchId: id })
 
       const response = await axios.post('/api/player-ratings', {
         playerId,
@@ -175,7 +179,7 @@ export default function MatchDetailsPage() {
             <div class="text-xl">⭐</div>
             <div>
               <div class="font-semibold">${response.data.message || 'Notation enregistrée !'}</div>
-              <div class="text-sm opacity-90">Moyenne: ${response.data.avgRating}/${matchData?.data.match.sport === 'F1' ? '10' : '10'} (${response.data.totalRatings} votes)</div>
+              <div class="text-sm opacity-90">Moyenne: ${response.data.avgRating}/10 (${response.data.totalRatings} votes)</div>
             </div>
           </div>
         `
@@ -223,21 +227,49 @@ export default function MatchDetailsPage() {
     const emojis = {
       'FOOTBALL': '⚽',
       'BASKETBALL': '🏀',
-      'MMA': '🥊',
-      'RUGBY': '🏉',
+      'MMA': '🥊', // 🥊 MMA
+      'RUGBY': '🏉', // 🏉 RUGBY
       'F1': '🏎️'
     }
     return emojis[sport as keyof typeof emojis] || '🏆'
   }
 
+  const getSportColor = (sport: string) => {
+    const colors = {
+      'FOOTBALL': 'from-green-500 to-emerald-600',
+      'BASKETBALL': 'from-orange-500 to-red-600',
+      'MMA': 'from-red-500 to-pink-600', // 🥊 MMA
+      'RUGBY': 'from-green-500 to-green-600', // 🏉 RUGBY
+      'F1': 'from-red-500 to-orange-600'
+    }
+    return colors[sport as keyof typeof colors] || 'from-indigo-500 to-purple-600'
+  }
+
   const formatScore = (homeScore: number | null, awayScore: number | null, sport: string) => {
     if (sport === 'F1') {
-      return 'COURSE TERMINÉE' // Pas de score en F1
+      return 'COURSE TERMINÉE'
     }
     if (sport === 'MMA') {
-      return 'W - L' // Win/Loss
+      // Pour MMA : W-L ou résultat du combat
+      return homeScore === 1 ? 'VICTOIRE' : awayScore === 1 ? 'DÉFAITE' : 'COMBAT TERMINÉ'
     }
-    return `${homeScore ?? '?'} - ${awayScore ?? '?'}` // Football, Basketball, Rugby
+    if (sport === 'RUGBY') {
+      return `${homeScore ?? '?'} - ${awayScore ?? '?'}`
+    }
+    return `${homeScore ?? '?'} - ${awayScore ?? '?'}` // Football, Basketball
+  }
+
+  const getSportTitle = (sport: string, homeTeam: string, awayTeam: string) => {
+    if (sport === 'MMA') {
+      return `🥊 ${homeTeam} vs ${awayTeam}` // Combat MMA
+    }
+    if (sport === 'RUGBY') {
+      return `🏉 ${homeTeam} vs ${awayTeam}` // Match Rugby
+    }
+    if (sport === 'F1') {
+      return `🏁 ${homeTeam}` // Grand Prix F1
+    }
+    return `${getSportEmoji(sport)} ${homeTeam} vs ${awayTeam}` // Autres sports
   }
 
   if (loading) {
@@ -268,12 +300,12 @@ export default function MatchDetailsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* 📱 BOUTON RETOUR MOBILE CORRIGÉ - Descendu encore plus bas */}
+      {/* 📱 HEADER MOBILE AVEC BOUTON RETOUR */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4">
-          {/* Espace supplémentaire en haut pour mobile (safe area + marge) */}
+          {/* Safe area pour mobile */}
           <div className="pt-4 md:pt-2 safe-area-top">
-            {/* Bouton retour repositionné encore plus bas */}
+            {/* Navigation header */}
             <div className="flex items-center justify-between py-4 md:py-2">
               <Link href="/" className="flex items-center text-gray-600 hover:text-gray-900 transition-colors touch-target group">
                 <div className="flex items-center space-x-2 px-4 py-3 md:px-3 md:py-2 rounded-xl hover:bg-gray-100 transition-all">
@@ -282,7 +314,7 @@ export default function MatchDetailsPage() {
                 </div>
               </Link>
               
-              {/* Badge sport mobile */}
+              {/* Badge sport */}
               <div className="flex items-center space-x-2 bg-gray-100 rounded-xl px-4 py-3 md:px-3 md:py-2">
                 <span className="text-xl md:text-lg">{getSportEmoji(match.sport)}</span>
                 <span className="text-sm font-medium text-gray-700 hidden sm:block">{match.competition}</span>
@@ -290,14 +322,14 @@ export default function MatchDetailsPage() {
             </div>
           </div>
           
-          {/* Score principal universel */}
+          {/* Header principal spécifique par sport */}
           <div className="text-center pb-4 md:pb-6">
             <div className="flex items-center justify-center space-x-2 mb-4 md:mb-2">
               <span className="text-2xl md:text-3xl">{getSportEmoji(match.sport)}</span>
               <span className="text-base md:text-lg font-medium text-gray-600 block sm:hidden md:block">{match.competition}</span>
             </div>
 
-            {/* Header spécifique F1 */}
+            {/* Headers spécialisés par sport */}
             {match.sport === 'F1' ? (
               <div className="mb-4">
                 <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">🏁 {match.homeTeam}</h1>
@@ -306,8 +338,33 @@ export default function MatchDetailsPage() {
                   Formula 1 • Grand Prix terminé
                 </div>
               </div>
+            ) : match.sport === 'MMA' ? (
+              <div className="mb-4">
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
+                  🥊 {match.homeTeam} vs {match.awayTeam}
+                </h1>
+                <p className="text-lg md:text-xl text-gray-700">📍 {match.venue}</p>
+                <div className="text-base md:text-lg font-medium text-red-600 mt-2">
+                  {match.competition} • {formatScore(match.homeScore, match.awayScore, match.sport)}
+                </div>
+                {match.details?.weightClass && (
+                  <div className="text-sm text-gray-600 mt-1">
+                    🏋️ Catégorie: {match.details.weightClass}
+                  </div>
+                )}
+              </div>
+            ) : match.sport === 'RUGBY' ? (
+              <div className="mb-4">
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
+                  🏉 {match.homeTeam} vs {match.awayTeam}
+                </h1>
+                <p className="text-lg md:text-xl text-gray-700">📍 {match.venue}</p>
+                <div className="text-base md:text-lg font-medium text-green-600 mt-2">
+                  {match.competition} • {formatScore(match.homeScore, match.awayScore, match.sport)}
+                </div>
+              </div>
             ) : (
-              /* Header classique pour autres sports - Optimisé mobile */
+              /* Header classique pour Football et Basketball */
               <div className="space-y-4 md:space-y-0">
                 {/* Version mobile - Stack vertical */}
                 <div className="block md:hidden">
@@ -366,7 +423,7 @@ export default function MatchDetailsPage() {
               </div>
             )}
 
-            {/* Infos du match universelles - Responsive */}
+            {/* Infos universelles du match */}
             <div className="flex flex-wrap items-center justify-center gap-3 md:gap-6 text-xs md:text-sm text-gray-600">
               <div className="flex items-center space-x-1 bg-gray-100 rounded-lg px-2 py-1">
                 <Clock className="w-3 h-3 md:w-4 md:h-4" />
@@ -385,7 +442,9 @@ export default function MatchDetailsPage() {
               {match.referee && match.sport !== 'F1' && (
                 <div className="flex items-center space-x-1 bg-gray-100 rounded-lg px-2 py-1">
                   <Flag className="w-3 h-3 md:w-4 md:h-4" />
-                  <span className="font-medium truncate max-w-[100px] md:max-w-none">{match.referee}</span>
+                  <span className="font-medium truncate max-w-[100px] md:max-w-none">
+                    {match.sport === 'MMA' ? 'Arbitre' : 'Arbitre'}: {match.referee}
+                  </span>
                 </div>
               )}
               {match.attendance && (
@@ -399,11 +458,12 @@ export default function MatchDetailsPage() {
         </div>
       </div>
 
-      {/* Contenu spécifique par sport */}
+      {/* Contenu principal */}
       <div className="max-w-7xl mx-auto px-4 py-6 md:py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
-          {/* Contenu principal - Varie selon le sport */}
+          {/* Zone de contenu principal - spécifique par sport */}
           <div className="lg:col-span-2 space-y-6 md:space-y-8">
+            {/* ⚽ FOOTBALL */}
             {match.sport === 'FOOTBALL' && (
               <FootballMatchDetails
                 matchDetails={matchData.data}
@@ -413,6 +473,7 @@ export default function MatchDetailsPage() {
               />
             )}
             
+            {/* 🏀 BASKETBALL */}
             {match.sport === 'BASKETBALL' && (
               <BasketballMatchDetails
                 matchDetails={matchData.data}
@@ -422,7 +483,7 @@ export default function MatchDetailsPage() {
               />
             )}
 
-            {/* Interface F1 */}
+            {/* 🏎️ F1 */}
             {match.sport === 'F1' && (
               <F1MatchDetails
                 matchDetails={matchData.data}
@@ -432,16 +493,41 @@ export default function MatchDetailsPage() {
               />
             )}
 
-            {/* 🆕 NOUVEAU : Section Reviews & Commentaires */}
+            {/* 🏉 RUGBY */}
+            {match.sport === 'RUGBY' && (
+              <RugbyMatchDetails
+                matchDetails={matchData.data}
+                playerRatings={playerRatings}
+                onRatePlayer={ratePlayer}
+                currentUserId={session?.user?.id}
+              />
+            )}
+
+            {/* 🥊 MMA */}
+            {match.sport === 'MMA' && (
+              <MMAMatchDetails
+                matchDetails={matchData.data}
+                playerRatings={playerRatings}
+                onRatePlayer={ratePlayer}
+                currentUserId={session?.user?.id}
+              />
+            )}
+
+            {/* Section Reviews & Commentaires universelle */}
             <MatchReviews
               matchId={match.id}
-              matchTitle={match.sport === 'F1' ? match.homeTeam : `${match.homeTeam} vs ${match.awayTeam}`}
+              matchTitle={
+                match.sport === 'F1' ? match.homeTeam : 
+                match.sport === 'MMA' ? `${match.homeTeam} vs ${match.awayTeam}` :
+                match.sport === 'RUGBY' ? `${match.homeTeam} vs ${match.awayTeam}` :
+                `${match.homeTeam} vs ${match.awayTeam}`
+              }
               currentUserId={session?.user?.id}
               userHasRated={!!userRating}
             />
 
-            {/* Sports pas encore implémentés */}
-            {!['FOOTBALL', 'BASKETBALL', 'F1'].includes(match.sport) && (
+            {/* Placeholder pour sports non implémentés */}
+            {!['FOOTBALL', 'BASKETBALL', 'F1', 'RUGBY', 'MMA'].includes(match.sport) && (
               <div className="bg-white rounded-xl shadow-lg p-6 md:p-8 text-center">
                 <div className="text-4xl md:text-6xl mb-4">{getSportEmoji(match.sport)}</div>
                 <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-2">
@@ -459,7 +545,7 @@ export default function MatchDetailsPage() {
             )}
           </div>
 
-          {/* Sidebar universelle - Notation de l'événement */}
+          {/* Sidebar universelle */}
           <div className="lg:col-span-1 space-y-6">
             <MatchRatingSidebar
               match={match}
@@ -474,8 +560,7 @@ export default function MatchDetailsPage() {
             />
             
             <MatchInfoCard match={match} />
-
-            {/* 🆕 Widget statistiques de la communauté */}
+            
             <CommunityStatsWidget matchId={match.id} />
           </div>
         </div>
@@ -518,13 +603,20 @@ function MatchRatingSidebar({
     return labels[sport as keyof typeof labels] || 'Événement'
   }
 
+  const getSportColor = (sport: string) => {
+    const colors = {
+      'FOOTBALL': 'from-green-500 to-emerald-600',
+      'BASKETBALL': 'from-orange-500 to-red-600',
+      'MMA': 'from-red-500 to-pink-600',
+      'RUGBY': 'from-green-500 to-green-600',
+      'F1': 'from-red-500 to-orange-600'
+    }
+    return colors[sport as keyof typeof colors] || 'from-indigo-500 to-purple-600'
+  }
+
   return (
     <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-      <div className={`p-4 md:p-6 text-white ${
-        match.sport === 'F1' ? 'bg-gradient-to-r from-red-500 to-orange-600' :
-        match.sport === 'BASKETBALL' ? 'bg-gradient-to-r from-orange-500 to-red-600' :
-        'bg-gradient-to-r from-indigo-500 to-purple-600'
-      }`}>
+      <div className={`p-4 md:p-6 text-white bg-gradient-to-r ${getSportColor(match.sport)}`}>
         <div className="flex items-center space-x-3">
           <span className="text-2xl md:text-3xl">{getSportEmoji(match.sport)}</span>
           <div>
@@ -587,7 +679,7 @@ function MatchRatingSidebar({
               onChange={(e) => setComment(e.target.value)}
               className="w-full p-3 md:p-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all resize-none text-sm md:text-base"
               rows={3}
-              placeholder={`Qu'avez-vous pensé de cet événement ?${getSportEmoji(match.sport)}`}
+              placeholder={`Qu'avez-vous pensé de cet événement ? ${getSportEmoji(match.sport)}`}
               maxLength={300}
             />
             <div className="text-xs text-gray-500 mt-1 text-right">
@@ -601,9 +693,7 @@ function MatchRatingSidebar({
             className={`w-full py-3 px-4 rounded-xl font-semibold transition-all duration-200 touch-target ${
               userRating === 0
                 ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                : match.sport === 'F1' 
-                ? 'bg-gradient-to-r from-red-500 to-orange-600 hover:from-red-600 hover:to-orange-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105'
-                : 'bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105'
+                : `bg-gradient-to-r ${getSportColor(match.sport)} hover:shadow-lg hover:shadow-xl transform hover:scale-105 text-white`
             }`}
           >
             {userRating > 0 ? '✏️ Mettre à jour' : '⭐ Noter'} l'événement
@@ -655,7 +745,9 @@ function MatchInfoCard({ match }: { match: MatchData }) {
         </div>
         {match.referee && match.sport !== 'F1' && (
           <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-            <span className="text-sm text-gray-600">Arbitre</span>
+            <span className="text-sm text-gray-600">
+              {match.sport === 'MMA' ? 'Arbitre' : 'Arbitre'}
+            </span>
             <span className="font-medium text-gray-900 text-sm truncate max-w-[120px]">{match.referee}</span>
           </div>
         )}
@@ -684,6 +776,66 @@ function MatchInfoCard({ match }: { match: MatchData }) {
                 <span className="text-sm text-yellow-600">Meilleur tour</span>
                 <span className="font-medium text-yellow-800 text-sm">
                   {match.details.fastest_lap.time}
+                </span>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Infos spécifiques RUGBY */}
+        {match.sport === 'RUGBY' && match.details && (
+          <>
+            {match.details.stage && (
+              <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+                <span className="text-sm text-green-600">Phase</span>
+                <span className="font-medium text-green-800 text-sm">
+                  {match.details.stage}
+                </span>
+              </div>
+            )}
+            {match.details.venue?.capacity && (
+              <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+                <span className="text-sm text-green-600">Capacité stade</span>
+                <span className="font-medium text-green-800 text-sm">
+                  {match.details.venue.capacity.toLocaleString()}
+                </span>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Infos spécifiques MMA */}
+        {match.sport === 'MMA' && match.details && (
+          <>
+            {match.details.weightClass && (
+              <div className="flex justify-between items-center p-3 bg-red-50 rounded-lg">
+                <span className="text-sm text-red-600">Catégorie</span>
+                <span className="font-medium text-red-800 text-sm">
+                  {match.details.weightClass}
+                </span>
+              </div>
+            )}
+            {match.details.method && (
+              <div className="flex justify-between items-center p-3 bg-red-50 rounded-lg">
+                <span className="text-sm text-red-600">Méthode</span>
+                <span className="font-medium text-red-800 text-sm">
+                  {match.details.method}
+                </span>
+              </div>
+            )}
+            {match.details.round && (
+              <div className="flex justify-between items-center p-3 bg-red-50 rounded-lg">
+                <span className="text-sm text-red-600">Round</span>
+                <span className="font-medium text-red-800 text-sm">
+                  {match.details.round}
+                </span>
+              </div>
+            )}
+            {match.details.time && (
+              <div className="flex justify-between items-center p-3 bg-red-50 rounded-lg">
+                <span className="text-sm text-red-600">Temps</span>
+                <span className="font-medium text-red-800 text-sm">
+                  {match.details.time}
                 </span>
               </div>
             )}

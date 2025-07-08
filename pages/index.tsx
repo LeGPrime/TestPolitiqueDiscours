@@ -337,7 +337,7 @@ export default function Home() {
               Événements à noter
             </h1>
             <p className="text-lg text-gray-600 dark:text-gray-300 mb-6">
-              ⚽🏀🥊🏉🏎️ Découvrez et notez vos sports favoris
+              Découvrez et notez vos sports favoris !
             </p>
             
             {/* Quick Stats */}
