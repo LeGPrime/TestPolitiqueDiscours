@@ -1,4 +1,4 @@
-// pages/api/player-ratings.ts - VERSION CORRIGÉE
+// pages/api/player-ratings.ts - VERSION AVEC SUPPORT DES COACHS
 import { NextApiRequest, NextApiResponse } from 'next'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '../../lib/auth'
@@ -15,7 +15,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
       const { playerId, matchId, rating, comment } = req.body
 
-      console.log('📝 Notation joueur reçue:', { playerId, matchId, rating, comment })
+      console.log('📝 Notation reçue:', { playerId, matchId, rating, comment })
 
       if (!playerId || !matchId || !rating || rating < 1 || rating > 10) {
         return res.status(400).json({ 
@@ -24,50 +24,63 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         })
       }
 
-      // 🔧 EXTRACTION DES INFOS DU PLAYER ID
-      // Format attendu: "Nom_Joueur_Equipe" ex: "L._Messi_Inter_Miami"
-      const playerIdParts = playerId.split('_')
+      // 🔧 DÉTECTION COACH vs JOUEUR
+      const isCoach = playerId.startsWith('COACH_')
+      
+      // 🔧 EXTRACTION DES INFOS SELON LE TYPE
       let playerName = playerId
       let teamName = 'Unknown Team'
+      let position = 'PLAYER'
       
-      if (playerIdParts.length >= 3) {
-        // Prendre tout sauf le dernier élément comme nom
-        playerName = playerIdParts.slice(0, -1).join(' ').replace(/_/g, ' ')
-        // Le dernier élément est l'équipe
-        teamName = playerIdParts[playerIdParts.length - 1].replace(/_/g, ' ')
+      if (isCoach) {
+        // Format coach: "COACH_Nom_Coach_Equipe"
+        const coachParts = playerId.replace('COACH_', '').split('_')
+        if (coachParts.length >= 2) {
+          playerName = coachParts.slice(0, -1).join(' ').replace(/_/g, ' ')
+          teamName = coachParts[coachParts.length - 1].replace(/_/g, ' ')
+          position = 'COACH'
+        }
+        console.log('👨‍💼 Coach détecté:', { playerName, teamName, originalId: playerId })
+      } else {
+        // Format joueur: "Nom_Joueur_Equipe"
+        const playerIdParts = playerId.split('_')
+        if (playerIdParts.length >= 3) {
+          playerName = playerIdParts.slice(0, -1).join(' ').replace(/_/g, ' ')
+          teamName = playerIdParts[playerIdParts.length - 1].replace(/_/g, ' ')
+        }
+        console.log('👤 Joueur détecté:', { playerName, teamName, originalId: playerId })
       }
 
-      console.log('👤 Infos extraites:', { playerName, teamName, originalId: playerId })
-
-      // 1. Vérifier/créer le joueur dans la base
+      // 1. Vérifier/créer la personne dans la base
       let player = await prisma.player.findFirst({
         where: { 
           OR: [
             { id: playerId },
             { 
               name: playerName,
-              team: teamName 
+              team: teamName,
+              position: isCoach ? 'COACH' : undefined
             }
           ]
         }
       })
 
       if (!player) {
-        // Créer le joueur s'il n'existe pas
-        console.log('🆕 Création du joueur:', { playerId, playerName, teamName })
+        console.log(`🆕 Création ${isCoach ? 'coach' : 'joueur'}:`, { playerId, playerName, teamName, position })
         player = await prisma.player.create({
           data: {
             id: playerId,
             name: playerName,
-            team: teamName, // 🔧 CORRECTION: Ajouter le team
+            team: teamName,
+            position: position,
             sport: 'FOOTBALL'
           }
         })
       }
 
-      console.log('👤 Joueur trouvé/créé:', player)
+      console.log(`${isCoach ? '👨‍💼' : '👤'} ${isCoach ? 'Coach' : 'Joueur'} trouvé/créé:`, player)
 
-      // 2. Créer ou mettre à jour la notation du joueur
+      // 2. Créer ou mettre à jour la notation
       const playerRating = await prisma.playerRating.upsert({
         where: {
           userId_playerId_matchId: {
@@ -98,27 +111,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
       })
 
-      console.log('✅ Notation créée/mise à jour:', playerRating)
+      console.log(`✅ Notation ${isCoach ? 'coach' : 'joueur'} créée/mise à jour:`, playerRating)
 
-      // 3. Recalculer la moyenne du joueur pour ce match
+      // 3. Recalculer la moyenne
       const allPlayerRatings = await prisma.playerRating.findMany({
         where: { playerId: player.id, matchId }
       })
 
       const avgRating = allPlayerRatings.reduce((sum, r) => sum + r.rating, 0) / allPlayerRatings.length
       
-      console.log(`📊 Nouvelle moyenne pour ${player.name}: ${avgRating.toFixed(1)} (${allPlayerRatings.length} votes)`)
+      console.log(`📊 Nouvelle moyenne pour ${player.name} (${isCoach ? 'coach' : 'joueur'}): ${avgRating.toFixed(1)} (${allPlayerRatings.length} votes)`)
 
       res.status(200).json({ 
         success: true,
         rating: playerRating, 
         avgRating: Number(avgRating.toFixed(1)), 
         totalRatings: allPlayerRatings.length,
-        message: `${player.name} noté ${rating}/10 avec succès !`
+        message: `${player.name} ${isCoach ? '(coach)' : ''} noté ${rating}/10 avec succès !`,
+        type: isCoach ? 'coach' : 'player'
       })
 
     } catch (error) {
-      console.error('❌ Erreur notation joueur:', error)
+      console.error('❌ Erreur notation:', error)
       res.status(500).json({ 
         error: 'Erreur serveur', 
         details: error.message,
@@ -129,9 +143,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   } else if (req.method === 'GET') {
     // Récupérer les notations d'un match
     try {
-      const { matchId, playerId } = req.query
+      const { matchId, playerId, type } = req.query
 
-      console.log('📖 Récupération ratings:', { matchId, playerId })
+      console.log('📖 Récupération ratings:', { matchId, playerId, type })
 
       let whereClause: any = {}
       
@@ -141,6 +155,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       
       if (playerId) {
         whereClause.playerId = playerId as string
+      }
+
+      // 🆕 FILTRER PAR TYPE (joueurs vs coachs)
+      if (type === 'coaches') {
+        whereClause.player = {
+          position: 'COACH'
+        }
+      } else if (type === 'players') {
+        whereClause.player = {
+          position: {
+            not: 'COACH'
+          }
+        }
       }
 
       const ratings = await prisma.playerRating.findMany({
@@ -156,12 +183,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         orderBy: { createdAt: 'desc' }
       })
 
-      console.log(`📊 ${ratings.length} ratings trouvés`)
+      // 🔧 SÉPARER JOUEURS ET COACHS DANS LA RÉPONSE
+      const playerRatings = ratings.filter(r => r.player.position !== 'COACH')
+      const coachRatings = ratings.filter(r => r.player.position === 'COACH')
+
+      console.log(`📊 ${ratings.length} ratings trouvés (${playerRatings.length} joueurs, ${coachRatings.length} coachs)`)
 
       res.status(200).json({ 
         success: true,
         ratings,
-        count: ratings.length
+        playerRatings,
+        coachRatings,
+        count: ratings.length,
+        stats: {
+          players: playerRatings.length,
+          coaches: coachRatings.length,
+          total: ratings.length
+        }
       })
 
     } catch (error) {

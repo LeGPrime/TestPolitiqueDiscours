@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { 
   Users, Trophy, Target, Star, ChevronLeft, ChevronRight, 
   Maximize2, Minimize2, RotateCcw, Eye, EyeOff, Filter,
-  Award, TrendingUp, Activity, Zap, Crown, Play, Shirt
+  Award, TrendingUp, Activity, Zap, Crown, Play, Shirt, UserCheck
 } from 'lucide-react'
 
 interface EnhancedLineupsTabProps {
@@ -38,6 +38,7 @@ export default function EnhancedLineupsTab({
   const [activeTeam, setActiveTeam] = useState<'home' | 'away'>('home')
   const [viewMode, setViewMode] = useState<'tactical' | 'list' | 'compare'>('tactical')
   const [selectedPlayer, setSelectedPlayer] = useState<any>(null)
+  const [selectedCoach, setSelectedCoach] = useState<any>(null)
   const [showRatingsOverlay, setShowRatingsOverlay] = useState(true)
   const [loadingRatings, setLoadingRatings] = useState(false)
   const [localPlayerRatings, setLocalPlayerRatings] = useState<any[]>([])
@@ -65,9 +66,30 @@ export default function EnhancedLineupsTab({
     )
   }
 
+  const getUserRatingForCoach = (coachName: string, team: 'home' | 'away') => {
+    const coachId = getCoachId(coachName, team)
+    return localPlayerRatings?.find((rating: any) => 
+      rating.playerId === coachId && rating.userId === currentUserId
+    )
+  }
+
   const getPlayerStats = (player: any) => {
     const playerId = getPlayerId(player)
     const ratings = localPlayerRatings?.filter((rating: any) => rating.playerId === playerId) || []
+    const avgRating = ratings.length > 0 
+      ? ratings.reduce((sum: number, r: any) => sum + r.rating, 0) / ratings.length 
+      : 0
+    
+    return {
+      avgRating,
+      totalRatings: ratings.length,
+      recentRatings: ratings.slice(0, 3)
+    }
+  }
+
+  const getCoachStats = (coachName: string, team: 'home' | 'away') => {
+    const coachId = getCoachId(coachName, team)
+    const ratings = localPlayerRatings?.filter((rating: any) => rating.playerId === coachId) || []
     const avgRating = ratings.length > 0 
       ? ratings.reduce((sum: number, r: any) => sum + r.rating, 0) / ratings.length 
       : 0
@@ -87,6 +109,14 @@ export default function EnhancedLineupsTab({
     const cleanTeamName = (currentTeam || 'Unknown_Team').replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '')
     
     return `${cleanPlayerName}_${cleanTeamName}`
+  }
+
+  const getCoachId = (coachName: string, team: 'home' | 'away') => {
+    const teamName = team === 'home' ? lineups.home.teamName : lineups.away.teamName
+    const cleanCoachName = coachName.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_\.]/g, '')
+    const cleanTeamName = (teamName || 'Unknown_Team').replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '')
+    
+    return `COACH_${cleanCoachName}_${cleanTeamName}`
   }
 
   const enhancedOnRatePlayer = async (player: any, rating: number, comment?: string) => {
@@ -140,6 +170,58 @@ export default function EnhancedLineupsTab({
       
     } catch (error) {
       console.error('❌ Erreur notation:', error)
+      loadPlayerRatings()
+      throw error
+    }
+  }
+
+  const enhancedOnRateCoach = async (coachName: string, team: 'home' | 'away', rating: number, comment?: string) => {
+    if (!currentUserId) {
+      console.error('❌ currentUserId non défini')
+      return
+    }
+
+    try {
+      const coachId = getCoachId(coachName, team)
+      console.log('🎯 Notation coach en cours:', { coachId, rating, currentUserId })
+      
+      setLocalPlayerRatings(prevRatings => {
+        const newRatings = prevRatings.filter(r => 
+          !(r.playerId === coachId && r.userId === currentUserId)
+        )
+        
+        const newRating = {
+          id: `local_coach_${Date.now()}`,
+          userId: currentUserId,
+          playerId: coachId,
+          rating: rating,
+          comment: comment || null,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          user: {
+            id: currentUserId,
+            name: 'Vous',
+            username: null,
+            image: null
+          },
+          player: {
+            id: coachId,
+            name: coachName,
+            position: 'COACH',
+            number: null,
+            team: team === 'home' ? lineups.home.teamName : lineups.away.teamName,
+            sport: 'FOOTBALL'
+          }
+        }
+        
+        return [...newRatings, newRating]
+      })
+
+      await onRatePlayer(coachId, rating, comment)
+      console.log('✅ Sauvegarde coach API réussie')
+      
+    } catch (error) {
+      console.error('❌ Erreur notation coach:', error)
       loadPlayerRatings()
       throw error
     }
@@ -229,13 +311,13 @@ export default function EnhancedLineupsTab({
             </div>
           </div>
 
-          {/* View modes - Mobile simplified - COULEURS CORRIGÉES */}
+          {/* View modes - Mobile simplified */}
           <div className="flex bg-gray-100 rounded-xl p-1">
             <button
               onClick={() => setViewMode('tactical')}
               className={`flex-1 flex items-center justify-center space-x-1 py-2 px-2 rounded-lg transition-all text-xs md:text-sm font-medium ${
                 viewMode === 'tactical' 
-                  ? 'bg-white text-gray-900 shadow-md font-bold' // ✅ CORRIGÉ: texte noir sur fond blanc
+                  ? 'bg-white text-gray-900 shadow-md font-bold'
                   : 'text-gray-600 hover:text-gray-800'
               }`}
             >
@@ -246,7 +328,7 @@ export default function EnhancedLineupsTab({
               onClick={() => setViewMode('list')}
               className={`flex-1 flex items-center justify-center space-x-1 py-2 px-2 rounded-lg transition-all text-xs md:text-sm font-medium ${
                 viewMode === 'list' 
-                  ? 'bg-white text-gray-900 shadow-md font-bold' // ✅ CORRIGÉ: texte noir sur fond blanc
+                  ? 'bg-white text-gray-900 shadow-md font-bold'
                   : 'text-gray-600 hover:text-gray-800'
               }`}
             >
@@ -271,6 +353,17 @@ export default function EnhancedLineupsTab({
           </div>
         </div>
       </div>
+
+      {/* Coach Section - NOUVEAU PLACEMENT */}
+      <CoachSection 
+        coach={currentLineup.coach}
+        teamName={activeTeam === 'home' ? lineups.home.teamName : lineups.away.teamName}
+        team={activeTeam}
+        userRating={getUserRatingForCoach(currentLineup.coach, activeTeam)}
+        coachStats={getCoachStats(currentLineup.coach, activeTeam)}
+        onRateCoach={enhancedOnRateCoach}
+        onSelectCoach={setSelectedCoach}
+      />
 
       {/* Content based on view mode */}
       {viewMode === 'tactical' && (
@@ -328,7 +421,7 @@ export default function EnhancedLineupsTab({
               <div className="text-2xl md:text-3xl font-black text-purple-600 mb-1">
                 {new Set(localPlayerRatings.map(r => r.playerId)).size}
               </div>
-              <div className="text-xs md:text-sm font-bold text-purple-700">Joueurs</div>
+              <div className="text-xs md:text-sm font-bold text-purple-700">Personnes</div>
             </div>
           </div>
         </div>
@@ -344,11 +437,121 @@ export default function EnhancedLineupsTab({
           teamColor={activeTeam === 'home' ? 'blue' : 'red'}
         />
       )}
+
+      {/* Coach rating modal */}
+      {selectedCoach && (
+        <MobileCoachRatingModal
+          coach={selectedCoach}
+          matchId={matchId}
+          onRate={enhancedOnRateCoach}
+          onClose={() => setSelectedCoach(null)}
+          teamColor={activeTeam === 'home' ? 'blue' : 'red'}
+        />
+      )}
     </div>
   )
 }
 
-// Vue tactique optimisée mobile
+// Nouveau composant pour la section Coach - VERSION COMPACTE
+function CoachSection({ 
+  coach, 
+  teamName, 
+  team, 
+  userRating, 
+  coachStats, 
+  onRateCoach, 
+  onSelectCoach 
+}: any) {
+  return (
+    <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-md overflow-hidden border border-gray-100">
+      {/* Header plus compact */}
+      <div className={`p-3 md:p-4 text-white relative overflow-hidden ${
+        team === 'home' 
+          ? 'bg-gradient-to-br from-purple-500 to-purple-600' 
+          : 'bg-gradient-to-br from-indigo-500 to-indigo-600'
+      }`}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
+              <UserCheck className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <h3 className="text-sm md:text-base font-bold">👨‍💼 Coach</h3>
+              <div className="text-xs opacity-90">{teamName}</div>
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="text-xs font-medium opacity-90">Noter ⭐</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Contenu plus compact */}
+      <div className="p-3 md:p-4">
+        <div 
+          onClick={() => onSelectCoach({ 
+            name: coach, 
+            team, 
+            teamName, 
+            userRating, 
+            coachStats 
+          })}
+          className="group cursor-pointer bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg p-3 hover:shadow-md transition-all duration-300 border border-gray-200 hover:border-gray-300 touch-target"
+        >
+          <div className="flex items-center space-x-3">
+            <div className={`w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold shadow-md transition-transform group-hover:scale-105 relative bg-gradient-to-br ${
+              team === 'home' ? 'from-purple-500 to-purple-700' : 'from-indigo-500 to-indigo-700'
+            } ${userRating ? 'ring-2 ring-yellow-400/60' : ''}`}>
+              👨‍💼
+              
+              {/* Badge de note coach - plus petit */}
+              {userRating && (
+                <div className="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-br from-yellow-300 to-yellow-500 rounded-full flex items-center justify-center text-xs font-black text-gray-900 shadow-lg">
+                  {userRating.rating}
+                </div>
+              )}
+            </div>
+            
+            <div className="flex-1 min-w-0">
+              <h4 className="font-bold text-gray-900 group-hover:text-purple-600 transition-colors text-base truncate">
+                {coach}
+              </h4>
+              <p className="text-xs text-gray-600 font-medium mb-1">Entraîneur principal</p>
+              
+              <div className="flex flex-wrap gap-1">
+                {userRating ? (
+                  <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full font-bold">
+                    ⭐ {userRating.rating}/10
+                  </span>
+                ) : coachStats.avgRating > 0 ? (
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
+                    coachStats.avgRating >= 8 ? 'bg-emerald-100 text-emerald-800' :
+                    coachStats.avgRating >= 6 ? 'bg-blue-100 text-blue-800' :
+                    coachStats.avgRating >= 4 ? 'bg-amber-100 text-amber-800' :
+                    'bg-red-100 text-red-800'
+                  }`}>
+                    ⭐ {coachStats.avgRating.toFixed(1)}
+                  </span>
+                ) : (
+                  <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-medium">
+                    Cliquer pour noter
+                  </span>
+                )}
+              </div>
+            </div>
+            
+            {/* Indicateur de clic - plus petit */}
+            <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+              <Play className="w-4 h-4 text-gray-400" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Vue tactique optimisée mobile - CORRIGÉE (coach info retiré du terrain)
 function MobileTacticalView({ 
   playerLines, 
   activeTeam, 
@@ -360,7 +563,8 @@ function MobileTacticalView({
   homeTeam,
   awayTeam
 }: any) {
-  const [showBench, setShowBench] = useState(false) // 🆕 État pour afficher/masquer le banc
+  const [showBench, setShowBench] = useState(false)
+  
   return (
     <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg overflow-hidden border border-gray-100">
       {/* Header compact */}
@@ -387,7 +591,7 @@ function MobileTacticalView({
         </div>
       </div>
 
-      {/* Terrain mobile-first */}
+      {/* Terrain mobile-first - COACH INFO RETIRÉ */}
       <div className="relative bg-gradient-to-b from-emerald-400 to-green-500 overflow-hidden" style={{ minHeight: '500px' }}>
         {/* Lignes du terrain simplifiées pour mobile */}
         <div className="absolute inset-0 opacity-50">
@@ -490,22 +694,7 @@ function MobileTacticalView({
           </div>
         </div>
 
-        {/* Coach info - Compact */}
-        <div className="absolute bottom-4 left-4">
-          <div className="bg-black/60 backdrop-blur-md rounded-xl p-3 border border-white/20">
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center text-white text-xs">
-                👨‍💼
-              </div>
-              <div>
-                <div className="text-xs text-white/80">Coach</div>
-                <div className="text-sm text-white font-bold">{currentLineup.coach}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Stats overlay - Mobile */}
+        {/* Stats overlay - Mobile (coach info supprimé) */}
         <div className="absolute top-4 right-4">
           <div className="bg-black/60 backdrop-blur-md rounded-xl p-3 border border-white/20">
             <div className="text-white text-xs">
@@ -523,9 +712,8 @@ function MobileTacticalView({
         </div>
       </div>
 
-      {/* Remplaçants mobile-optimized - Avec système de déroulement */}
+      {/* Remplaçants mobile-optimized */}
       <div className="bg-gradient-to-br from-slate-50 to-gray-100 border-t border-gray-200">
-        {/* Header cliquable pour dérouler/fermer */}
         <button
           onClick={() => setShowBench(!showBench)}
           className="w-full p-4 md:p-6 flex items-center justify-between hover:bg-gray-100/50 transition-colors"
@@ -550,7 +738,6 @@ function MobileTacticalView({
           </div>
         </button>
         
-        {/* Contenu du banc - Collapsible */}
         <div className={`overflow-hidden transition-all duration-500 ease-in-out ${
           showBench 
             ? 'max-h-[2000px] opacity-100' 
@@ -559,7 +746,6 @@ function MobileTacticalView({
           <div className="px-4 pb-4 md:px-6 md:pb-6">
             {currentLineup.substitutes.length > 0 ? (
               <>
-                {/* Info banc */}
                 <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
                   <p className="text-sm text-blue-800 font-medium flex items-center space-x-2">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -569,7 +755,6 @@ function MobileTacticalView({
                   </p>
                 </div>
 
-                {/* Grille des remplaçants */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                   {currentLineup.substitutes.map((player: any, index: number) => (
                     <MobileSubstituteCard
@@ -583,7 +768,6 @@ function MobileTacticalView({
                   ))}
                 </div>
 
-                {/* Stats du banc */}
                 <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
                   <div className="bg-white/60 rounded-lg p-3 text-center">
                     <div className="text-lg font-bold text-gray-700">{currentLineup.substitutes.length}</div>
@@ -642,7 +826,6 @@ function MobilePlayerCard({ player, playerStats, userRating, activeTeam, onSelec
       return 'from-red-400 to-red-600'
     }
     
-    // Couleur par position
     if (position === 'GK') return 'from-purple-500 to-purple-700'
     if (position === 'DEF') return 'from-blue-500 to-blue-700'
     if (position === 'MID') return 'from-green-500 to-green-700'
@@ -655,13 +838,11 @@ function MobilePlayerCard({ player, playerStats, userRating, activeTeam, onSelec
       onClick={() => onSelect({...player, ...playerStats, userRating})}
       className="cursor-pointer group transition-all duration-300 hover:scale-110 flex flex-col items-center relative touch-target"
     >
-      {/* Maillot moderne */}
       <div className={`relative w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center text-white font-black text-sm md:text-base shadow-xl border-2 border-white/50 transition-all duration-500 bg-gradient-to-br ${getPlayerCardColor()} ${
         userRating ? 'ring-2 ring-yellow-400/80' : ''
       } group-hover:shadow-2xl group-hover:scale-105`}>
         {player.number || player.player?.number || '?'}
         
-        {/* Badge de note - Plus discret */}
         {userRating && showRatingsOverlay && (
           <div className="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-br from-yellow-300 to-yellow-500 rounded-full flex items-center justify-center text-xs font-black text-gray-900 shadow-lg">
             {userRating.rating}
@@ -669,7 +850,6 @@ function MobilePlayerCard({ player, playerStats, userRating, activeTeam, onSelec
         )}
       </div>
       
-      {/* Nom du joueur - Compact */}
       <div className="mt-2 text-center min-w-0">
         <div className="bg-black/70 text-white text-xs px-2 py-1 rounded-lg font-bold shadow-lg backdrop-blur-md border border-white/20 max-w-[80px] truncate">
           {(player.player?.name || player.player || player.name || 'Joueur').split(' ').slice(-1)[0]}
@@ -705,7 +885,6 @@ function MobileSubstituteCard({ player, playerStats, userRating, activeTeam, onS
         }`}>
           {player.number || player.player?.number || '?'}
           
-          {/* Badge SUB */}
           <div className="absolute -top-1 -right-1 bg-gray-600 text-white text-xs px-1 py-0.5 rounded-full font-bold">
             S
           </div>
@@ -745,10 +924,10 @@ function MobileSubstituteCard({ player, playerStats, userRating, activeTeam, onS
 
 // Vue liste mobile
 function MobileListView({ currentLineup, activeTeam, getPlayerStats, getUserRatingForPlayer, onPlayerSelect }: any) {
-  const [showBench, setShowBench] = useState(false) // 🆕 État pour le banc en vue liste
+  const [showBench, setShowBench] = useState(false)
+  
   return (
     <div className="space-y-4">
-      {/* Titulaires */}
       <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg overflow-hidden border border-gray-100">
         <div className={`p-4 text-white ${
           activeTeam === 'home' 
@@ -779,9 +958,7 @@ function MobileListView({ currentLineup, activeTeam, getPlayerStats, getUserRati
         </div>
       </div>
 
-      {/* Remplaçants - Avec système de déroulement */}
       <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg overflow-hidden border border-gray-100">
-        {/* Header cliquable pour dérouler/fermer */}
         <button
           onClick={() => setShowBench(!showBench)}
           className="w-full bg-gradient-to-r from-gray-500 to-gray-600 p-4 text-white flex items-center justify-between hover:from-gray-600 hover:to-gray-700 transition-all"
@@ -806,7 +983,6 @@ function MobileListView({ currentLineup, activeTeam, getPlayerStats, getUserRati
           </div>
         </button>
         
-        {/* Contenu du banc - Collapsible */}
         <div className={`overflow-hidden transition-all duration-500 ease-in-out ${
           showBench 
             ? 'max-h-[2000px] opacity-100' 
@@ -815,7 +991,6 @@ function MobileListView({ currentLineup, activeTeam, getPlayerStats, getUserRati
           <div className="p-4">
             {currentLineup.substitutes.length > 0 ? (
               <>
-                {/* Info pratique */}
                 <div className="mb-4 p-3 bg-amber-50 rounded-lg border border-amber-200">
                   <p className="text-sm text-amber-800 font-medium flex items-center space-x-2">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -825,7 +1000,6 @@ function MobileListView({ currentLineup, activeTeam, getPlayerStats, getUserRati
                   </p>
                 </div>
 
-                {/* Liste des remplaçants */}
                 <div className="space-y-3">
                   {currentLineup.substitutes.map((player: any, index: number) => (
                     <MobileListPlayerCard
@@ -840,7 +1014,6 @@ function MobileListView({ currentLineup, activeTeam, getPlayerStats, getUserRati
                   ))}
                 </div>
 
-                {/* Statistiques du banc */}
                 <div className="mt-4 pt-4 border-t border-gray-200">
                   <p className="text-sm font-bold text-gray-700 mb-3 flex items-center space-x-2">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -944,7 +1117,6 @@ function MobileListPlayerCard({ player, playerStats, userRating, activeTeam, onS
           </div>
         </div>
         
-        {/* Indicateur de clic */}
         <div className="opacity-0 group-hover:opacity-100 transition-opacity">
           <Play className="w-4 h-4 text-gray-400" />
         </div>
@@ -987,7 +1159,6 @@ function MobilePlayerRatingModal({ player, matchId, onRate, onClose, teamColor }
   return (
     <div className="fixed inset-0 bg-black/60 flex items-end md:items-center justify-center z-50 p-4 backdrop-blur-sm">
       <div className="bg-white rounded-t-3xl md:rounded-3xl w-full max-w-md shadow-2xl transform transition-all max-h-[90vh] overflow-y-auto">
-        {/* Header */}
         <div className={`p-6 text-white relative overflow-hidden rounded-t-3xl ${
           teamColor === 'blue' 
             ? 'bg-gradient-to-br from-blue-500 to-blue-600' 
@@ -1015,11 +1186,9 @@ function MobilePlayerRatingModal({ player, matchId, onRate, onClose, teamColor }
         </div>
 
         <div className="p-6 space-y-6">
-          {/* Système de notation tactile */}
           <div>
             <p className="text-sm font-bold mb-4 text-gray-700">Note sur 10 :</p>
             
-            {/* Grille 2x5 pour mobile */}
             <div className="grid grid-cols-5 gap-3 mb-4">
               {Array.from({ length: 10 }, (_, i) => (
                 <button
@@ -1036,7 +1205,6 @@ function MobilePlayerRatingModal({ player, matchId, onRate, onClose, teamColor }
               ))}
             </div>
             
-            {/* Barre de progression */}
             <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
               <div 
                 className="bg-gradient-to-r from-yellow-400 to-amber-500 h-2 rounded-full transition-all duration-500"
@@ -1044,14 +1212,12 @@ function MobilePlayerRatingModal({ player, matchId, onRate, onClose, teamColor }
               ></div>
             </div>
             
-            {/* Description */}
             <div className={`text-center text-sm font-bold ${ratingDesc.color} bg-gray-50 rounded-xl p-3`}>
               <span className="text-2xl mr-2">{ratingDesc.emoji}</span>
               {ratingDesc.text}
             </div>
           </div>
           
-          {/* Commentaire */}
           <div>
             <label className="block text-sm font-bold mb-3 text-gray-700">
               💭 Commentaire (optionnel) :
@@ -1069,7 +1235,6 @@ function MobilePlayerRatingModal({ player, matchId, onRate, onClose, teamColor }
             </div>
           </div>
           
-          {/* Actions */}
           <div className="flex space-x-3 pt-2">
             <button
               onClick={onClose}
@@ -1095,6 +1260,154 @@ function MobilePlayerRatingModal({ player, matchId, onRate, onClose, teamColor }
                 </div>
               ) : (
                 `${player.userRating ? '✏️ Modifier' : '⭐ Noter'} ${selectedRating > 0 ? `(${selectedRating}/10)` : ''}`
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// NOUVEAU: Modal de notation pour les coachs
+function MobileCoachRatingModal({ coach, matchId, onRate, onClose, teamColor }: any) {
+  const [selectedRating, setSelectedRating] = useState(coach.userRating?.rating || 0)
+  const [comment, setComment] = useState(coach.userRating?.comment || '')
+  const [submitting, setSubmitting] = useState(false)
+
+  const handleRate = async () => {
+    if (selectedRating === 0 || submitting) return
+
+    setSubmitting(true)
+    try {
+      await onRate(coach.name, coach.team, selectedRating, comment)
+      onClose()
+    } catch (error) {
+      console.error('Erreur notation coach:', error)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const getRatingDescription = (rating: number) => {
+    if (rating === 0) return { emoji: "🤔", text: "Tapez pour noter", color: "text-gray-500" }
+    if (rating <= 2) return { emoji: "😞", text: "Tactique décevante", color: "text-red-600" }
+    if (rating <= 4) return { emoji: "😐", text: "Choix tactiques moyens", color: "text-orange-600" }
+    if (rating <= 6) return { emoji: "🙂", text: "Direction correcte", color: "text-yellow-600" }
+    if (rating <= 8) return { emoji: "😊", text: "Excellente gestion", color: "text-green-600" }
+    return { emoji: "🏆", text: "Maître tacticien !", color: "text-emerald-600" }
+  }
+
+  const ratingDesc = getRatingDescription(selectedRating)
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-end md:items-center justify-center z-50 p-4 backdrop-blur-sm">
+      <div className="bg-white rounded-t-3xl md:rounded-3xl w-full max-w-md shadow-2xl transform transition-all max-h-[90vh] overflow-y-auto">
+        <div className={`p-6 text-white relative overflow-hidden rounded-t-3xl ${
+          teamColor === 'blue' 
+            ? 'bg-gradient-to-br from-purple-500 to-purple-600' 
+            : 'bg-gradient-to-br from-indigo-500 to-indigo-600'
+        }`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center text-white text-3xl backdrop-blur-sm">
+                👨‍💼
+              </div>
+              <div>
+                <h3 className="text-xl font-bold leading-tight">
+                  {coach.name}
+                </h3>
+                <p className="text-white/90 text-sm">Coach • {coach.teamName}</p>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+
+        <div className="p-6 space-y-6">
+          <div>
+            <p className="text-sm font-bold mb-4 text-gray-700">Noter le coach sur 10 :</p>
+            
+            <div className="grid grid-cols-5 gap-3 mb-4">
+              {Array.from({ length: 10 }, (_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setSelectedRating(i + 1)}
+                  className={`aspect-square rounded-xl text-sm font-black transition-all duration-200 touch-target ${
+                    i < selectedRating 
+                      ? 'bg-gradient-to-br from-purple-400 to-indigo-500 text-white shadow-lg scale-105 ring-2 ring-purple-300' 
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200 active:scale-95'
+                  }`}
+                >
+                  {i + 1}
+                </button>
+              ))}
+            </div>
+            
+            <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
+              <div 
+                className="bg-gradient-to-r from-purple-400 to-indigo-500 h-2 rounded-full transition-all duration-500"
+                style={{ width: `${(selectedRating / 10) * 100}%` }}
+              ></div>
+            </div>
+            
+            <div className={`text-center text-sm font-bold ${ratingDesc.color} bg-gray-50 rounded-xl p-3`}>
+              <span className="text-2xl mr-2">{ratingDesc.emoji}</span>
+              {ratingDesc.text}
+            </div>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-bold mb-3 text-gray-700">
+              🧠 Votre analyse tactique (optionnel) :
+            </label>
+            <textarea
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              className="w-full p-3 border-2 border-gray-200 rounded-xl resize-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all placeholder-gray-400 text-sm"
+              rows={3}
+              placeholder="Votre avis sur ses choix tactiques, changements, gestion d'équipe..."
+              maxLength={250}
+            />
+            <div className="text-xs text-gray-500 mt-1 text-right">
+              {comment.length}/250
+            </div>
+          </div>
+          
+          <div className="bg-blue-50 rounded-lg p-3 mb-4">
+            <p className="text-blue-800 text-xs font-medium">
+              💡 Critères : Formation, changements, motivation, adaptation tactique
+            </p>
+          </div>
+          
+          <div className="flex space-x-3 pt-2">
+            <button
+              onClick={onClose}
+              className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-all font-bold touch-target"
+            >
+              Annuler
+            </button>
+            <button
+              onClick={handleRate}
+              disabled={selectedRating === 0 || submitting}
+              className={`flex-2 px-4 py-3 rounded-xl transition-all font-bold text-white shadow-lg touch-target ${
+                selectedRating === 0 || submitting
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 active:scale-95'
+              }`}
+            >
+              {submitting ? (
+                <div className="flex items-center justify-center">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                  En cours...
+                </div>
+              ) : (
+                `${coach.userRating ? '✏️ Modifier' : '👨‍💼 Noter'} le coach ${selectedRating > 0 ? `(${selectedRating}/10)` : ''}`
               )}
             </button>
           </div>

@@ -2,13 +2,12 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
-  "/": "pages/index.js",
-  "/api/auth/[...nextauth]": "pages/api/auth/[...nextauth].js",
-  "/profile": "pages/profile.js",
-  "/api/teams": "pages/api/teams.js",
-  "/api/profile/fixed": "pages/api/profile/fixed.js",
   "/api/matches": "pages/api/matches.js",
+  "/top-matches": "pages/top-matches.js",
+  "/api/top-matches": "pages/api/top-matches.js",
+  "/match/[id]": "pages/match/[id].js",
   "/api/filter-stats": "pages/api/filter-stats.js",
-  "/search": "pages/search.js",
-  "/friends": "pages/friends.js"
+  "/api/auth/[...nextauth]": "pages/api/auth/[...nextauth].js",
+  "/": "pages/index.js",
+  "/api/ballon-or": "pages/api/ballon-or.js"
 }
