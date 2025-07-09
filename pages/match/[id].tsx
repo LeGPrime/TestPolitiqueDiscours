@@ -1,4 +1,4 @@
-// pages/match/[id].tsx - VERSION COMPLÈTE AVEC RUGBY ET MMA
+// pages/match/[id].tsx - VERSION COMPLÈTE AVEC RUGBY ET MMA + BOUTON LISTES
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { useSession } from 'next-auth/react'
@@ -15,6 +15,7 @@ import F1MatchDetails from '../../components/F1MatchDetails'
 import RugbyMatchDetails from '../../components/RugbyMatchDetails' // 🏉 RUGBY
 import MMAMatchDetails from '../../components/MMAMatchDetails' // 🥊 MMA
 import MatchReviews from '../../components/MatchReviews'
+import AddToListButton from '../../components/AddToListButton'
 
 interface MatchData {
   id: string
@@ -698,6 +699,21 @@ function MatchRatingSidebar({
           >
             {userRating > 0 ? '✏️ Mettre à jour' : '⭐ Noter'} l'événement
           </button>
+
+          {/* 🆕 NOUVEAU - Bouton Ajouter à une liste */}
+          <div className="pt-2 border-t border-gray-200 dark:border-slate-600">
+            <AddToListButton
+              matchId={match.id}
+              matchTitle={
+                match.sport === 'F1' ? match.homeTeam : 
+                match.sport === 'MMA' ? `${match.homeTeam} vs ${match.awayTeam}` :
+                match.sport === 'RUGBY' ? `${match.homeTeam} vs ${match.awayTeam}` :
+                `${match.homeTeam} vs ${match.awayTeam}`
+              }
+              variant="button"
+              size="md"
+            />
+          </div>
         </div>
       ) : (
         <div className="p-4 md:p-6 text-center">

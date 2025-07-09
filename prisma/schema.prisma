@@ -49,15 +49,14 @@ model User {
   sessions            Session[]
   receivedFriendships Friendship[]   @relation("UserReceivedFriendships")
   sentFriendships     Friendship[]   @relation("UserSentFriendships")
+  notifications       Notification[]
   playerRatings       PlayerRating[]
   ratings             Rating[]
-  team_follows        TeamFollow[]
-
-  // 🆕 Nouvelles relations pour les reviews
+  replyLikes          ReplyLike[]
   reviewLikes         ReviewLike[]
   reviewReplies       ReviewReply[]
-  replyLikes          ReplyLike[]
-  notifications       Notification[]
+  team_follows        TeamFollow[]
+  user_profiles       user_profiles?
 
   @@map("users")
 }
@@ -112,80 +111,70 @@ model MatchEvent {
 }
 
 model Rating {
-  id            String        @id @default(cuid())
-  userId        String
-  matchId       String
-  rating        Int
-  comment       String?
-  spoilerFree   Boolean       @default(true)  // 🆕 Nouveau champ pour les spoilers
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  match         Match         @relation(fields: [matchId], references: [id], onDelete: Cascade)
-  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  // 🆕 Relations pour les likes et réponses
-  likes         ReviewLike[]
-  replies       ReviewReply[]
+  id          String        @id @default(cuid())
+  userId      String
+  matchId     String
+  rating      Int
+  comment     String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  spoilerFree Boolean       @default(true)
+  match       Match         @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  likes       ReviewLike[]
+  replies     ReviewReply[]
 
   @@unique([userId, matchId])
   @@map("ratings")
 }
 
-// 🆕 Nouvelle table pour les likes des reviews
 model ReviewLike {
   id        String   @id @default(cuid())
   userId    String
   reviewId  String
   createdAt DateTime @default(now())
-  
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   review    Rating   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, reviewId])
   @@map("review_likes")
 }
 
-// 🆕 Nouvelle table pour les réponses aux reviews
 model ReviewReply {
-  id        String        @id @default(cuid())
+  id        String      @id @default(cuid())
   content   String
   userId    String
   reviewId  String
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
-  
-  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  review    Rating        @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
   likes     ReplyLike[]
+  review    Rating      @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("review_replies")
 }
 
-// 🆕 Table pour les likes des réponses
 model ReplyLike {
-  id      String      @id @default(cuid())
-  userId  String
-  replyId String
-  createdAt DateTime  @default(now())
-  
-  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  reply   ReviewReply @relation(fields: [replyId], references: [id], onDelete: Cascade)
+  id        String      @id @default(cuid())
+  userId    String
+  replyId   String
+  createdAt DateTime    @default(now())
+  reply     ReviewReply @relation(fields: [replyId], references: [id], onDelete: Cascade)
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, replyId])
   @@map("reply_likes")
 }
 
-// 🆕 Table pour les notifications
 model Notification {
   id        String   @id @default(cuid())
   userId    String
-  type      String   // 'REPLY', 'LIKE', 'MENTION', etc.
+  type      String
   title     String
   message   String
-  data      Json?    // Données contextuelles (matchId, reviewId, etc.)
+  data      Json?
   read      Boolean  @default(false)
   createdAt DateTime @default(now())
-  
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("notifications")
@@ -266,6 +255,29 @@ model TeamFollow {
   @@index([team_id], map: "idx_team_follows_team_id")
   @@index([user_id], map: "idx_team_follows_user_id")
   @@map("team_follows")
+}
+
+model user_profiles {
+  id                       String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id                  String    @unique
+  location                 String?   @db.VarChar(255)
+  age                      String?   @db.VarChar(10)
+  occupation               String?   @db.VarChar(255)
+  favorite_club            String?   @db.VarChar(255)
+  favorite_basketball_team String?   @db.VarChar(255)
+  favorite_tennis_player   String?   @db.VarChar(100)
+  favorite_f1_driver       String?   @db.VarChar(100)
+  preferred_sports         Json?     @default("[]")
+  watching_habits          String?   @db.VarChar(50)
+  languages                Json?     @default("[]")
+  visibility               Json?     @default("{}")
+  created_at               DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at               DateTime? @default(now()) @db.Timestamptz(6)
+  users                    User      @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([languages], map: "idx_user_profiles_languages", type: Gin)
+  @@index([preferred_sports], map: "idx_user_profiles_preferred_sports", type: Gin)
+  @@index([user_id], map: "idx_user_profiles_user_id")
 }
 
 enum FriendshipStatus {
