@@ -1,14 +1,15 @@
-// pages/lists/[id].tsx - Page pour afficher une liste complète
+// pages/lists/[id].tsx - Mise à jour avec drag & drop
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import {
   ArrowLeft, Star, Calendar, MapPin, Eye, Heart, Lock, Globe,
-  Edit, Share2, Copy, Check, MoreHorizontal, Trash2
+  Edit, Share2, Copy, Check, MoreHorizontal, Trash2, Shuffle
 } from 'lucide-react'
 import axios from 'axios'
 import Navbar from '../../components/Navbar'
+import DraggableMatchList from '../../components/DraggableMatchList'
 
 interface ListItem {
   id: string
@@ -65,7 +66,9 @@ export default function ListPage() {
       
       if (response.data.success) {
         setListData(response.data.list)
-        setItems(response.data.items)
+        // Trier par position pour être sûr
+        const sortedItems = response.data.items.sort((a: ListItem, b: ListItem) => a.position - b.position)
+        setItems(sortedItems)
       }
     } catch (error: any) {
       console.error('❌ Erreur chargement liste:', error)
@@ -75,6 +78,10 @@ export default function ListPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleItemsReorder = (newItems: ListItem[]) => {
+    setItems(newItems)
   }
 
   const handleShare = async () => {
@@ -100,23 +107,6 @@ export default function ListPage() {
         console.error('Erreur copie:', error)
       }
     }
-  }
-
-  const getSportEmoji = (sport: string) => {
-    const emojis = {
-      'FOOTBALL': '⚽',
-      'BASKETBALL': '🏀',
-      'MMA': '🥊',
-      'RUGBY': '🏉',
-      'F1': '🏎️'
-    }
-    return emojis[sport as keyof typeof emojis] || '🏆'
-  }
-
-  const formatScore = (homeScore: any, awayScore: any, sport: string) => {
-    if (sport === 'F1') return 'COURSE TERMINÉE'
-    if (sport === 'MMA') return `${homeScore} vs ${awayScore}`
-    return `${homeScore ?? '?'} - ${awayScore ?? '?'}`
   }
 
   if (loading) {
@@ -211,6 +201,12 @@ export default function ListPage() {
                       <Calendar className="w-4 h-4" />
                       <span>Créée le {new Date(listData.id).toLocaleDateString('fr-FR')}</span>
                     </div>
+                    {listData.isOwner && items.length > 1 && (
+                      <div className="flex items-center space-x-1 text-blue-600 dark:text-blue-400">
+                        <Shuffle className="w-4 h-4" />
+                        <span>Réorganisable</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -248,19 +244,14 @@ export default function ListPage() {
           </div>
         </div>
 
-        {/* Liste des matchs */}
+        {/* Liste des matchs avec drag & drop */}
         {items.length > 0 ? (
-          <div className="space-y-4">
-            {items.map((item, index) => (
-              <MatchCard
-                key={item.id}
-                item={item}
-                position={index + 1}
-                getSportEmoji={getSportEmoji}
-                formatScore={formatScore}
-              />
-            ))}
-          </div>
+          <DraggableMatchList
+            items={items}
+            listId={listData.id}
+            isOwner={listData.isOwner}
+            onItemsReorder={handleItemsReorder}
+          />
         ) : (
           <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-8 text-center">
             <Star className="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -283,97 +274,5 @@ export default function ListPage() {
         )}
       </main>
     </div>
-  )
-}
-
-// Composant pour une carte de match dans la liste
-function MatchCard({ 
-  item, 
-  position, 
-  getSportEmoji, 
-  formatScore 
-}: {
-  item: ListItem
-  position: number
-  getSportEmoji: (sport: string) => string
-  formatScore: (homeScore: any, awayScore: any, sport: string) => string
-}) {
-  const { match } = item
-
-  return (
-    <Link href={`/match/${match.id}`}>
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-6 hover:shadow-xl hover:border-blue-300 dark:hover:border-blue-600 transition-all duration-300 cursor-pointer group">
-        <div className="flex items-start space-x-4">
-          {/* Position */}
-          <div className="w-10 h-10 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-slate-700 dark:to-slate-600 rounded-xl flex items-center justify-center font-bold text-gray-600 dark:text-gray-400 flex-shrink-0">
-            {position}
-          </div>
-
-          {/* Contenu principal */}
-          <div className="flex-1 min-w-0">
-            {/* Header */}
-            <div className="flex items-center space-x-2 mb-3">
-              <span className="text-lg">{getSportEmoji(match.sport)}</span>
-              <span className="text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded">
-                {match.competition}
-              </span>
-              <span className="text-sm text-gray-500 dark:text-gray-400">
-                {new Date(match.date).toLocaleDateString('fr-FR')}
-              </span>
-              <div className="flex items-center text-blue-600 group-hover:text-blue-700 ml-auto">
-                <Eye className="w-4 h-4 mr-1" />
-                <span className="text-sm">Voir</span>
-              </div>
-            </div>
-
-            {/* Match details */}
-            {match.sport === 'F1' ? (
-              <div className="mb-3">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">
-                  🏁 {match.homeTeam}
-                </h3>
-                <p className="text-gray-600 dark:text-gray-400">📍 {match.awayTeam}</p>
-              </div>
-            ) : (
-              <div className="mb-3">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
-                  {match.homeTeam} vs {match.awayTeam}
-                </h3>
-                <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
-                  <span className="font-medium">
-                    Score: {formatScore(match.homeScore, match.awayScore, match.sport)}
-                  </span>
-                  {match.venue && (
-                    <div className="flex items-center space-x-1">
-                      <MapPin className="w-3 h-3" />
-                      <span>{match.venue}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Stats du match */}
-            <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400 mb-3">
-              <div className="flex items-center space-x-1">
-                <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                <span>{match.avgRating > 0 ? match.avgRating.toFixed(1) : '—'}</span>
-              </div>
-              <span>{match.totalRatings} vote{match.totalRatings > 1 ? 's' : ''}</span>
-              <span>Ajouté le {new Date(item.addedAt).toLocaleDateString('fr-FR')}</span>
-            </div>
-
-            {/* Note personnelle */}
-            {item.note && (
-              <div className="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 p-3 rounded-r-lg">
-                <p className="text-sm text-blue-800 dark:text-blue-300 italic">
-                  💭 "{item.note}"
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </Link>
   )
 }

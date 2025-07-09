@@ -1,1 +1,20 @@
 node_modules/
+# Base de données et sauvegardes
+*.sql
+backup_*
+*.db
+*.sqlite
+
+# Variables d'environnement sensibles
+.env
+.env.local
+.env.production
+
+# Logs
+logs/
+*.log
+
+# Fichiers temporaires
+tmp/
+temp/backup_*.sql
+*.sql

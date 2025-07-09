@@ -1,4 +1,4 @@
-// pages/profile.tsx - Version mobile complètement optimisée
+// pages/profile.tsx - Version mise à jour avec l'onglet listes
 import { useState, useEffect } from 'react'
 import { useSession, signOut } from 'next-auth/react'
 import { useRouter } from 'next/router'
@@ -9,7 +9,7 @@ import {
   Activity, Award, Target, Zap, Globe, Mail, Shield,
   Plus, X, Check, Camera, Upload, Save, Eye, ArrowRight,
   Gamepad2, BarChart, PieChart, Filter, Trash2, ChevronDown,
-  MoreHorizontal, Edit, Menu
+  MoreHorizontal, Edit, Menu, BookmarkPlus
 } from 'lucide-react'
 import axios from 'axios'
 import ThemeToggle from '../components/ThemeToggle'
@@ -19,6 +19,7 @@ import EnhancedProfileEditor from '../components/EnhancedProfileEditor'
 import EnhancedTeamGrid from '../components/EnhancedTeamGrid'
 import AvatarUpload from '../components/AvatarUpload'
 import DeleteAccountModal from '../components/DeleteAccountModal'
+import MatchListsSection from '../components/MatchListsSection'
 
 interface UserProfile {
   user: {
@@ -102,7 +103,7 @@ export default function EnhancedProfilePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [teams, setTeams] = useState<Team[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'overview' | 'ratings' | 'player-ratings' | 'teams' | 'stats'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'ratings' | 'player-ratings' | 'teams' | 'lists' | 'stats'>('overview')
   const [activeSport, setActiveSport] = useState<'all' | 'football' | 'basketball' | 'mma' | 'rugby' | 'f1'>('all')
   
   // États pour les modals
@@ -776,6 +777,7 @@ export default function EnhancedProfilePage() {
                   { id: 'ratings', label: 'Notes matchs', icon: Star },
                   { id: 'player-ratings', label: 'Notes joueurs', icon: Users },
                   { id: 'teams', label: 'Équipes', icon: Heart },
+                  { id: 'lists', label: 'Mes listes', icon: BookmarkPlus },
                   { id: 'stats', label: 'Stats', icon: BarChart3 }
                 ].map((tab) => {
                   const Icon = tab.icon
@@ -804,6 +806,7 @@ export default function EnhancedProfilePage() {
                 { id: 'ratings', label: 'Notes matchs', icon: Star },
                 { id: 'player-ratings', label: 'Notes joueurs', icon: Users },
                 { id: 'teams', label: 'Équipes suivies', icon: Heart },
+                { id: 'lists', label: 'Mes listes', icon: BookmarkPlus },
                 { id: 'stats', label: 'Statistiques', icon: BarChart3 }
               ].map((tab) => {
                 const Icon = tab.icon
@@ -1155,6 +1158,14 @@ export default function EnhancedProfilePage() {
                   isOwnProfile={isOwnProfile}
                 />
               </div>
+            )}
+
+            {/* 🆕 ONGLET LISTES */}
+            {activeTab === 'lists' && (
+              <MatchListsSection 
+                userId={targetUserId}
+                isOwnProfile={isOwnProfile}
+              />
             )}
 
             {/* Stats Tab */}
