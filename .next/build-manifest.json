@@ -27,15 +27,15 @@
       "static/chunks/main.js",
       "static/chunks/pages/_error.js"
     ],
-    "/lists/[id]": [
+    "/auth/signin": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
-      "static/chunks/pages/lists/[id].js"
+      "static/chunks/pages/auth/signin.js"
     ],
-    "/top-reviews": [
+    "/search": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
-      "static/chunks/pages/top-reviews.js"
+      "static/chunks/pages/search.js"
     ]
   },
   "ampFirstPages": []

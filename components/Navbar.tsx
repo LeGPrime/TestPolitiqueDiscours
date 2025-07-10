@@ -75,15 +75,14 @@ export default function Navbar({ activeTab }: NavbarProps) {
             <Link href="/" className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
               <div className="relative">
                 <Image
-                  src="/logosporating.svg"
+                  src="/GLOBAL.png"
                   alt="Sporating Logo"
-                  width={40}
-                  height={40}
+                  width={140}
+                  height={140}
                   className="rounded-lg"
                   priority
                 />
                 <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-gradient-to-r from-blue-500 to-green-500 rounded-full flex items-center justify-center">
-                  <Trophy className="w-2.5 h-2.5 text-white" />
                 </div>
               </div>
               
@@ -118,15 +117,14 @@ export default function Navbar({ activeTab }: NavbarProps) {
             <Link href="/" className="flex items-center space-x-3 hover:opacity-80 transition-opacity group">
               <div className="relative">
                 <Image
-                  src="/logosporating.svg"
+                  src="/GLOBAL.png"
                   alt="Sporating Logo"
-                  width={40}
-                  height={40}
+                  width={80}
+                  height={80}
                   className="rounded-lg group-hover:scale-105 transition-transform"
                   priority
                 />
                 <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-gradient-to-r from-blue-500 to-green-500 rounded-full flex items-center justify-center group-hover:rotate-12 transition-transform">
-                  <Trophy className="w-2.5 h-2.5 text-white" />
                 </div>
               </div>
               
@@ -236,15 +234,14 @@ export default function Navbar({ activeTab }: NavbarProps) {
             <Link href="/" className="flex items-center space-x-3 touch-manipulation py-2">
               <div className="relative">
                 <Image
-                  src="/logosporating.svg"
+                  src="/GLOBAL.png"
                   alt="Sporating Logo"
-                  width={32}
-                  height={32}
+                  width={64}
+                  height={64}
                   className="rounded-lg"
                   priority
                 />
                 <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-gradient-to-r from-blue-500 to-green-500 rounded-full flex items-center justify-center">
-                  <Trophy className="w-2 h-2 text-white" />
                 </div>
               </div>
               <h1 className="text-lg font-bold text-gray-900 dark:text-white">Sporating</h1>

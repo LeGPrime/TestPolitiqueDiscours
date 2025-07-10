@@ -2,12 +2,12 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
-  "/lists/[id]": "pages/lists/[id].js",
-  "/api/matches": "pages/api/matches.js",
-  "/api/filter-stats": "pages/api/filter-stats.js",
-  "/api/match-list-items/reorder": "pages/api/match-list-items/reorder.js",
+  "/": "pages/index.js",
   "/api/auth/[...nextauth]": "pages/api/auth/[...nextauth].js",
-  "/top-reviews": "pages/top-reviews.js",
-  "/api/top-reviews": "pages/api/top-reviews.js",
-  "/": "pages/index.js"
+  "/auth/signin": "pages/auth/signin.js",
+  "/api/filter-stats": "pages/api/filter-stats.js",
+  "/api/matches": "pages/api/matches.js",
+  "/search": "pages/search.js",
+  "/api/search": "pages/api/search.js",
+  "/api/teams": "pages/api/teams.js"
 }

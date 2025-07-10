@@ -10,7 +10,8 @@ import {
   Eye,
   EyeOff,
   ArrowRight,
-  Check
+  Check,
+  Sparkles
 } from 'lucide-react'
 import axios from 'axios'
 
@@ -80,9 +81,10 @@ export default function Register() {
         })
 
         if (result?.ok) {
-          router.push('/')
+          // 🆕 Rediriger vers l'onboarding au lieu de la homepage
+          router.push('/onboarding?from=register')
         }
-      }, 1500)
+      }, 2000) // Augmenté à 2s pour laisser le temps de voir le succès
 
     } catch (error: any) {
       const message = error.response?.data?.message || 'Une erreur est survenue'
@@ -99,12 +101,16 @@ export default function Register() {
           <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <Check className="w-8 h-8 text-green-600" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Compte créé !</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Compte créé ! 🎉</h1>
           <p className="text-gray-600 mb-4">
             Bienvenue sur Sporating ! Connexion en cours...
           </p>
+          <p className="text-sm text-blue-600 mb-4">
+            ✨ Nous allons maintenant personnaliser votre expérience
+          </p>
           <div className="flex items-center justify-center">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+            <span className="ml-2 text-sm text-gray-600">Redirection vers la configuration...</span>
           </div>
         </div>
       </div>
@@ -128,7 +134,7 @@ export default function Register() {
               Rejoignez la communauté
             </h1>
             <p className="text-xl text-green-100 mb-8">
-              Créez votre compte et commencez à noter vos matchs de football préférés
+              Créez votre compte et commencez à noter vos matchs de sport préférés
             </p>
 
             <div className="space-y-4">
@@ -136,13 +142,26 @@ export default function Register() {
                 '🚀 Inscription rapide et gratuite',
                 '⭐ Notez tous les matchs que vous voulez',
                 '📊 Suivez vos statistiques personnelles',
-                '🏆 Découvrez les avis de la communauté'
+                '🏆 Découvrez les avis de la communauté',
+                '✨ Configuration personnalisée après inscription'
               ].map((feature, index) => (
                 <div key={index} className="flex items-center space-x-3">
                   <div className="w-2 h-2 bg-white/60 rounded-full"></div>
                   <span className="text-green-100">{feature}</span>
                 </div>
               ))}
+            </div>
+
+            {/* 🆕 Section onboarding preview */}
+            <div className="mt-8 p-4 bg-white/10 rounded-xl backdrop-blur border border-white/20">
+              <div className="flex items-center space-x-2 mb-2">
+                <Sparkles className="w-5 h-5 text-yellow-300" />
+                <span className="font-semibold text-yellow-100">Après inscription</span>
+              </div>
+              <p className="text-white/90 text-sm">
+                Personnalisez votre profil en 4 étapes simples : vos infos, vos sports favoris, 
+                votre avatar et vos objectifs. Entièrement optionnel !
+              </p>
             </div>
           </div>
         </div>
@@ -269,6 +288,20 @@ export default function Register() {
                 )}
               </div>
 
+              {/* 🆕 Info onboarding */}
+              <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-start space-x-3">
+                  <Sparkles className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <h4 className="font-medium text-blue-900 text-sm">Que se passe-t-il après ?</h4>
+                    <p className="text-blue-800 text-xs mt-1">
+                      Après la création de votre compte, nous vous proposons 4 étapes simples pour 
+                      personnaliser votre expérience. Vous pouvez les ignorer si vous préférez !
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               <button
                 type="submit"
                 disabled={loading}
@@ -293,6 +326,34 @@ export default function Register() {
                   Se connecter
                 </Link>
               </p>
+            </div>
+
+            {/* 🆕 Aperçu des étapes onboarding */}
+            <div className="mt-8 lg:hidden">
+              <div className="bg-gray-50 rounded-xl p-4">
+                <h4 className="font-semibold text-gray-900 mb-3 text-center">🎯 Étapes de personnalisation</h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-bold">1</div>
+                    <span className="text-gray-700">Vos informations de base</span>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-bold">2</div>
+                    <span className="text-gray-700">Vos sports et équipes favorites</span>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-bold">3</div>
+                    <span className="text-gray-700">Avatar et préférences</span>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-bold">4</div>
+                    <span className="text-gray-700">Vos objectifs sur Sporating</span>
+                  </div>
+                </div>
+                <div className="mt-3 text-center">
+                  <span className="text-xs text-green-600 font-medium">✅ Entièrement optionnel - Vous pouvez tout ignorer !</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>

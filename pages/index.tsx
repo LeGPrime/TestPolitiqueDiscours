@@ -4,6 +4,7 @@ import { Star, Trophy, LogOut, RefreshCw, Search, Users, Calendar, Filter, BarCh
 import axios from 'axios'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
+import { toast } from 'react-hot-toast'
 import ThemeToggle from '../components/ThemeToggle'
 import Navbar from '../components/Navbar'
 
@@ -148,6 +149,31 @@ export default function Home() {
   const [showFilters, setShowFilters] = useState(false)
   const [availableCompetitions, setAvailableCompetitions] = useState<Array<{competition: string, count: number, sport: string}>>([])
 
+  // 🆕 Gérer les redirections depuis l'onboarding
+  useEffect(() => {
+    const { welcome, fromOnboarding } = router.query
+
+    if (welcome === 'true') {
+      toast.success('🎉 Bienvenue sur Sporating ! Explorez et découvrez de nouveaux matchs.', {
+        duration: 5000,
+        icon: '👋',
+      })
+      
+      // Nettoyer l'URL
+      router.replace('/', undefined, { shallow: true })
+    }
+
+    if (fromOnboarding === 'skipped') {
+      toast('💡 N\'oubliez pas de personnaliser votre profil dans les paramètres !', {
+        duration: 4000,
+        icon: '⚙️',
+      })
+      
+      // Nettoyer l'URL
+      router.replace('/', undefined, { shallow: true })
+    }
+  }, [router])
+
   useEffect(() => {
     if (session) {
       fetchMatches()
@@ -161,7 +187,8 @@ export default function Home() {
       const params = new URLSearchParams({
         type: filter,
         sport: sportFilter,
-        days: '14'
+        days: '14',
+        limit: '10' // 🆕 Limiter à 10 matchs au lieu de 50
       })
       
       if (searchTerm) {
