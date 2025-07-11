@@ -226,4 +226,5 @@ function getSportFromEnum(sportEnum: string): string {
   }
   
   return sportMap[sportEnum] || sportEnum.toLowerCase()
+
 }

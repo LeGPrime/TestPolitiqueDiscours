@@ -1,94 +1,129 @@
-// pages/api/matches.ts - CORRIGÉ pour supporter MMA
+// pages/api/matches.ts - CORRECTION FILTRE DE DATES
 import { NextApiRequest, NextApiResponse } from 'next'
+import { getServerSession } from 'next-auth/next'
+import { authOptions } from '../../lib/auth'
 import { prisma } from '../../lib/prisma'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const session = await getServerSession(req, res, authOptions)
+
+  if (!session?.user?.id) {
+    return res.status(401).json({ error: 'Connexion requise' })
+  }
+
   if (req.method === 'GET') {
     try {
       const { 
         type = 'recent', 
-        search, 
-        days = '14', 
-        sport = 'all',
-        competition = 'all',
-        limit = '50' 
+        sport = 'all', 
+        days = '365', // 🔧 AUGMENTÉ À 365 JOURS PAR DÉFAUT
+        limit = '50',
+        search,
+        competition 
       } = req.query
 
-      console.log(`📊 Recherche dans la base de données locale...`)
-      console.log(`🏆 Sport: ${sport}, Compétition: ${competition}, Type: ${type}`)
+      console.log(`🔍 API Matches - Filtres reçus:`, { type, sport, days, limit, search, competition })
 
-      // Construire le filtre de base
-      const whereClause: any = {
-        status: 'FINISHED'
-      }
-
-      // 🆕 FILTRE PAR SPORT - CORRECTION MAJEURE
+      // Construction du filtre sport
+      let sportFilter = {}
+      
       if (sport && sport !== 'all') {
-        // Convertir le sport en format ENUM Prisma (UPPERCASE)
-        const sportUpper = sport.toString().toUpperCase()
-        console.log(`🔍 Filtrage sport: ${sport} -> ${sportUpper}`)
-        whereClause.sport = sportUpper
+        const sportMapping: Record<string, string> = {
+          'football': 'FOOTBALL',
+          'basketball': 'BASKETBALL',
+          'mma': 'MMA',
+          'rugby': 'RUGBY',
+          'f1': 'F1'
+        }
+        
+        const mappedSport = sportMapping[sport as string]
+        if (mappedSport) {
+          sportFilter = { sport: mappedSport }
+          console.log(`🎯 Filtre sport appliqué: ${sport} -> ${mappedSport}`)
+        }
       }
 
-      // 🆕 FILTRE PAR COMPÉTITION
-      if (competition && competition !== 'all') {
-        whereClause.competition = competition.toString()
+      // Construction du filtre de base
+      const baseFilters: any = {
+        status: 'FINISHED',
+        ...sportFilter
       }
 
-      // Filtrer par recherche si nécessaire
+      // 🔧 FILTRE PAR DATE AMÉLIORÉ
+      if (type === 'today') {
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        const tomorrow = new Date(today)
+        tomorrow.setDate(tomorrow.getDate() + 1)
+        
+        baseFilters.date = {
+          gte: today,
+          lt: tomorrow
+        }
+      } else {
+        // 🔧 STRATÉGIE ADAPTATIVE POUR LES DATES
+        const daysBack = parseInt(days as string)
+        
+        if (daysBack > 0) {
+          // Si on demande des jours spécifiques, les appliquer
+          const daysAgo = new Date()
+          daysAgo.setDate(daysAgo.getDate() - daysBack)
+          baseFilters.date = {
+            gte: daysAgo
+          }
+          console.log(`📅 Filtre date: depuis ${daysAgo.toLocaleDateString()} (${daysBack} jours)`)
+        } else {
+          // Si days = 0 ou négatif, ne pas filtrer par date
+          console.log(`📅 Pas de filtre date (days=${daysBack})`)
+        }
+      }
+
+      // Filtre par recherche
       if (search && typeof search === 'string') {
-        console.log(`🔍 Recherche: "${search}"`)
-        whereClause.OR = [
+        baseFilters.OR = [
           { homeTeam: { contains: search, mode: 'insensitive' } },
           { awayTeam: { contains: search, mode: 'insensitive' } },
           { competition: { contains: search, mode: 'insensitive' } }
         ]
       }
 
-      // Filtrer par date si c'est "today"
-      if (type === 'today') {
-        const today = new Date()
-        const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate())
-        const endOfDay = new Date(startOfDay)
-        endOfDay.setDate(endOfDay.getDate() + 1)
-        
-        whereClause.date = {
-          gte: startOfDay,
-          lt: endOfDay
-        }
+      // Filtre par compétition
+      if (competition && competition !== 'all') {
+        baseFilters.competition = competition
       }
 
-      console.log('🔍 Clause WHERE finale:', JSON.stringify(whereClause, null, 2))
+      console.log(`🔍 Filtres Prisma appliqués:`, JSON.stringify(baseFilters, null, 2))
 
-      const dbMatches = await prisma.match.findMany({
-        where: whereClause,
+      // Requête principale
+      const matches = await prisma.match.findMany({
+        where: baseFilters,
         include: {
           ratings: {
             include: {
               user: {
-                select: { id: true, name: true, email: true }
+                select: { id: true, name: true, username: true }
               }
             }
-          },
-          _count: {
-            select: { ratings: true }
           }
         },
         orderBy: { date: 'desc' },
         take: parseInt(limit as string)
       })
 
-      console.log(`✅ Trouvé ${dbMatches.length} événements dans la base locale`)
+      console.log(`✅ ${matches.length} matchs trouvés`)
 
-      // 🆕 DEBUG - Montrer les sports trouvés
-      const sportsFound = [...new Set(dbMatches.map(m => m.sport))]
-      console.log(`🏆 Sports trouvés en base:`, sportsFound)
+      // 🔧 DEBUG: Afficher la répartition par sport des résultats
+      const sportBreakdown = matches.reduce((acc: any, match) => {
+        acc[match.sport] = (acc[match.sport] || 0) + 1
+        return acc
+      }, {})
+      console.log(`📊 Répartition résultats:`, sportBreakdown)
 
-      // Convertir au format attendu avec support multi-sports
-      const formattedMatches = dbMatches.map(match => ({
+      // Conversion des matchs
+      const formattedMatches = matches.map(match => ({
         id: match.id,
         apiId: match.apiMatchId,
-        sport: match.sport.toLowerCase(), // 🆕 CONVERSION EN MINUSCULE POUR L'INTERFACE
+        sport: getSportFromEnum(match.sport),
         homeTeam: match.homeTeam,
         awayTeam: match.awayTeam,
         homeScore: match.homeScore,
@@ -97,80 +132,77 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         status: match.status,
         competition: match.competition,
         venue: match.venue,
-        homeTeamLogo: match.homeTeamLogo,
-        awayTeamLogo: match.awayTeamLogo,
         avgRating: match.avgRating,
         totalRatings: match.totalRatings,
-        ratings: match.ratings,
+        homeTeamLogo: match.homeTeamLogo,
+        awayTeamLogo: match.awayTeamLogo,
         canRate: true,
-        // 🆕 DÉTAILS ENRICHIS PAR SPORT
-        details: match.details || null
+        ratings: match.ratings,
+        details: match.details
       }))
 
-      // 🆕 STATISTIQUES PAR SPORT ET COMPÉTITION
-      const sportStats = await prisma.match.groupBy({
+      // Statistiques
+      const bySportStats = await prisma.match.groupBy({
         by: ['sport'],
-        _count: {
-          id: true
-        },
-        where: { 
-          status: 'FINISHED',
-          ...(competition !== 'all' ? { competition: competition.toString() } : {})
-        }
+        where: { status: 'FINISHED' },
+        _count: { sport: true }
       })
 
-      const competitionStats = await prisma.match.groupBy({
-        by: ['competition'],
-        _count: {
-          id: true
-        },
-        where: { 
-          status: 'FINISHED',
-          ...(sport !== 'all' ? { sport: sport.toString().toUpperCase() } : {})
-        },
-        orderBy: {
-          _count: {
-            id: 'desc'
-          }
-        },
-        take: 20
+      const byCompetitionStats = await prisma.match.groupBy({
+        by: ['competition', 'sport'],
+        where: { status: 'FINISHED' },
+        _count: { competition: true }
       })
 
-      // 🆕 DEBUG FINAL
-      console.log(`📊 Stats finales:`)
-      console.log(`- Total matches: ${formattedMatches.length}`)
-      console.log(`- Sports stats:`, sportStats.map(s => `${s.sport}: ${s._count.id}`))
-      console.log(`- Sport filter: ${sport}`)
-      console.log(`- Matches trouvés par sport:`, formattedMatches.reduce((acc, m) => {
-        acc[m.sport] = (acc[m.sport] || 0) + 1
-        return acc
-      }, {} as Record<string, number>))
+      // Convertir les stats des sports
+      const convertedSportStats = bySportStats.map(stat => ({
+        sport: getSportFromEnum(stat.sport),
+        count: stat._count.sport
+      }))
 
-      res.status(200).json({ 
+      const limitedCompetitionStats = byCompetitionStats
+        .slice(0, 50)
+        .map(stat => ({
+          competition: stat.competition,
+          sport: getSportFromEnum(stat.sport),
+          count: stat._count.competition
+        }))
+
+      const stats = {
+        total: formattedMatches.length,
+        bySport: convertedSportStats,
+        byCompetition: limitedCompetitionStats
+      }
+
+      console.log(`📊 Stats générées:`, stats.bySport)
+
+      res.status(200).json({
         matches: formattedMatches,
-        stats: {
-          total: formattedMatches.length,
-          bySport: sportStats.map(stat => ({
-            sport: stat.sport.toLowerCase(), // 🆕 CONVERSION POUR L'INTERFACE
-            count: stat._count.id
-          })),
-          byCompetition: competitionStats.map(stat => ({
-            competition: stat.competition,
-            count: stat._count.id
-          }))
-        },
-        debug: {
-          whereClause,
-          foundSports: sportsFound,
-          requestedSport: sport
-        }
+        stats
       })
+
     } catch (error) {
-      console.error('❌ Erreur API matchs:', error)
-      res.status(500).json({ error: 'Erreur serveur', details: error.message })
+      console.error('❌ Erreur API matches:', error)
+      res.status(500).json({ 
+        error: 'Erreur serveur',
+        details: error instanceof Error ? error.message : 'Erreur inconnue'
+      })
     }
   } else {
     res.setHeader('Allow', ['GET'])
     res.status(405).end(`Method ${req.method} Not Allowed`)
   }
+}
+
+// Fonction pour convertir l'enum Sport en string
+function getSportFromEnum(sportEnum: string): string {
+  const sportMap: Record<string, string> = {
+    'FOOTBALL': 'football',
+    'BASKETBALL': 'basketball', 
+    'MMA': 'mma',
+    'RUGBY': 'rugby',
+    'F1': 'f1'
+  }
+  
+  return sportMap[sportEnum] || sportEnum.toLowerCase()
 }

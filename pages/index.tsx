@@ -187,8 +187,8 @@ export default function Home() {
       const params = new URLSearchParams({
         type: filter,
         sport: sportFilter,
-        days: '14',
-        limit: '10' // 🆕 Limiter à 10 matchs au lieu de 50
+        days: '365', // 🔧 AUGMENTÉ POUR VOIR PLUS DE MATCHS
+        limit: '10'
       })
       
       if (searchTerm) {
@@ -640,8 +640,25 @@ function OptimizedMatchCard({ match, onRate, currentUserId }: {
     setShowRatingForm(true)
   }
 
-  const formatScore = (homeScore: any, awayScore: any, sport: string) => {
-    if (sport === 'mma') return `${homeScore} vs ${awayScore}`
+  // 🔧 FONCTION FORMATAGE SCORE CORRIGÉE POUR MMA
+  const formatScore = (homeScore: any, awayScore: any, sport: string, details?: any) => {
+    if (sport === 'mma') {
+      // Vérifier s'il y a un gagnant dans les détails
+      const winner = details?.winner || details?.processed?.result?.winner || details?.api_data?.winner
+      const method = details?.method || details?.processed?.result?.method || details?.api_data?.method
+      
+      if (winner) {
+        return `${winner} victoire` + (method ? ` (${method})` : '')
+      }
+      
+      // Si pas de résultat, afficher "Combat MMA"
+      if (homeScore === null && awayScore === null) {
+        return 'Combat MMA'
+      }
+      
+      return `${homeScore ?? '?'} vs ${awayScore ?? '?'}`
+    }
+    
     if (sport === 'f1') return `P${homeScore}`
     return `${homeScore ?? '?'} - ${awayScore ?? '?'}`
   }
@@ -708,6 +725,41 @@ function OptimizedMatchCard({ match, onRate, currentUserId }: {
                 📍 {match.awayTeam}
               </div>
             </div>
+          ) : match.sport === 'mma' ? (
+            // 🆕 AFFICHAGE SPÉCIAL POUR MMA
+            <div className="bg-gradient-to-r from-red-50/80 to-pink-50/80 dark:from-red-900/30 dark:to-pink-900/30 backdrop-blur-sm rounded-xl p-4 border border-red-200/50 dark:border-red-800/50">
+              <div className="text-center">
+                <div className="text-xl font-bold text-red-600 dark:text-red-400 mb-2">
+                  🥊 Combat MMA
+                </div>
+                <div className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {match.homeTeam} vs {match.awayTeam}
+                </div>
+                <div className="text-sm text-amber-600 dark:text-amber-400 mt-2">
+                  {/* Vérifier s'il y a un résultat */}
+                  {match.details?.winner ? (
+                    <span className="text-green-600 dark:text-green-400 font-semibold">
+                      🏆 {match.details.winner} victoire
+                      {match.details.method && ` (${match.details.method})`}
+                    </span>
+                  ) : match.details?.processed?.result?.winner ? (
+                    <span className="text-green-600 dark:text-green-400 font-semibold">
+                      🏆 {match.details.processed.result.winner} victoire
+                      {match.details.processed.result.method && ` (${match.details.processed.result.method})`}
+                    </span>
+                  ) : (
+                    <span className="text-amber-600 dark:text-amber-400">
+                      Résultat non disponible
+                    </span>
+                  )}
+                </div>
+                {match.venue && (
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    📍 {match.venue}
+                  </div>
+                )}
+              </div>
+            </div>
           ) : (
             <div className="bg-gradient-to-r from-gray-50/80 to-blue-50/80 dark:from-slate-700/60 dark:to-blue-900/30 backdrop-blur-sm rounded-xl p-4 border border-gray-200/50 dark:border-slate-600/50">
               <div className="flex items-center justify-between">
@@ -721,7 +773,7 @@ function OptimizedMatchCard({ match, onRate, currentUserId }: {
                 
                 <div className="mx-4 text-center">
                   <div className="text-xl font-black text-gray-900 dark:text-white tracking-wider">
-                    {formatScore(match.homeScore, match.awayScore, match.sport)}
+                    {formatScore(match.homeScore, match.awayScore, match.sport, match.details)}
                   </div>
                 </div>
                 

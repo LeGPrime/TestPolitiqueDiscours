@@ -34,21 +34,21 @@ model Session {
 }
 
 model User {
-  id                  String         @id @default(cuid())
+  id                  String             @id @default(cuid())
   name                String?
-  email               String         @unique
+  email               String             @unique
   emailVerified       DateTime?
   image               String?
-  username            String?        @unique
+  username            String?            @unique
   bio                 String?
   password            String?
-  createdAt           DateTime       @default(now())
-  location            String?        @db.VarChar(255)
-  favorite_club       String?        @db.VarChar(255)
+  createdAt           DateTime           @default(now())
+  location            String?            @db.VarChar(255)
+  favorite_club       String?            @db.VarChar(255)
   accounts            Account[]
   sessions            Session[]
-  receivedFriendships Friendship[]   @relation("UserReceivedFriendships")
-  sentFriendships     Friendship[]   @relation("UserSentFriendships")
+  receivedFriendships Friendship[]       @relation("UserReceivedFriendships")
+  sentFriendships     Friendship[]       @relation("UserSentFriendships")
   notifications       Notification[]
   playerRatings       PlayerRating[]
   ratings             Rating[]
@@ -59,6 +59,7 @@ model User {
   user_profiles       user_profiles?
   matchLists          MatchList[]
   matchListLikes      MatchListLike[]
+  manOfMatchVotes     ManOfMatchVote[]   // 🆕 VOTES HOMME DU MATCH
 
   @@map("users")
 }
@@ -72,30 +73,31 @@ model VerificationToken {
 }
 
 model Match {
-  id            String         @id @default(cuid())
-  apiMatchId    Int            @unique
-  sport         Sport          @default(FOOTBALL)
-  homeTeam      String
-  awayTeam      String
-  homeScore     Int?
-  awayScore     Int?
-  date          DateTime
-  status        String
-  competition   String
-  season        String
-  venue         String?
-  referee       String?
-  homeTeamLogo  String?
-  awayTeamLogo  String?
-  details       Json?
-  totalRatings  Int            @default(0)
-  avgRating     Float          @default(0)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  events        MatchEvent[]
-  playerRatings PlayerRating[]
-  ratings       Rating[]
-  listItems     MatchListItem[]
+  id              String           @id @default(cuid())
+  apiMatchId      Int              @unique
+  sport           Sport            @default(FOOTBALL)
+  homeTeam        String
+  awayTeam        String
+  homeScore       Int?
+  awayScore       Int?
+  date            DateTime
+  status          String
+  competition     String
+  season          String
+  venue           String?
+  referee         String?
+  homeTeamLogo    String?
+  awayTeamLogo    String?
+  details         Json?
+  totalRatings    Int              @default(0)
+  avgRating       Float            @default(0)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  events          MatchEvent[]
+  playerRatings   PlayerRating[]
+  ratings         Rating[]
+  listItems       MatchListItem[]
+  manOfMatchVotes ManOfMatchVote[] // 🆕 VOTES HOMME DU MATCH
 
   @@map("matches")
 }
@@ -197,14 +199,15 @@ model Friendship {
 }
 
 model Player {
-  id        String         @id @default(cuid())
-  name      String
-  number    Int?
-  position  String?
-  team      String
-  sport     Sport          @default(FOOTBALL)
-  createdAt DateTime       @default(now())
-  ratings   PlayerRating[]
+  id              String           @id @default(cuid())
+  name            String
+  number          Int?
+  position        String?
+  team            String
+  sport           Sport            @default(FOOTBALL)
+  createdAt       DateTime         @default(now())
+  ratings         PlayerRating[]
+  manOfMatchVotes ManOfMatchVote[] // 🆕 VOTES HOMME DU MATCH
 
   @@unique([name, team, sport])
   @@map("players")
@@ -225,6 +228,24 @@ model PlayerRating {
 
   @@unique([userId, playerId, matchId])
   @@map("player_ratings")
+}
+
+// 🆕 NOUVEAU MODÈLE - VOTES HOMME DU MATCH
+model ManOfMatchVote {
+  id        String   @id @default(cuid())
+  userId    String
+  playerId  String
+  matchId   String
+  comment   String?  // Commentaire optionnel sur le choix
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  player    Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  match     Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, matchId]) // Un utilisateur ne peut voter qu'une fois par match
+  @@map("man_of_match_votes")
 }
 
 model Team {
@@ -283,7 +304,7 @@ model user_profiles {
   @@index([user_id], map: "idx_user_profiles_user_id")
 }
 
-// 🆕 NOUVEAUX MODÈLES POUR LES LISTES
+// MODÈLES POUR LES LISTES DE MATCHS
 model MatchList {
   id          String           @id @default(cuid())
   name        String

@@ -1,10 +1,11 @@
-// components/FootballMatchDetails.tsx - VERSION RÉORGANISÉE ET MOBILE-OPTIMIZED
+// components/FootballMatchDetails.tsx - VERSION COMPLÈTE AVEC HOMME DU MATCH
 import { useState, useEffect } from 'react'
 import { 
   Target, AlertTriangle, RefreshCw, UserCheck, BarChart3, 
   Activity, Trophy, Flag, Clock, MapPin, Users, ChevronDown, ChevronUp
 } from 'lucide-react'
 import EnhancedLineupsTab from './EnhancedLineupsTab'
+import ManOfMatchWidget from './ManOfMatchWidget'
 
 interface FootballMatchDetailsProps {
   matchDetails: {
@@ -47,8 +48,8 @@ export default function FootballMatchDetails({
   onRatePlayer, 
   currentUserId 
 }: FootballMatchDetailsProps) {
-  // 🔄 NOUVEL ORDRE : Compositions → Stats → Timeline
-  const [activeTab, setActiveTab] = useState<'lineups' | 'stats' | 'timeline'>('lineups')
+  // 🔄 NOUVEL ORDRE : Compositions → Homme du Match → Stats → Timeline
+  const [activeTab, setActiveTab] = useState<'lineups' | 'man-of-match' | 'stats' | 'timeline'>('lineups')
   
   // 📱 État différent selon la taille d'écran
   const [showQuickSummary, setShowQuickSummary] = useState(() => {
@@ -91,6 +92,65 @@ export default function FootballMatchDetails({
     redCards: redCards.length,
     totalCards: cards.length,
     substitutions: substitutions.length
+  }
+
+  // 🆕 EXTRAIRE TOUS LES JOUEURS POUR L'HOMME DU MATCH
+  const getAllPlayers = () => {
+    const players = []
+    
+    // Joueurs de l'équipe domicile - Titulaires
+    if (lineups.home.startXI) {
+      lineups.home.startXI.forEach((p: any) => {
+        players.push({
+          id: `${p.player.name || p.player}_${match.homeTeam}`.replace(/\s+/g, '_'),
+          name: p.player.name || p.player,
+          position: p.position,
+          number: p.number,
+          team: match.homeTeam
+        })
+      })
+    }
+    
+    // Joueurs de l'équipe domicile - Remplaçants
+    if (lineups.home.substitutes) {
+      lineups.home.substitutes.forEach((p: any) => {
+        players.push({
+          id: `${p.player.name || p.player}_${match.homeTeam}`.replace(/\s+/g, '_'),
+          name: p.player.name || p.player,
+          position: p.position,
+          number: p.number,
+          team: match.homeTeam
+        })
+      })
+    }
+
+    // Joueurs de l'équipe extérieure - Titulaires
+    if (lineups.away.startXI) {
+      lineups.away.startXI.forEach((p: any) => {
+        players.push({
+          id: `${p.player.name || p.player}_${match.awayTeam}`.replace(/\s+/g, '_'),
+          name: p.player.name || p.player,
+          position: p.position,
+          number: p.number,
+          team: match.awayTeam
+        })
+      })
+    }
+    
+    // Joueurs de l'équipe extérieure - Remplaçants
+    if (lineups.away.substitutes) {
+      lineups.away.substitutes.forEach((p: any) => {
+        players.push({
+          id: `${p.player.name || p.player}_${match.awayTeam}`.replace(/\s+/g, '_'),
+          name: p.player.name || p.player,
+          position: p.position,
+          number: p.number,
+          team: match.awayTeam
+        })
+      })
+    }
+
+    return players
   }
 
   return (
@@ -209,7 +269,7 @@ export default function FootballMatchDetails({
         </div>
       )}
 
-      {/* 📱 TABS NAVIGATION - Mobile Optimized */}
+      {/* 📱 TABS NAVIGATION - Mobile Optimized avec Homme du Match */}
       <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg overflow-hidden border border-gray-100">
         {/* Mobile: Horizontal scroll tabs */}
         <div className="flex overflow-x-auto scrollbar-hide">
@@ -222,6 +282,14 @@ export default function FootballMatchDetails({
                 shortLabel: 'Équipes',
                 color: 'blue',
                 description: 'Formations & tactiques'
+              },
+              { 
+                id: 'man-of-match', 
+                label: 'Homme du Match', 
+                icon: Trophy, 
+                shortLabel: 'MOTM',
+                color: 'yellow',
+                description: 'Voter pour le meilleur'
               },
               { 
                 id: 'stats', 
@@ -247,10 +315,11 @@ export default function FootballMatchDetails({
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
-                  className={`flex-shrink-0 flex flex-col items-center space-y-2 px-4 py-3 md:px-6 md:py-4 rounded-xl font-medium text-sm transition-all duration-300 min-w-[100px] md:min-w-[140px] ${
+                  className={`flex-shrink-0 flex flex-col items-center space-y-2 px-4 py-3 md:px-6 md:py-4 rounded-xl font-medium text-sm transition-all duration-300 min-w-[100px] md:min-w-[140px] relative ${
                     isActive
                       ? `bg-gradient-to-br ${
                           tab.color === 'blue' ? 'from-blue-500 to-blue-600' :
+                          tab.color === 'yellow' ? 'from-yellow-500 to-yellow-600' :
                           tab.color === 'purple' ? 'from-purple-500 to-purple-600' :
                           'from-green-500 to-green-600'
                         } text-white shadow-lg scale-105`
@@ -260,7 +329,7 @@ export default function FootballMatchDetails({
                   <Icon className="w-5 h-5 md:w-6 md:h-6" />
                   <div className="text-center">
                     <div className="font-bold text-xs md:text-sm">
-                      {window.innerWidth < 768 ? tab.shortLabel : tab.label}
+                      {typeof window !== 'undefined' && window.innerWidth < 768 ? tab.shortLabel : tab.label}
                     </div>
                     {isActive && (
                       <div className="text-xs opacity-90 hidden md:block">
@@ -273,6 +342,13 @@ export default function FootballMatchDetails({
                   {tab.id === 'timeline' && events.length > 0 && (
                     <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs font-bold">
                       {events.length > 9 ? '9+' : events.length}
+                    </div>
+                  )}
+                  
+                  {/* Badge spécial pour Homme du Match */}
+                  {tab.id === 'man-of-match' && (
+                    <div className="absolute -top-1 -right-1 w-5 h-5 bg-yellow-500 text-white rounded-full flex items-center justify-center text-xs font-bold">
+                      🏆
                     </div>
                   )}
                 </button>
@@ -300,7 +376,21 @@ export default function FootballMatchDetails({
           </div>
         )}
         
-        {/* TAB 2: STATISTIQUES */}
+        {/* TAB 2: HOMME DU MATCH (NOUVEAU) */}
+        {activeTab === 'man-of-match' && (
+          <div className="space-y-4">
+            <ManOfMatchWidget
+              matchId={match.id}
+              homeTeam={match.homeTeam}
+              awayTeam={match.awayTeam}
+              sport="FOOTBALL"
+              players={getAllPlayers()}
+              currentUserId={currentUserId}
+            />
+          </div>
+        )}
+        
+        {/* TAB 3: STATISTIQUES */}
         {activeTab === 'stats' && (
           <FootballStatsTabMobile 
             statistics={statistics} 
@@ -310,7 +400,7 @@ export default function FootballMatchDetails({
           />
         )}
         
-        {/* TAB 3: TIMELINE */}
+        {/* TAB 4: TIMELINE */}
         {activeTab === 'timeline' && (
           <FootballTimelineTabMobile 
             events={events} 
