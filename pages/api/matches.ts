@@ -1,4 +1,4 @@
-// pages/api/matches.ts - CORRECTION FILTRE DE DATES
+// pages/api/matches.ts - AJOUT DU TRI PAR POPULARITÉ
 import { NextApiRequest, NextApiResponse } from 'next'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '../../lib/auth'
@@ -16,13 +16,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const { 
         type = 'recent', 
         sport = 'all', 
-        days = '365', // 🔧 AUGMENTÉ À 365 JOURS PAR DÉFAUT
+        days = '365',
         limit = '50',
         search,
-        competition 
+        competition,
+        sortBy = 'date' // 🆕 NOUVEAU PARAMÈTRE DE TRI
       } = req.query
 
-      console.log(`🔍 API Matches - Filtres reçus:`, { type, sport, days, limit, search, competition })
+      console.log(`🔍 API Matches - Filtres reçus:`, { type, sport, days, limit, search, competition, sortBy })
 
       // Construction du filtre sport
       let sportFilter = {}
@@ -49,7 +50,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         ...sportFilter
       }
 
-      // 🔧 FILTRE PAR DATE AMÉLIORÉ
+      // Filtre par date
       if (type === 'today') {
         const today = new Date()
         today.setHours(0, 0, 0, 0)
@@ -61,20 +62,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           lt: tomorrow
         }
       } else {
-        // 🔧 STRATÉGIE ADAPTATIVE POUR LES DATES
         const daysBack = parseInt(days as string)
         
         if (daysBack > 0) {
-          // Si on demande des jours spécifiques, les appliquer
           const daysAgo = new Date()
           daysAgo.setDate(daysAgo.getDate() - daysBack)
           baseFilters.date = {
             gte: daysAgo
           }
           console.log(`📅 Filtre date: depuis ${daysAgo.toLocaleDateString()} (${daysBack} jours)`)
-        } else {
-          // Si days = 0 ou négatif, ne pas filtrer par date
-          console.log(`📅 Pas de filtre date (days=${daysBack})`)
         }
       }
 
@@ -94,7 +90,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       console.log(`🔍 Filtres Prisma appliqués:`, JSON.stringify(baseFilters, null, 2))
 
-      // Requête principale
+      // 🆕 CONFIGURATION DU TRI
+      let orderBy: any = { date: 'desc' } // Par défaut : par date
+      
+      if (sortBy === 'popularity') {
+        // Tri par nombre de notes (totalRatings) puis par note moyenne
+        orderBy = [
+          { totalRatings: 'desc' },
+          { avgRating: 'desc' },
+          { date: 'desc' } // En cas d'égalité, plus récent d'abord
+        ]
+        console.log(`📊 Tri par popularité activé`)
+      } else if (sortBy === 'rating') {
+        // Tri par note moyenne puis par nombre de notes
+        orderBy = [
+          { avgRating: 'desc' },
+          { totalRatings: 'desc' },
+          { date: 'desc' }
+        ]
+        console.log(`⭐ Tri par note moyenne activé`)
+      } else if (sortBy === 'date') {
+        orderBy = { date: 'desc' }
+        console.log(`📅 Tri par date activé`)
+      }
+
+      // Requête principale avec le nouveau tri
       const matches = await prisma.match.findMany({
         where: baseFilters,
         include: {
@@ -106,18 +126,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             }
           }
         },
-        orderBy: { date: 'desc' },
+        orderBy,
         take: parseInt(limit as string)
       })
 
-      console.log(`✅ ${matches.length} matchs trouvés`)
+      console.log(`✅ ${matches.length} matchs trouvés avec tri: ${sortBy}`)
 
-      // 🔧 DEBUG: Afficher la répartition par sport des résultats
-      const sportBreakdown = matches.reduce((acc: any, match) => {
-        acc[match.sport] = (acc[match.sport] || 0) + 1
-        return acc
-      }, {})
-      console.log(`📊 Répartition résultats:`, sportBreakdown)
+      // Debug: Afficher les top 5 matchs selon le tri choisi
+      if (sortBy === 'popularity') {
+        const top5 = matches.slice(0, 5).map(m => ({
+          teams: `${m.homeTeam} vs ${m.awayTeam}`,
+          totalRatings: m.totalRatings,
+          avgRating: m.avgRating.toFixed(1)
+        }))
+        console.log(`🏆 Top 5 par popularité:`, top5)
+      }
 
       // Conversion des matchs
       const formattedMatches = matches.map(match => ({
@@ -174,11 +197,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         byCompetition: limitedCompetitionStats
       }
 
-      console.log(`📊 Stats générées:`, stats.bySport)
-
       res.status(200).json({
         matches: formattedMatches,
-        stats
+        stats,
+        sortBy: sortBy // 🆕 Renvoyer le tri utilisé
       })
 
     } catch (error) {

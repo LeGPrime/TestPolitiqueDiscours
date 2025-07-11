@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useSession, signIn, signOut } from 'next-auth/react'
-import { Star, Trophy, LogOut, RefreshCw, Search, Users, Calendar, Filter, BarChart3, Eye, X, ChevronDown, Play, Clock, MapPin, TrendingUp, Flame, MessageCircle, ChevronRight } from 'lucide-react'
+import { Star, Trophy, LogOut, RefreshCw, Search, Users, Calendar, Filter, BarChart3, Eye, X, ChevronDown, Play, Clock, MapPin, TrendingUp, Flame, MessageCircle, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 import axios from 'axios'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { toast } from 'react-hot-toast'
 import ThemeToggle from '../components/ThemeToggle'
 import Navbar from '../components/Navbar'
+import React from 'react'
 
 interface Match {
   id: string
@@ -148,6 +149,10 @@ export default function Home() {
   const [stats, setStats] = useState<FilterStats | null>(null)
   const [showFilters, setShowFilters] = useState(false)
   const [availableCompetitions, setAvailableCompetitions] = useState<Array<{competition: string, count: number, sport: string}>>([])
+  
+  // 🆕 ÉTAT POUR LE TRI
+  const [sortBy, setSortBy] = useState<'date' | 'popularity' | 'rating'>('date')
+  const [currentSortBy, setCurrentSortBy] = useState<string>('date') // Pour l'affichage
 
   // 🆕 Gérer les redirections depuis l'onboarding
   useEffect(() => {
@@ -159,7 +164,6 @@ export default function Home() {
         icon: '👋',
       })
       
-      // Nettoyer l'URL
       router.replace('/', undefined, { shallow: true })
     }
 
@@ -169,7 +173,6 @@ export default function Home() {
         icon: '⚙️',
       })
       
-      // Nettoyer l'URL
       router.replace('/', undefined, { shallow: true })
     }
   }, [router])
@@ -179,7 +182,7 @@ export default function Home() {
       fetchMatches()
       fetchFilterStats()
     }
-  }, [session, filter, sportFilter, competitionFilter])
+  }, [session, filter, sportFilter, competitionFilter, sortBy]) // 🆕 AJOUT DE SORTBY
 
   const fetchMatches = async () => {
     try {
@@ -187,8 +190,9 @@ export default function Home() {
       const params = new URLSearchParams({
         type: filter,
         sport: sportFilter,
-        days: '365', // 🔧 AUGMENTÉ POUR VOIR PLUS DE MATCHS
-        limit: '10'
+        days: '365',
+        limit: '10',
+        sortBy: sortBy // 🆕 AJOUT DU PARAMÈTRE DE TRI
       })
       
       if (searchTerm) {
@@ -202,6 +206,7 @@ export default function Home() {
       const response = await axios.get(`/api/matches?${params}`)
       setMatches(response.data.matches)
       setStats(response.data.stats)
+      setCurrentSortBy(response.data.sortBy || 'date') // 🆕 METTRE À JOUR LE TRI ACTUEL
     } catch (error) {
       console.error('Erreur chargement matchs:', error)
     } finally {
@@ -267,6 +272,7 @@ export default function Home() {
     setCompetitionFilter('all')
     setSearchTerm('')
     setFilter('recent')
+    setSortBy('date') // 🆕 RÉINITIALISER LE TRI
   }
 
   useEffect(() => {
@@ -284,6 +290,31 @@ export default function Home() {
     { id: 'f1', name: 'F1', emoji: '🏎️', color: 'from-blue-500 to-cyan-600' }
   ]
 
+  // 🆕 OPTIONS DE TRI
+  const sortOptions = [
+    { 
+      id: 'date', 
+      name: 'Plus récents', 
+      icon: Clock, 
+      description: 'Par date',
+      color: 'from-blue-500 to-blue-600'
+    },
+    { 
+      id: 'popularity', 
+      name: 'Plus populaires', 
+      icon: Flame, 
+      description: 'Par nombre de notes',
+      color: 'from-orange-500 to-red-600'
+    },
+    { 
+      id: 'rating', 
+      name: 'Mieux notés', 
+      icon: Star, 
+      description: 'Par note moyenne',
+      color: 'from-yellow-500 to-amber-600'
+    }
+  ]
+
   const getFilteredCompetitions = () => {
     if (sportFilter === 'all') {
       return availableCompetitions
@@ -299,7 +330,20 @@ export default function Home() {
     if (competitionFilter !== 'all') count++
     if (searchTerm) count++
     if (filter !== 'recent') count++
+    if (sortBy !== 'date') count++ // 🆕 COMPTER LE TRI
     return count
+  }
+
+  // 🆕 FONCTION POUR OBTENIR L'ICÔNE DU TRI ACTUEL
+  const getCurrentSortIcon = () => {
+    const currentSort = sortOptions.find(option => option.id === sortBy)
+    return currentSort?.icon || Clock
+  }
+
+  // 🆕 FONCTION POUR OBTENIR LE NOM DU TRI ACTUEL
+  const getCurrentSortName = () => {
+    const currentSort = sortOptions.find(option => option.id === sortBy)
+    return currentSort?.name || 'Plus récents'
   }
 
   if (!session) {
@@ -403,6 +447,59 @@ export default function Home() {
                 </button>
               </div>
             </form>
+
+            {/* 🆕 SECTION TRI - PLACEMENT STRATÉGIQUE */}
+            <div className="mb-6">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                {/* Titre avec indicateur du tri actuel */}
+                <div className="flex items-center space-x-3">
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Trier par :
+                  </h2>
+                  <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
+                    {React.createElement(getCurrentSortIcon(), { className: "w-4 h-4" })}
+                    <span>{getCurrentSortName()}</span>
+                  </div>
+                </div>
+
+                {/* 🆕 BOUTONS DE TRI MODERNES - MOBILE FRIENDLY */}
+                <div className="flex bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-2xl p-2 border border-gray-200 dark:border-slate-600 w-full sm:w-auto">
+                  {sortOptions.map((option) => {
+                    const IconComponent = option.icon
+                    const isActive = sortBy === option.id
+                    
+                    return (
+                      <button
+                        key={option.id}
+                        onClick={() => setSortBy(option.id as any)}
+                        className={`flex items-center space-x-2 px-3 py-2 rounded-xl transition-all duration-300 active:scale-95 flex-1 sm:flex-none ${
+                          isActive
+                            ? `bg-gradient-to-r ${option.color} text-white shadow-lg font-semibold`
+                            : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-slate-700/50'
+                        }`}
+                      >
+                        <IconComponent className="w-4 h-4" />
+                        <span className="text-sm font-medium hidden sm:inline">
+                          {option.name.split(' ')[1] || option.name} {/* Mobile: mot clé */}
+                        </span>
+                        <span className="text-xs sm:hidden">
+                          {option.name.split(' ')[0]} {/* Mobile version courte */}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* 🆕 DESCRIPTION DU TRI ACTUEL */}
+              <div className="mt-3 text-center">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {sortBy === 'date' && '📅 Événements les plus récents en premier'}
+                  {sortBy === 'popularity' && '🔥 Événements avec le plus de notes en premier'}
+                  {sortBy === 'rating' && '⭐ Événements les meilleures notés'}
+                </p>
+              </div>
+            </div>
 
             {/* Sports Filter Pills */}
             <div className="mb-6">
@@ -556,19 +653,21 @@ export default function Home() {
           </div>
         ) : (
           <div>
-            {/* Results Summary */}
+            {/* 🆕 ENHANCED RESULTS SUMMARY AVEC INFO SUR LE TRI */}
             <div className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-2xl p-6 mb-8 border border-indigo-200 dark:border-indigo-800">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center">
-                    <Trophy className="w-5 h-5 text-white" />
+                    {React.createElement(getCurrentSortIcon(), { className: "w-5 h-5 text-white" })}
                   </div>
                   <div>
                     <h2 className="text-xl font-bold text-indigo-800 dark:text-indigo-200">
                       {matches.length} événement{matches.length > 1 ? 's' : ''} trouvé{matches.length > 1 ? 's' : ''}
                     </h2>
                     <p className="text-indigo-600 dark:text-indigo-400 text-sm">
-                      Prêts à être notés et commentés
+                      {sortBy === 'date' && '📅 Triés par date (plus récents d\'abord)'}
+                      {sortBy === 'popularity' && '🔥 Triés par popularité (plus de notes d\'abord)'}
+                      {sortBy === 'rating' && '⭐ Triés par note moyenne (mieux notés d\'abord)'}
                     </p>
                   </div>
                 </div>
@@ -579,6 +678,29 @@ export default function Home() {
                   </div>
                 )}
               </div>
+
+              {/* 🆕 APERÇU QUICK DES STATISTIQUES SELON LE TRI */}
+              {sortBy === 'popularity' && matches.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-indigo-200 dark:border-indigo-700">
+                  <div className="flex items-center justify-between text-sm text-indigo-600 dark:text-indigo-400">
+                    <span>🏆 Plus populaire: <strong>{matches[0]?.homeTeam} vs {matches[0]?.awayTeam}</strong></span>
+                    <span className="bg-white/50 dark:bg-slate-800/50 px-2 py-1 rounded-lg">
+                      {matches[0]?.totalRatings} note{matches[0]?.totalRatings > 1 ? 's' : ''}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {sortBy === 'rating' && matches.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-indigo-200 dark:border-indigo-700">
+                  <div className="flex items-center justify-between text-sm text-indigo-600 dark:text-indigo-400">
+                    <span>⭐ Mieux noté: <strong>{matches[0]?.homeTeam} vs {matches[0]?.awayTeam}</strong></span>
+                    <span className="bg-white/50 dark:bg-slate-800/50 px-2 py-1 rounded-lg">
+                      {matches[0]?.avgRating?.toFixed(1)}/5 ⭐
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Matches Grid */}
@@ -697,7 +819,7 @@ function OptimizedMatchCard({ match, onRate, currentUserId }: {
             </div>
           </div>
           
-          {/* Stats modernes avec badges */}
+          {/* 🆕 STATS MODERNES AVEC BADGES AMÉLIORÉS POUR LE TRI */}
           <div className="flex items-center space-x-2">
             <div className="flex items-center space-x-1 bg-yellow-50 dark:bg-yellow-900/20 px-2 py-1 rounded-lg">
               <Star className="w-3.5 h-3.5 text-yellow-500 fill-current" />
@@ -708,9 +830,16 @@ function OptimizedMatchCard({ match, onRate, currentUserId }: {
             <div className="flex items-center space-x-1 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-lg">
               <MessageCircle className="w-3.5 h-3.5 text-blue-500" />
               <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
-                {commentsCount}
+                {match.totalRatings}
               </span>
             </div>
+            {/* 🆕 BADGE POPULARITÉ SI > 5 NOTES */}
+            {match.totalRatings >= 5 && (
+              <div className="flex items-center space-x-1 bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded-lg">
+                <Flame className="w-3.5 h-3.5 text-red-500" />
+                <span className="text-xs font-bold text-red-600 dark:text-red-400">HOT</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -726,7 +855,6 @@ function OptimizedMatchCard({ match, onRate, currentUserId }: {
               </div>
             </div>
           ) : match.sport === 'mma' ? (
-            // 🆕 AFFICHAGE SPÉCIAL POUR MMA
             <div className="bg-gradient-to-r from-red-50/80 to-pink-50/80 dark:from-red-900/30 dark:to-pink-900/30 backdrop-blur-sm rounded-xl p-4 border border-red-200/50 dark:border-red-800/50">
               <div className="text-center">
                 <div className="text-xl font-bold text-red-600 dark:text-red-400 mb-2">
@@ -736,7 +864,6 @@ function OptimizedMatchCard({ match, onRate, currentUserId }: {
                   {match.homeTeam} vs {match.awayTeam}
                 </div>
                 <div className="text-sm text-amber-600 dark:text-amber-400 mt-2">
-                  {/* Vérifier s'il y a un résultat */}
                   {match.details?.winner ? (
                     <span className="text-green-600 dark:text-green-400 font-semibold">
                       🏆 {match.details.winner} victoire
@@ -763,7 +890,6 @@ function OptimizedMatchCard({ match, onRate, currentUserId }: {
           ) : (
             <div className="bg-gradient-to-r from-gray-50/80 to-blue-50/80 dark:from-slate-700/60 dark:to-blue-900/30 backdrop-blur-sm rounded-xl p-4 border border-gray-200/50 dark:border-slate-600/50">
               <div className="flex items-center justify-between">
-                {/* Équipe domicile avec logo stylé */}
                 <div className="flex items-center space-x-2 flex-1 min-w-0">
                   <TeamLogo teamName={match.homeTeam} size="sm" />
                   <span className="font-bold text-gray-900 dark:text-white truncate text-sm">
@@ -777,7 +903,6 @@ function OptimizedMatchCard({ match, onRate, currentUserId }: {
                   </div>
                 </div>
                 
-                {/* Équipe extérieure avec logo stylé */}
                 <div className="flex items-center space-x-2 flex-1 justify-end min-w-0">
                   <span className="font-bold text-gray-900 dark:text-white truncate text-sm text-right">
                     {match.awayTeam}
