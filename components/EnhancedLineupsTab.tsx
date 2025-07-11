@@ -1126,10 +1126,14 @@ function MobileListPlayerCard({ player, playerStats, userRating, activeTeam, onS
 }
 
 // Modal de notation mobile-optimized
+// Modal de notation mobile-optimized AVEC STATS COMMUNAUTAIRES - VERSION SIMPLIFIÉE
 function MobilePlayerRatingModal({ player, matchId, onRate, onClose, teamColor }: any) {
   const [selectedRating, setSelectedRating] = useState(player.userRating?.rating || 0)
   const [comment, setComment] = useState(player.userRating?.comment || '')
   const [submitting, setSubmitting] = useState(false)
+  
+  // 🆕 NOUVEAU STATE POUR LES STATS COMMUNAUTAIRES
+  const [communityStatsEnabled, setCommunityStatsEnabled] = useState(false)
 
   const handleRate = async () => {
     if (selectedRating === 0 || submitting) return
@@ -1154,6 +1158,29 @@ function MobilePlayerRatingModal({ player, matchId, onRate, onClose, teamColor }
     return { emoji: "🔥", text: "Exceptionnel !", color: "text-emerald-600" }
   }
 
+  // 🆕 FONCTION SIMPLIFIÉE POUR LA MOYENNE COMMUNAUTAIRE
+  const getCommunityAverage = () => {
+    if (!player.recentRatings || player.recentRatings.length === 0) {
+      return { average: 0, total: 0 }
+    }
+
+    const ratings = player.recentRatings.map(r => r.rating)
+    const average = ratings.reduce((sum, r) => sum + r, 0) / ratings.length
+
+    return {
+      average: Number(average.toFixed(1)),
+      total: ratings.length
+    }
+  }
+
+  const getRatingColor = (rating: number) => {
+    if (rating >= 8) return 'text-green-600'
+    if (rating >= 6) return 'text-blue-600'  
+    if (rating >= 4) return 'text-yellow-600'
+    return 'text-red-600'
+  }
+
+  const communityStats = getCommunityAverage()
   const ratingDesc = getRatingDescription(selectedRating)
 
   return (
@@ -1186,6 +1213,68 @@ function MobilePlayerRatingModal({ player, matchId, onRate, onClose, teamColor }
         </div>
 
         <div className="p-6 space-y-6">
+          {/* 🆕 TOGGLE COMPLÈTEMENT CACHÉ PAR DÉFAUT */}
+          {communityStats.total > 0 && (
+            <div className="bg-blue-50 rounded-xl p-3 border border-blue-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <span className="text-blue-600 text-sm">👥</span>
+                  <span className="text-sm font-medium text-blue-800">
+                    {communityStatsEnabled ? (
+                      <>
+                        Moyenne communauté: <span className="font-bold">{communityStats.average}/10</span>
+                      </>
+                    ) : (
+                      <>
+                        Avis de la communauté
+                      </>
+                    )}
+                  </span>
+                  <span className="text-xs bg-blue-200 text-blue-700 px-2 py-0.5 rounded-full">
+                    {communityStats.total} votes
+                  </span>
+                </div>
+                <button
+                  onClick={() => setCommunityStatsEnabled(!communityStatsEnabled)}
+                  className={`p-2 rounded-lg transition-all ${
+                    communityStatsEnabled
+                      ? 'bg-blue-200 text-blue-700'
+                      : 'bg-blue-100 text-blue-600 hover:bg-blue-200'
+                  }`}
+                >
+                  {communityStatsEnabled ? '👁️' : '🙈'}
+                </button>
+              </div>
+
+              {/* 🆕 DÉTAILS COMPACTS SEULEMENT SI ACTIVÉ */}
+              {communityStatsEnabled && (
+                <div className="mt-3 pt-3 border-t border-blue-200">
+                  <div className="flex items-center justify-center space-x-4 text-xs">
+                    <div className="text-center">
+                      <div className={`text-lg font-bold ${getRatingColor(communityStats.average)}`}>
+                        {communityStats.average}
+                      </div>
+                      <div className="text-blue-600">Moyenne</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-lg font-bold text-blue-600">
+                        {communityStats.total}
+                      </div>
+                      <div className="text-blue-600">Votes</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-lg font-bold text-purple-600">
+                        {communityStats.average >= 7.5 ? '👍' : 
+                         communityStats.average >= 5 ? '😐' : '👎'}
+                      </div>
+                      <div className="text-blue-600">Tendance</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           <div>
             <p className="text-sm font-bold mb-4 text-gray-700">Note sur 10 :</p>
             
@@ -1215,6 +1304,25 @@ function MobilePlayerRatingModal({ player, matchId, onRate, onClose, teamColor }
             <div className={`text-center text-sm font-bold ${ratingDesc.color} bg-gray-50 rounded-xl p-3`}>
               <span className="text-2xl mr-2">{ratingDesc.emoji}</span>
               {ratingDesc.text}
+              
+              {/* 🆕 COMPARAISON SIMPLE AVEC LA COMMUNAUTÉ - SEULEMENT SI STATS ACTIVÉES */}
+              {communityStatsEnabled && communityStats.total > 0 && selectedRating > 0 && (
+                <div className="mt-2 text-xs">
+                  {selectedRating > communityStats.average + 1 ? (
+                    <span className="text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                      📈 + généreux que la moyenne ({communityStats.average})
+                    </span>
+                  ) : selectedRating < communityStats.average - 1 ? (
+                    <span className="text-red-600 bg-red-50 px-2 py-1 rounded-full">
+                      📉 + sévère que la moyenne ({communityStats.average})
+                    </span>
+                  ) : Math.abs(selectedRating - communityStats.average) <= 1 ? (
+                    <span className="text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
+                      🎯 Proche de la moyenne ({communityStats.average})
+                    </span>
+                  ) : null}
+                </div>
+              )}
             </div>
           </div>
           
@@ -1268,7 +1376,6 @@ function MobilePlayerRatingModal({ player, matchId, onRate, onClose, teamColor }
     </div>
   )
 }
-
 // NOUVEAU: Modal de notation pour les coachs
 function MobileCoachRatingModal({ coach, matchId, onRate, onClose, teamColor }: any) {
   const [selectedRating, setSelectedRating] = useState(coach.userRating?.rating || 0)

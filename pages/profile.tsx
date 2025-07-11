@@ -1,10 +1,9 @@
-// pages/profile.tsx - Version mise à jour avec l'onglet listes
 import { useState, useEffect } from 'react'
-import { useSession, signOut } from 'next-auth/react'
+import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
 import {
-  Trophy, Search, Users, LogOut, Star, Calendar, MapPin, 
+  Trophy, Search, Users, Star, Calendar, MapPin, 
   Edit3, Settings, BarChart3, TrendingUp, Heart, UserPlus,
   Activity, Award, Target, Zap, Globe, Mail, Shield,
   Plus, X, Check, Camera, Upload, Save, Eye, ArrowRight,
@@ -20,6 +19,7 @@ import EnhancedTeamGrid from '../components/EnhancedTeamGrid'
 import AvatarUpload from '../components/AvatarUpload'
 import DeleteAccountModal from '../components/DeleteAccountModal'
 import MatchListsSection from '../components/MatchListsSection'
+import ProfileSettingsSection from '../components/ProfileSettingsSection'
 
 interface UserProfile {
   user: {
@@ -103,7 +103,7 @@ export default function EnhancedProfilePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [teams, setTeams] = useState<Team[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'overview' | 'ratings' | 'player-ratings' | 'teams' | 'lists' | 'stats'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'ratings' | 'player-ratings' | 'teams' | 'lists' | 'stats' | 'settings'>('overview')
   const [activeSport, setActiveSport] = useState<'all' | 'football' | 'basketball' | 'mma' | 'rugby' | 'f1'>('all')
   
   // États pour les modals
@@ -441,70 +441,64 @@ export default function EnhancedProfilePage() {
         <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg overflow-hidden mb-6 border border-gray-200 dark:border-slate-700">
           {/* Background gradient - réduit sur mobile */}
           <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 h-16 md:h-32 relative">
-            {/* 📱 Menu actions - Optimisé mobile */}
-            {isOwnProfile && (
-              <div className="absolute top-2 md:top-4 right-2 md:right-4">
-                {/* 📱 Version mobile avec menu dropdown */}
-                <div className="md:hidden relative">
-                  <button 
-                    onClick={() => setShowMobileMenu(!showMobileMenu)}
-                    className="p-2 bg-white/20 backdrop-blur-sm rounded-lg text-white hover:bg-white/30 transition-colors"
-                    title="Options"
-                  >
-                    <Menu className="w-5 h-5" />
-                  </button>
-                  
-                  {/* Dropdown menu mobile */}
-                  {showMobileMenu && (
-                    <>
-                      {/* Overlay pour fermer */}
-                      <div 
-                        className="fixed inset-0 z-10" 
-                        onClick={() => setShowMobileMenu(false)}
-                      />
-                      
-                      {/* Menu */}
-                      <div className="absolute right-0 top-12 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-gray-200 dark:border-slate-700 z-20 min-w-48 overflow-hidden">
-                        <div className="py-1">
-                          <button 
-                            onClick={() => {
-                              setShowMobileMenu(false)
-                              setShowEnhancedEditor(true)
-                            }}
-                            className="w-full flex items-center space-x-3 px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-slate-700 transition-colors text-left text-sm"
-                          >
-                            <Edit className="w-4 h-4 text-blue-600" />
-                            <span>Modifier le profil</span>
-                          </button>
-                          <button 
-                            onClick={() => {
-                              setShowMobileMenu(false)
-                              fetchProfile()
-                              fetchTeams()
-                            }}
-                            className="w-full flex items-center space-x-3 px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-slate-700 transition-colors text-left text-sm"
-                          >
-                            <Activity className="w-4 h-4 text-green-600" />
-                            <span>Actualiser</span>
-                          </button>
-                          <button 
-                            onClick={() => {
-                              setShowMobileMenu(false)
-                              setShowEnhancedEditor(true)
-                            }}
-                            className="w-full flex items-center space-x-3 px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-purple-50 dark:hover:bg-slate-700 transition-colors text-left text-sm"
-                          >
-                            <Settings className="w-4 h-4 text-purple-600" />
-                            <span>Paramètres</span>
-                          </button>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
+            {/* 🎯 BOUTONS D'ACTION EN HAUT À DROITE */}
+{isOwnProfile && (
+  <div className="absolute top-3 right-3">
+    {/* 📱 Version mobile élégante avec menu déroulant */}
+    <div className="md:hidden relative">
+      <button 
+        onClick={() => setShowMobileMenu(!showMobileMenu)}
+        className="p-2.5 bg-white/20 backdrop-blur-sm rounded-xl text-white hover:bg-white/30 transition-all duration-200 shadow-lg"
+        title="Options"
+      >
+        <MoreHorizontal className="w-5 h-5" />
+      </button>
+      
+      {/* Menu déroulant mobile */}
+      {showMobileMenu && (
+        <>
+          {/* Overlay pour fermer */}
+          <div 
+            className="fixed inset-0 z-10" 
+            onClick={() => setShowMobileMenu(false)}
+          />
+          
+          {/* Menu */}
+          <div className="absolute right-0 top-12 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-gray-200 dark:border-slate-700 z-20 min-w-48 overflow-hidden animate-in slide-in-from-top-2 duration-200">
+            <div className="py-2">
+              <Link
+                href="/friends"
+                onClick={() => setShowMobileMenu(false)}
+                className="flex items-center space-x-3 px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
+              >
+                <Users className="w-5 h-5 text-green-600 dark:text-green-400" />
+                <span className="font-medium">Mes amis</span>
+              </Link>
+              <button 
+                onClick={() => {
+                  setShowMobileMenu(false)
+                  setShowEnhancedEditor(true)
+                }}
+                className="w-full flex items-center space-x-3 px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors text-left"
+              >
+                <Edit3 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                <span className="font-medium">Personnaliser</span>
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
                 
                 {/* 🖥️ Version desktop */}
                 <div className="hidden md:flex space-x-2">
+                  <Link
+                    href="/friends"
+                    className="flex items-center space-x-2 px-3 py-2 bg-white/20 backdrop-blur-sm rounded-lg text-white hover:bg-white/30 transition-colors"
+                  >
+                    <Users className="w-4 h-4" />
+                    <span>Mes amis</span>
+                  </Link>
                   <button 
                     onClick={() => {
                       fetchProfile()
@@ -517,10 +511,10 @@ export default function EnhancedProfilePage() {
                   </button>
                   <button 
                     onClick={() => setShowEnhancedEditor(true)}
-                    className="p-2 bg-white/20 rounded-lg text-white hover:bg-white/30 transition-colors"
-                    title="Paramètres du profil"
+                    className="flex items-center space-x-2 px-3 py-2 bg-white/20 backdrop-blur-sm rounded-lg text-white hover:bg-white/30 transition-colors"
                   >
-                    <Settings className="w-5 h-5" />
+                    <Edit3 className="w-4 h-4" />
+                    <span>Personnaliser</span>
                   </button>
                 </div>
               </div>
@@ -552,32 +546,6 @@ export default function EnhancedProfilePage() {
                       <p className="text-gray-600 dark:text-gray-400">@{profile.user.username}</p>
                     )}
                   </div>
-                  
-                  {/* 📱 Bouton d'action mobile plus discret */}
-                  {isOwnProfile && (
-                    <div className="md:hidden">
-                      <button
-                        onClick={() => setShowEnhancedEditor(true)}
-                        className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-                      >
-                        <Edit className="w-4 h-4" />
-                        <span>Modifier</span>
-                      </button>
-                    </div>
-                  )}
-                  
-                  {/* 🖥️ Bouton desktop */}
-                  {isOwnProfile && (
-                    <div className="hidden md:flex items-center justify-end">
-                      <button
-                        onClick={() => setShowEnhancedEditor(true)}
-                        className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                      >
-                        <Edit3 className="w-4 h-4" />
-                        <span>Personnaliser</span>
-                      </button>
-                    </div>
-                  )}
                 </div>
               </div>
 
@@ -663,27 +631,46 @@ export default function EnhancedProfilePage() {
                   })()}
                 </div>
                 
-                {/* 📱 Stats en grille compacte mobile */}
+                {/* 📱 Stats en grille compacte mobile - AVEC LIENS CLIQUABLES */}
                 <div className="md:col-span-2">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-lg p-3 md:p-4 text-center">
+                    {/* Notes - cliquable vers onglet ratings */}
+                    <button
+                      onClick={() => setActiveTab('ratings')}
+                      className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-lg p-3 md:p-4 text-center hover:shadow-md hover:scale-105 transition-all"
+                    >
                       <div className="text-lg md:text-2xl font-bold text-blue-600 dark:text-blue-400">{profile?.stats?.totalRatings || 0}</div>
                       <div className="text-xs md:text-sm text-blue-700 dark:text-blue-300">Notes</div>
-                    </div>
-                    <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-900/20 dark:to-yellow-800/20 rounded-lg p-3 md:p-4 text-center">
+                    </button>
+                    
+                    {/* Moyenne - cliquable vers onglet stats */}
+                    <button
+                      onClick={() => setActiveTab('stats')}
+                      className="bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-900/20 dark:to-yellow-800/20 rounded-lg p-3 md:p-4 text-center hover:shadow-md hover:scale-105 transition-all"
+                    >
                       <div className="text-lg md:text-2xl font-bold text-yellow-600 dark:text-yellow-400">
                         {profile?.stats?.avgRating > 0 ? profile.stats.avgRating.toFixed(1) : '—'}
                       </div>
                       <div className="text-xs md:text-sm text-yellow-700 dark:text-yellow-300">Moyenne</div>
-                    </div>
-                    <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-lg p-3 md:p-4 text-center">
+                    </button>
+                    
+                    {/* Amis - cliquable vers page /friends */}
+                    <Link
+                      href="/friends"
+                      className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-lg p-3 md:p-4 text-center hover:shadow-md hover:scale-105 transition-all block"
+                    >
                       <div className="text-lg md:text-2xl font-bold text-green-600 dark:text-green-400">{profile?.stats?.totalFriends || 0}</div>
                       <div className="text-xs md:text-sm text-green-700 dark:text-green-300">Amis</div>
-                    </div>
-                    <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-lg p-3 md:p-4 text-center">
+                    </Link>
+                    
+                    {/* Équipes - cliquable vers onglet teams */}
+                    <button
+                      onClick={() => setActiveTab('teams')}
+                      className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-lg p-3 md:p-4 text-center hover:shadow-md hover:scale-105 transition-all"
+                    >
                       <div className="text-lg md:text-2xl font-bold text-purple-600 dark:text-purple-400">{teams.length}</div>
                       <div className="text-xs md:text-sm text-purple-700 dark:text-purple-300">Équipes</div>
-                    </div>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -778,7 +765,9 @@ export default function EnhancedProfilePage() {
                   { id: 'player-ratings', label: 'Notes joueurs', icon: Users },
                   { id: 'teams', label: 'Équipes', icon: Heart },
                   { id: 'lists', label: 'Mes listes', icon: BookmarkPlus },
-                  { id: 'stats', label: 'Stats', icon: BarChart3 }
+                  { id: 'stats', label: 'Stats', icon: BarChart3 },
+                  // 🆕 Onglet paramètres uniquement pour son propre profil
+                  ...(isOwnProfile ? [{ id: 'settings', label: 'Paramètres', icon: Settings }] : [])
                 ].map((tab) => {
                   const Icon = tab.icon
                   return (
@@ -807,7 +796,9 @@ export default function EnhancedProfilePage() {
                 { id: 'player-ratings', label: 'Notes joueurs', icon: Users },
                 { id: 'teams', label: 'Équipes suivies', icon: Heart },
                 { id: 'lists', label: 'Mes listes', icon: BookmarkPlus },
-                { id: 'stats', label: 'Statistiques', icon: BarChart3 }
+                { id: 'stats', label: 'Statistiques', icon: BarChart3 },
+                // 🆕 Onglet paramètres uniquement pour son propre profil  
+                ...(isOwnProfile ? [{ id: 'settings', label: 'Paramètres', icon: Settings }] : [])
               ].map((tab) => {
                 const Icon = tab.icon
                 return (
@@ -1291,46 +1282,17 @@ export default function EnhancedProfilePage() {
                 )}
               </div>
             )}
+
+            {/* 🆕 Settings Tab - Nouveau */}
+            {activeTab === 'settings' && isOwnProfile && (
+              <ProfileSettingsSection
+                userEmail={profile.user.email}
+                onDeleteAccount={handleDeleteAccount}
+                userHasPassword={userHasPassword}
+              />
+            )}
           </div>
         </div>
-
-        {/* Zone de danger - Version mobile optimisée */}
-        {isOwnProfile && (
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg overflow-hidden mt-6 md:mt-8 border border-red-200 dark:border-red-800">
-            <div className="bg-red-50 dark:bg-red-900/20 p-4 md:p-6 border-b border-red-200 dark:border-red-800">
-              <h3 className="text-base md:text-lg font-semibold text-red-900 dark:text-red-100 flex items-center space-x-2">
-                <Shield className="w-4 md:w-5 h-4 md:h-5" />
-                <span>Zone de danger</span>
-              </h3>
-              <p className="text-red-700 dark:text-red-200 mt-2 text-sm md:text-base">
-                Actions irréversibles sur votre compte
-              </p>
-            </div>
-            <div className="p-4 md:p-6">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
-                <div className="flex-1">
-                  <h4 className="font-semibold text-gray-900 dark:text-white mb-2 text-sm md:text-base">Supprimer mon compte</h4>
-                  <div className="text-gray-600 dark:text-gray-400 text-xs md:text-sm space-y-1">
-                    <p>Supprime définitivement votre compte et toutes vos données :</p>
-                    <ul className="ml-4 list-disc text-xs space-y-1">
-                      <li>{profile?.stats?.totalRatings || 0} notes de matchs</li>
-                      <li>{profile?.stats?.totalPlayerRatings || 0} notes de joueurs</li>
-                      <li>{profile?.stats?.totalFriends || 0} relations d'amitié</li>
-                      <li>{teams.length} équipes suivies</li>
-                    </ul>
-                  </div>
-                </div>
-                <button
-                  onClick={handleDeleteAccount}
-                  className="flex items-center justify-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium text-sm md:text-base w-full md:w-auto"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  <span>Supprimer</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </main>
 
       {/* Modals */}

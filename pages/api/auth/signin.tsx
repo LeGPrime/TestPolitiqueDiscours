@@ -59,14 +59,14 @@ export default function SignIn() {
               <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur">
                 <Trophy className="w-6 h-6 text-white" />
               </div>
-              <span className="text-3xl font-bold">FootRate</span>
+              <span className="text-3xl font-bold">SPORATING</span>
             </div>
             
             <h1 className="text-4xl font-bold mb-4">
               Notez vos matchs préférés
             </h1>
             <p className="text-xl text-blue-100 mb-8">
-              Rejoignez la communauté des passionnés de sport et partagez vos avis sur les meilleurs matchs
+              Rejoignez la communauté des passionnés de sport et partagez vos avis sur les meilleurs matchs !
             </p>
 
             <div className="space-y-4">
@@ -93,7 +93,7 @@ export default function SignIn() {
               <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-green-500 rounded-lg flex items-center justify-center">
                 <Trophy className="w-6 h-6 text-white" />
               </div>
-              <span className="text-2xl font-bold text-gray-900">FootRate</span>
+              <span className="text-2xl font-bold text-gray-900">SPORATING</span>
             </div>
 
             <div className="text-center mb-8">

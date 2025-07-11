@@ -1,4 +1,4 @@
-// components/Navbar.tsx - Version corrigée avec profil en haut et safe area
+// components/Navbar.tsx - Version redesignée mobile avec profil dans bottom nav
 import { useSession, signOut } from 'next-auth/react'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -11,6 +11,7 @@ import {
 import ThemeToggle from './ThemeToggle'
 import NotificationCenter from './NotificationCenter'
 import AvatarDisplay from './AvatarDisplay'
+
 
 interface NavbarProps {
   activeTab?: string
@@ -64,8 +65,45 @@ export default function Navbar({ activeTab }: NavbarProps) {
     }
   ]
 
-  // Navigation mobile sans profil (sera en haut à droite)
-  const mobileNavItems = navigationItems
+  // 🆕 Navigation mobile AVEC profil (5 onglets équilibrés)
+  const mobileNavItems = [
+    { 
+      href: '/', 
+      label: 'Accueil', 
+      icon: Home, 
+      active: activeTab === 'home' || router.pathname === '/',
+      id: 'home'
+    },
+    { 
+      href: '/search', 
+      label: 'Recherche', 
+      icon: Search, 
+      active: activeTab === 'search' || router.pathname.startsWith('/search'),
+      id: 'search'
+    },
+    { 
+      href: '/top-reviews', 
+      label: 'Hall of Fame', 
+      icon: Crown, 
+      active: activeTab === 'hall-of-fame' || router.pathname === '/top-reviews',
+      id: 'hall',
+      special: true
+    },
+    { 
+      href: '/top-matches', 
+      label: 'Top', 
+      icon: BarChart3, 
+      active: activeTab === 'top' || router.pathname === '/top-matches',
+      id: 'top'
+    },
+    { 
+      href: '/profile', 
+      label: 'Profil', 
+      icon: User, 
+      active: activeTab === 'profile' || router.pathname === '/profile',
+      id: 'profile'
+    }
+  ]
 
   if (!session) {
     return (
@@ -74,14 +112,9 @@ export default function Navbar({ activeTab }: NavbarProps) {
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
               <div className="relative">
-                <Image
-                  src="/GLOBAL.png"
-                  alt="Sporating Logo"
-                  width={140}
-                  height={140}
-                  className="rounded-lg"
-                  priority
-                />
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                  <Trophy className="w-6 h-6 text-white" />
+                </div>
                 <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-gradient-to-r from-blue-500 to-green-500 rounded-full flex items-center justify-center">
                 </div>
               </div>
@@ -109,21 +142,16 @@ export default function Navbar({ activeTab }: NavbarProps) {
 
   return (
     <>
-      {/* 🖥️ DESKTOP HEADER - Masqué sur mobile */}
+      {/* 🖥️ DESKTOP HEADER - Inchangé */}
       <header className="hidden md:block bg-white dark:bg-slate-800 shadow-sm border-b border-gray-200 dark:border-slate-700 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             {/* Logo */}
             <Link href="/" className="flex items-center space-x-3 hover:opacity-80 transition-opacity group">
               <div className="relative">
-                <Image
-                  src="/GLOBAL.png"
-                  alt="Sporating Logo"
-                  width={80}
-                  height={80}
-                  className="rounded-lg group-hover:scale-105 transition-transform"
-                  priority
-                />
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center group-hover:scale-105 transition-transform">
+                  <Trophy className="w-6 h-6 text-white" />
+                </div>
                 <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-gradient-to-r from-blue-500 to-green-500 rounded-full flex items-center justify-center group-hover:rotate-12 transition-transform">
                 </div>
               </div>
@@ -225,116 +253,84 @@ export default function Navbar({ activeTab }: NavbarProps) {
         </div>
       </header>
 
-      {/* 📱 MOBILE HEADER - Avec safe area et profil en haut à droite */}
+      {/* 📱 MOBILE HEADER - Design centré épuré */}
       <header className="md:hidden bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg shadow-sm border-b border-gray-200 dark:border-slate-700 sticky top-0 z-50">
-        {/* Safe area pour iOS - plus conservative */}
         <div className="pt-safe-area-inset-top">
-          <div className="flex items-center justify-between px-4 py-2">
-            {/* Logo à gauche */}
-            <Link href="/" className="flex items-center space-x-3 touch-manipulation py-2">
-              <div className="relative">
-                <Image
-                  src="/GLOBAL.png"
-                  alt="Sporating Logo"
-                  width={64}
-                  height={64}
-                  className="rounded-lg"
-                  priority
-                />
-                <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-gradient-to-r from-blue-500 to-green-500 rounded-full flex items-center justify-center">
-                </div>
-              </div>
-              <h1 className="text-lg font-bold text-gray-900 dark:text-white">Sporating</h1>
-            </Link>
-            
-            {/* Actions à droite avec profil ET déconnexion */}
-            <div className="flex items-center space-x-1">
-              <div className="touch-manipulation">
-                <NotificationCenter userId={session?.user?.id || session?.user?.email || 'user'} />
-              </div>
-              <div className="touch-manipulation">
-                <ThemeToggle />
-              </div>
+          <div className="flex items-center justify-between px-4 py-4">
+            {/* Logo centré avec Sporating à gauche */}
+            <div className="flex items-center space-x-3 flex-1">
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Sporating</h1>
               
-              {/* 👤 PROFIL EN HAUT À DROITE SUR MOBILE - PLUS GRAND */}
-              <Link
-                href="/profile"
-                className={`flex items-center justify-center p-3 rounded-xl transition-all duration-200 touch-manipulation ${
-                  activeTab === 'profile' || router.pathname === '/profile'
-                    ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-200 dark:ring-blue-800'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-700'
-                }`}
-                style={{ minHeight: '48px', minWidth: '48px' }}
-              >
-                <div className="relative">
-                  <AvatarDisplay
-                    image={session.user?.image}
-                    name={session.user?.name || session.user?.email || 'User'}
-                    size="md"
-                    showBorder={true}
-                  />
-                  {/* Indicateur actif pour le profil */}
-                  {(activeTab === 'profile' || router.pathname === '/profile') && (
-                    <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-blue-500 rounded-full border-2 border-white dark:border-slate-900"></div>
-                  )}
-                </div>
-              </Link>
-
-              {/* 🚪 BOUTON DÉCONNEXION SUR MOBILE */}
-              <button
-                onClick={() => signOut({ callbackUrl: '/' })}
-                className="flex items-center justify-center p-3 rounded-xl transition-all duration-200 touch-manipulation text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
-                style={{ minHeight: '48px', minWidth: '48px' }}
-                title="Se déconnecter"
-              >
-                <LogOut className="w-5 h-5" />
-              </button>
+              {/* Logo au centre */}
+              <div className="flex-1 flex justify-center">
+                <Link href="/" className="touch-manipulation">
+                  <div className="relative group">
+                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg group-active:scale-95 transition-transform">
+                      <Trophy className="w-7 h-7 text-white" />
+                    </div>
+                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-gradient-to-r from-blue-500 to-green-500 rounded-full border-2 border-white dark:border-slate-900"></div>
+                  </div>
+                </Link>
+              </div>
+            </div>
+            
+            {/* Notifications à droite */}
+            <div className="touch-manipulation">
+              <NotificationCenter userId={session?.user?.id || session?.user?.email || 'user'} />
             </div>
           </div>
         </div>
       </header>
 
-      {/* 📱 MOBILE BOTTOM NAVIGATION - Sans profil maintenant */}
+      {/* 📱 MOBILE BOTTOM NAVIGATION - 5 onglets avec Profil */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg border-t border-gray-200 dark:border-slate-700 z-50">
         <div className="pb-safe-area-inset-bottom">
-          <div className="flex items-center justify-around px-2 py-2">
+          <div className="flex items-center justify-around px-1 py-2">
             {mobileNavItems.map((tab) => {
               const Icon = tab.icon
-              const isHallOfFame = tab.id === 'hall'
+              const isHallOfFame = tab.special
+              const isProfile = tab.id === 'profile'
               
               return (
                 <Link
                   key={tab.href}
                   href={tab.href}
-                  className={`flex flex-col items-center justify-center space-y-1 px-3 py-2 rounded-xl transition-all duration-200 min-w-0 relative group touch-manipulation ${
+                  className={`flex flex-col items-center justify-center space-y-1 px-2 py-2 rounded-xl transition-all duration-200 min-w-0 relative group touch-manipulation ${
                     tab.active 
                       ? isHallOfFame
                         ? 'text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20' 
+                        : isProfile
+                        ? 'text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20'
                         : 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20'
                       : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                   }`}
                   style={{ minHeight: '56px', minWidth: '56px' }}
-                  // Force le changement de page
-                  onClick={(e) => {
-                    e.preventDefault()
-                    router.push(tab.href)
-                  }}
                 >
-                  {/* Icon avec effet d'animation */}
+                  {/* Icon avec avatar pour profil */}
                   <div className={`relative transition-transform duration-200 ${tab.active ? 'scale-110' : 'group-active:scale-95'}`}>
-                    <Icon className="w-5 h-5" />
+                    {isProfile ? (
+                      <AvatarDisplay
+                        image={session.user?.image}
+                        name={session.user?.name || session.user?.email || 'User'}
+                        size="sm"
+                        showBorder={true}
+                      />
+                    ) : (
+                      <Icon className="w-5 h-5" />
+                    )}
                     
                     {/* Badge actif */}
                     {tab.active && (
                       <div className={`absolute -top-1 -right-1 w-2 h-2 rounded-full ${
-                        isHallOfFame ? 'bg-yellow-500' : 'bg-blue-500'
+                        isHallOfFame ? 'bg-yellow-500' : 
+                        isProfile ? 'bg-purple-500' : 'bg-blue-500'
                       }`}></div>
                     )}
                   </div>
                   
                   {/* Label */}
                   <span className={`text-xs font-medium truncate transition-all duration-200 ${
-                    tab.active ? 'opacity-100' : 'opacity-70'
+                    tab.active ? 'opacity-100 font-semibold' : 'opacity-70'
                   }`}>
                     {tab.label}
                   </span>
@@ -342,7 +338,8 @@ export default function Navbar({ activeTab }: NavbarProps) {
                   {/* Indicateur de sélection en bas */}
                   {tab.active && (
                     <div className={`absolute bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 rounded-full ${
-                      isHallOfFame ? 'bg-yellow-500' : 'bg-blue-500'
+                      isHallOfFame ? 'bg-yellow-500' : 
+                      isProfile ? 'bg-purple-500' : 'bg-blue-500'
                     }`}></div>
                   )}
                 </Link>
@@ -352,7 +349,7 @@ export default function Navbar({ activeTab }: NavbarProps) {
         </div>
       </nav>
 
-      {/* 📱 SPACER pour éviter que le contenu soit masqué par la nav bottom */}
+      {/* 📱 SPACER */}
       <div className="md:hidden h-20"></div>
     </>
   )

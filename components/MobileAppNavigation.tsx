@@ -1,20 +1,16 @@
-// components/MobileAppNavigation.tsx - Navigation spéciale pour l'app mobile
-import { useSession, signOut } from 'next-auth/react'
+// components/MobileAppNavigation.tsx - Version épurée et réorganisée
+import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
-import { useState } from 'react'
 import {
-  Home, Search, Users, Crown, User, Bell, Settings, LogOut,
-  Trophy, BarChart3, Menu, X
+  Home, Search, Users, Crown, User, Trophy
 } from 'lucide-react'
 import AvatarDisplay from './AvatarDisplay'
 import NotificationCenter from './NotificationCenter'
-import ThemeToggle from './ThemeToggle'
 
 export default function MobileAppNavigation() {
   const { data: session } = useSession()
   const router = useRouter()
-  const [showProfileMenu, setShowProfileMenu] = useState(false)
 
   const bottomTabs = [
     { 
@@ -79,11 +75,11 @@ export default function MobileAppNavigation() {
 
   return (
     <>
-      {/* 📱 TOP HEADER - Minimaliste pour app */}
+      {/* 📱 TOP HEADER - Clean et épuré */}
       <header className="bg-white dark:bg-slate-800 shadow-sm border-b border-gray-200 dark:border-slate-700 safe-top sticky top-0 z-50">
         <div className="px-4 py-3">
           <div className="flex items-center justify-between">
-            {/* Logo simple */}
+            {/* Logo + Nom à gauche */}
             <div className="flex items-center space-x-2">
               <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
                 <Trophy className="w-4 h-4 text-white" />
@@ -91,14 +87,15 @@ export default function MobileAppNavigation() {
               <span className="text-lg font-bold text-gray-900 dark:text-white">Sporating</span>
             </div>
             
-            {/* Actions top */}
-            <div className="flex items-center space-x-2">
+            {/* Notifications + Avatar à droite */}
+            <div className="flex items-center space-x-3">
+              {/* Notifications */}
               <NotificationCenter userId={session?.user?.id || session?.user?.email || 'user'} />
               
-              {/* Bouton profil/menu */}
-              <button
-                onClick={() => setShowProfileMenu(!showProfileMenu)}
-                className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+              {/* Avatar - Lien vers profil */}
+              <Link
+                href="/profile"
+                className="block focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full"
               >
                 <AvatarDisplay
                   image={session.user?.image}
@@ -106,61 +103,10 @@ export default function MobileAppNavigation() {
                   size="sm"
                   showBorder={true}
                 />
-              </button>
+              </Link>
             </div>
           </div>
         </div>
-
-        {/* 📱 MENU PROFIL DÉROULANT */}
-        {showProfileMenu && (
-          <div className="border-t border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800">
-            <div className="px-4 py-3 space-y-2">
-              {/* Info utilisateur */}
-              <div className="flex items-center space-x-3 pb-3 border-b border-gray-200 dark:border-slate-700">
-                <AvatarDisplay
-                  image={session.user?.image}
-                  name={session.user?.name || session.user?.email || 'User'}
-                  size="md"
-                  showBorder={true}
-                />
-                <div>
-                  <div className="font-medium text-gray-900 dark:text-white">
-                    {session.user?.name || 'Utilisateur'}
-                  </div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">
-                    {session.user?.email}
-                  </div>
-                </div>
-              </div>
-
-              {/* Actions supplémentaires */}
-              <Link
-                href="/top-matches"
-                onClick={() => setShowProfileMenu(false)}
-                className="flex items-center space-x-3 px-3 py-3 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
-              >
-                <BarChart3 className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                <span className="text-gray-700 dark:text-gray-300">Top Événements</span>
-              </Link>
-
-              <div className="flex items-center justify-between px-3 py-2">
-                <span className="text-gray-700 dark:text-gray-300">Thème</span>
-                <ThemeToggle />
-              </div>
-
-              <button
-                onClick={() => {
-                  setShowProfileMenu(false)
-                  signOut({ callbackUrl: '/' })
-                }}
-                className="flex items-center space-x-3 px-3 py-3 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors w-full text-left"
-              >
-                <LogOut className="w-5 h-5" />
-                <span>Se déconnecter</span>
-              </button>
-            </div>
-          </div>
-        )}
       </header>
 
       {/* 📱 BOTTOM NAVIGATION - Style iOS/Android */}
@@ -174,7 +120,7 @@ export default function MobileAppNavigation() {
               <Link
                 key={tab.href}
                 href={tab.href}
-                className={`flex flex-col items-center space-y-1 px-3 py-2 rounded-xl transition-all duration-200 min-w-0 ${
+                className={`flex flex-col items-center space-y-1 px-3 py-2 rounded-xl transition-all duration-200 min-w-0 touch-manipulation ${
                   tab.active 
                     ? isSpecial
                       ? 'text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20' 

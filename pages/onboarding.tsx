@@ -6,7 +6,7 @@ import {
   User, Mail, MapPin, Heart, Trophy, Star, 
   ChevronRight, ChevronLeft, Check, Sparkles,
   Globe, Calendar, Briefcase, Users, Camera,
-  ArrowRight, Flag, Target, Zap, Loader
+  ArrowRight, Flag, Target, Zap, Loader, Eye, EyeOff
 } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
@@ -16,41 +16,47 @@ const OnboardingPage = () => {
   const { data: session, status } = useSession();
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formData, setFormData] = useState({
-    // Étape 1 - Basics
-    name: '',
+    // Étape 1 - Inscription complète
+    firstName: '',
+    lastName: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    
+    // Étape 2 - Username
     username: '',
-    bio: '',
+    
+    // Étape 3 - Âge et Localisation
     age: '',
     location: '',
     
-    // Étape 2 - Sports Preferences
+    // Étape 4 - Sports Preferences
     favoriteSports: [],
-    favoriteTeams: {
-      football: '',
-      basketball: '',
-      tennis: '',
-      f1: ''
-    },
+    
+    // Étape 5 - Style de visionnage
     watchingStyle: '',
     
-    // Étape 3 - Personalization
+    // Étape 6 - Avatar
     avatar: null,
-    theme: 'light',
+    
+    // Étape 7 - Confidentialité
     visibility: {
       location: true,
       age: false,
       teams: true
     },
     
-    // Étape 4 - Goals
+    // Étape 8 - Goals
     goals: [],
     expectations: ''
   });
 
   // Rediriger si pas connecté
   useEffect(() => {
-    if (status === 'loading') return; // Attendre le chargement
+    if (status === 'loading') return;
     if (!session) {
       router.push('/auth/signin');
       return;
@@ -58,10 +64,13 @@ const OnboardingPage = () => {
 
     // Pré-remplir avec les données existantes de l'utilisateur
     if (session.user) {
+      const name = session.user.name || '';
+      const nameParts = name.split(' ');
       setFormData(prev => ({
         ...prev,
-        name: session.user.name || '',
-        // On pourrait récupérer plus de données via une API call
+        firstName: nameParts[0] || '',
+        lastName: nameParts.slice(1).join(' ') || '',
+        email: session.user.email || ''
       }));
     }
   }, [session, status, router]);
@@ -101,10 +110,14 @@ const OnboardingPage = () => {
   ];
 
   const steps = [
-    { id: 'basics', title: 'Qui êtes-vous ?', desc: 'Parlez-nous de vous' },
-    { id: 'sports', title: 'Vos sports', desc: 'Quels sports vous passionnent ?' },
-    { id: 'personalization', title: 'Personnalisation', desc: 'Créez votre style' },
-    { id: 'goals', title: 'Vos objectifs', desc: 'Que voulez-vous accomplir ?' }
+    { id: 'signup', title: 'Inscription', desc: 'Créez votre compte' },
+    { id: 'username', title: 'Nom d\'utilisateur', desc: 'Choisissez votre pseudo' },
+    { id: 'location-age', title: 'Informations', desc: 'Âge et localisation' },
+    { id: 'sports', title: 'Sports préférés', desc: 'Vos passions' },
+    { id: 'watching', title: 'Style de visionnage', desc: 'Comment regardez-vous ?' },
+    { id: 'avatar', title: 'Avatar', desc: 'Personnalisez votre profil' },
+    { id: 'privacy', title: 'Confidentialité', desc: 'Vos paramètres' },
+    { id: 'goals', title: 'Objectifs', desc: 'Vos attentes' }
   ];
 
   const nextStep = () => {
@@ -141,18 +154,14 @@ const OnboardingPage = () => {
     setLoading(true);
     
     try {
-      // Essayer de sauvegarder via l'API profile/enhanced s'il existe
+      const fullName = `${formData.firstName} ${formData.lastName}`.trim();
+      
       try {
         await axios.put('/api/profile/enhanced', {
-          name: formData.name,
+          name: fullName,
           username: formData.username,
-          bio: formData.bio,
           age: formData.age,
           location: formData.location,
-          favoriteClub: formData.favoriteTeams.football,
-          favoriteBasketballTeam: formData.favoriteTeams.basketball,
-          favoriteTennisPlayer: formData.favoriteTeams.tennis,
-          favoriteF1Driver: formData.favoriteTeams.f1,
           preferredSports: formData.favoriteSports,
           watchingHabits: formData.watchingStyle,
           languages: [], 
@@ -160,15 +169,12 @@ const OnboardingPage = () => {
         });
       } catch (enhancedError) {
         console.log('API enhanced pas disponible, utilisation API de base');
-        // Fallback vers l'API de base
         await axios.put('/api/profile', {
-          name: formData.name || undefined,
-          username: formData.username || undefined,
-          bio: formData.bio || undefined
+          name: fullName || undefined,
+          username: formData.username || undefined
         });
       }
 
-      // Sauvegarder l'avatar si sélectionné
       if (formData.avatar) {
         try {
           await axios.post('/api/profile/avatar', {
@@ -180,15 +186,11 @@ const OnboardingPage = () => {
       }
 
       toast.success('🎉 Profil configuré avec succès ! Bienvenue dans la communauté Sporating !');
-      
-      // Rediriger vers l'app principale
       router.push('/?welcome=true');
       
     } catch (error) {
       console.error('Erreur sauvegarde onboarding:', error);
       toast.error('Erreur lors de la sauvegarde. Vos données seront sauvegardées plus tard.');
-      
-      // Même en cas d'erreur, rediriger vers l'app
       router.push('/?welcome=true');
     } finally {
       setLoading(false);
@@ -198,13 +200,12 @@ const OnboardingPage = () => {
   const handleSkip = async () => {
     console.log('Configuration ignorée par l\'utilisateur');
     
-    // Sauvegarder le minimum si quelque chose a été rempli
-    if (formData.name.trim() || formData.username.trim()) {
+    const fullName = `${formData.firstName} ${formData.lastName}`.trim();
+    if (fullName || formData.username.trim()) {
       try {
         await axios.put('/api/profile', {
-          name: formData.name || undefined,
-          username: formData.username || undefined,
-          bio: formData.bio || undefined
+          name: fullName || undefined,
+          username: formData.username || undefined
         });
       } catch (error) {
         console.log('Erreur sauvegarde partielle:', error);
@@ -223,26 +224,29 @@ const OnboardingPage = () => {
     }
   };
 
-  const canProceed = () => {
-    return true; // Toujours possible de continuer
-  };
-
   const isStepComplete = () => {
     switch(currentStep) {
       case 0:
-        return formData.name.trim() && formData.username.trim();
+        return formData.firstName.trim() && formData.lastName.trim() && formData.email.trim() && formData.password && formData.confirmPassword && formData.password === formData.confirmPassword;
       case 1:
-        return formData.favoriteSports.length > 0;
+        return formData.username.trim();
       case 2:
-        return formData.avatar;
+        return formData.age && formData.location.trim();
       case 3:
+        return formData.favoriteSports.length > 0;
+      case 4:
+        return formData.watchingStyle;
+      case 5:
+        return formData.avatar;
+      case 6:
+        return true;
+      case 7:
         return formData.goals.length > 0;
       default:
         return false;
     }
   };
 
-  // Afficher un loader pendant l'authentification
   if (status === 'loading') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
@@ -258,38 +262,121 @@ const OnboardingPage = () => {
     switch(currentStep) {
       case 0:
         return (
+          <div className="space-y-6">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <User className="w-8 h-8 text-white" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-1">Créer un compte</h2>
+              <p className="text-gray-600 text-sm mb-6">Rejoignez Sporating en quelques secondes</p>
+            </div>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
+                    Prénom ✨
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.firstName}
+                    onChange={(e) => setFormData(prev => ({...prev, firstName: e.target.value}))}
+                    className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                    placeholder="Votre prénom"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
+                    Nom ✨
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.lastName}
+                    onChange={(e) => setFormData(prev => ({...prev, lastName: e.target.value}))}
+                    className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                    placeholder="Votre nom"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Email 📧
+                </label>
+                <input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData(prev => ({...prev, email: e.target.value}))}
+                  className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  placeholder="votre@email.com"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Mot de passe 🔑
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={formData.password}
+                    onChange={(e) => setFormData(prev => ({...prev, password: e.target.value}))}
+                    className="w-full px-3 py-2.5 pr-10 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                    placeholder="Votre mot de passe"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-2.5 text-gray-500 hover:text-gray-700"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Confirmer le mot de passe 🔐
+                </label>
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    value={formData.confirmPassword}
+                    onChange={(e) => setFormData(prev => ({...prev, confirmPassword: e.target.value}))}
+                    className="w-full px-3 py-2.5 pr-10 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                    placeholder="Confirmez votre mot de passe"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-2.5 text-gray-500 hover:text-gray-700"
+                  >
+                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                {formData.confirmPassword && formData.password !== formData.confirmPassword && (
+                  <p className="text-red-500 text-xs mt-1">Les mots de passe ne correspondent pas</p>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 1:
+        return (
           <div className="space-y-8">
             <div className="text-center">
-              <div className="w-20 h-20 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-6">
+              <div className="w-20 h-20 bg-gradient-to-r from-purple-500 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-6">
                 <User className="w-10 h-10 text-white" />
               </div>
               <h2 className="text-3xl font-bold text-gray-900 mb-2">Bienvenue sur Sporating ! 🎉</h2>
-              <p className="text-gray-600 text-lg mb-4">Commençons par faire connaissance</p>
-              
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
-                <p className="text-blue-800 text-sm">
-                  💡 <strong>Configuration optionnelle</strong> - Vous pouvez passer ces étapes et personnaliser votre profil plus tard !
-                </p>
-              </div>
+              <p className="text-gray-600 text-lg mb-8">Comment vous appelez-vous ?</p>
             </div>
 
             <div className="space-y-6">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-3">
-                  Comment vous appelez-vous ? ✨
-                </label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData(prev => ({...prev, name: e.target.value}))}
-                  className="w-full px-4 py-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
-                  placeholder="Votre nom complet"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-3">
-                  Choisissez un nom d'utilisateur unique 🎯
+                  Nom d'utilisateur unique 🎯
                 </label>
                 <div className="relative">
                   <span className="absolute left-4 top-4 text-gray-500 text-lg">@</span>
@@ -297,12 +384,27 @@ const OnboardingPage = () => {
                     type="text"
                     value={formData.username}
                     onChange={(e) => setFormData(prev => ({...prev, username: e.target.value}))}
-                    className="w-full pl-8 pr-4 py-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
+                    className="w-full pl-8 pr-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
                     placeholder="votre_pseudo"
                   />
                 </div>
               </div>
+            </div>
+          </div>
+        );
 
+      case 2:
+        return (
+          <div className="space-y-8">
+            <div className="text-center">
+              <div className="w-20 h-20 bg-gradient-to-r from-green-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                <MapPin className="w-10 h-10 text-white" />
+              </div>
+              <h2 className="text-3xl font-bold text-gray-900 mb-2">Informations personnelles 📍</h2>
+              <p className="text-gray-600 text-lg mb-8">Parlez-nous de vous</p>
+            </div>
+
+            <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-3">
@@ -311,7 +413,7 @@ const OnboardingPage = () => {
                   <select
                     value={formData.age}
                     onChange={(e) => setFormData(prev => ({...prev, age: e.target.value}))}
-                    className="w-full px-4 py-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
+                    className="w-full px-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
                   >
                     <option value="">Sélectionnez</option>
                     <option value="13-17">13-17 ans</option>
@@ -331,33 +433,16 @@ const OnboardingPage = () => {
                     type="text"
                     value={formData.location}
                     onChange={(e) => setFormData(prev => ({...prev, location: e.target.value}))}
-                    className="w-full px-4 py-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
+                    className="w-full px-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
                     placeholder="Votre ville"
                   />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-3">
-                  Décrivez-vous en quelques mots 💬
-                </label>
-                <textarea
-                  value={formData.bio}
-                  onChange={(e) => setFormData(prev => ({...prev, bio: e.target.value}))}
-                  className="w-full px-4 py-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg resize-none"
-                  rows={3}
-                  placeholder="Fan de sport passionné, j'adore analyser les matchs et partager mes opinions..."
-                  maxLength={150}
-                />
-                <div className="text-right text-sm text-gray-500 mt-1">
-                  {formData.bio.length}/150 caractères
                 </div>
               </div>
             </div>
           </div>
         );
 
-      case 1:
+      case 3:
         return (
           <div className="space-y-8">
             <div className="text-center">
@@ -365,7 +450,7 @@ const OnboardingPage = () => {
                 <Trophy className="w-10 h-10 text-white" />
               </div>
               <h2 className="text-3xl font-bold text-gray-900 mb-2">Vos passions sportives 🏆</h2>
-              <p className="text-gray-600 text-lg">Dites-nous quels sports vous font vibrer</p>
+              <p className="text-gray-600 text-lg mb-8">Quels sports vous font vibrer ?</p>
             </div>
 
             <div>
@@ -375,7 +460,7 @@ const OnboardingPage = () => {
                   <button
                     key={sport.id}
                     onClick={() => toggleSport(sport.id)}
-                    className={`p-6 rounded-xl border-2 transition-all duration-200 text-center ${
+                    className={`p-6 rounded-2xl border-2 transition-all duration-200 text-center ${
                       formData.favoriteSports.includes(sport.id)
                         ? `bg-gradient-to-r ${sport.color} text-white border-transparent shadow-lg transform scale-105`
                         : 'border-gray-200 hover:border-gray-300 bg-white hover:bg-gray-50'
@@ -390,15 +475,27 @@ const OnboardingPage = () => {
                 ))}
               </div>
             </div>
+          </div>
+        );
+
+      case 4:
+        return (
+          <div className="space-y-8">
+            <div className="text-center">
+              <div className="w-20 h-20 bg-gradient-to-r from-orange-500 to-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Users className="w-10 h-10 text-white" />
+              </div>
+              <h2 className="text-3xl font-bold text-gray-900 mb-2">Votre style de visionnage 🎭</h2>
+              <p className="text-gray-600 text-lg mb-8">Comment regardez-vous le sport ?</p>
+            </div>
 
             <div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-4">Quel type de spectateur êtes-vous ? 🎭</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {watchingStyles.map((style) => (
                   <button
                     key={style.id}
                     onClick={() => setFormData(prev => ({...prev, watchingStyle: style.id}))}
-                    className={`p-6 rounded-xl border-2 transition-all duration-200 text-left ${
+                    className={`p-6 rounded-2xl border-2 transition-all duration-200 text-left ${
                       formData.watchingStyle === style.id
                         ? 'bg-blue-50 border-blue-500 shadow-md'
                         : 'border-gray-200 hover:border-gray-300 bg-white hover:bg-gray-50'
@@ -413,59 +510,21 @@ const OnboardingPage = () => {
                 ))}
               </div>
             </div>
-
-            {formData.favoriteSports.length > 0 && (
-              <div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-4">Vos équipes favorites 💙</h3>
-                <div className="space-y-4">
-                  {formData.favoriteSports.map((sportId) => {
-                    const sport = sports.find(s => s.id === sportId);
-                    return (
-                      <div key={sportId}>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          {sport.name}
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.favoriteTeams[sportId] || ''}
-                          onChange={(e) => setFormData(prev => ({
-                            ...prev,
-                            favoriteTeams: {
-                              ...prev.favoriteTeams,
-                              [sportId]: e.target.value
-                            }
-                          }))}
-                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          placeholder={
-                            sportId === 'football' ? 'ex: PSG, Real Madrid...' :
-                            sportId === 'basketball' ? 'ex: Lakers, Warriors...' :
-                            sportId === 'tennis' ? 'ex: Djokovic, Serena...' :
-                            sportId === 'f1' ? 'ex: Lewis Hamilton, Max Verstappen...' :
-                            'Votre équipe/joueur favori'
-                          }
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
           </div>
         );
 
-      case 2:
+      case 5:
         return (
           <div className="space-y-8">
             <div className="text-center">
               <div className="w-20 h-20 bg-gradient-to-r from-purple-500 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-6">
                 <Sparkles className="w-10 h-10 text-white" />
               </div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">Personnalisez votre profil ✨</h2>
-              <p className="text-gray-600 text-lg">Faites-le vôtre avec style</p>
+              <h2 className="text-3xl font-bold text-gray-900 mb-2">Choisissez votre avatar ✨</h2>
+              <p className="text-gray-600 text-lg mb-8">Personnalisez votre profil</p>
             </div>
 
             <div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-4">Choisissez votre avatar 🎨</h3>
               <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
                 {avatarPresets.map((avatar) => (
                   <button
@@ -481,7 +540,7 @@ const OnboardingPage = () => {
                   </button>
                 ))}
               </div>
-              <div className="mt-4 p-4 bg-blue-50 rounded-xl">
+              <div className="mt-4 p-4 bg-blue-50 rounded-2xl">
                 <div className="flex items-center space-x-3">
                   <Camera className="w-5 h-5 text-blue-600" />
                   <p className="text-blue-800 text-sm">
@@ -490,84 +549,94 @@ const OnboardingPage = () => {
                 </div>
               </div>
             </div>
+          </div>
+        );
 
-            <div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-4">Paramètres de confidentialité 🔒</h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                  <div className="flex items-center space-x-3">
-                    <MapPin className="w-5 h-5 text-gray-600" />
-                    <div>
-                      <p className="font-medium text-gray-900">Afficher ma localisation</p>
-                      <p className="text-sm text-gray-600">Visible sur votre profil public</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setFormData(prev => ({
-                      ...prev,
-                      visibility: {...prev.visibility, location: !prev.visibility.location}
-                    }))}
-                    className={`w-12 h-6 rounded-full transition-all duration-200 ${
-                      formData.visibility.location ? 'bg-blue-500' : 'bg-gray-300'
-                    }`}
-                  >
-                    <div className={`w-5 h-5 bg-white rounded-full shadow-md transition-all duration-200 ${
-                      formData.visibility.location ? 'translate-x-6' : 'translate-x-0.5'
-                    }`} />
-                  </button>
-                </div>
+      case 6:
+        return (
+          <div className="space-y-8">
+            <div className="text-center">
+              <div className="w-20 h-20 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Zap className="w-10 h-10 text-white" />
+              </div>
+              <h2 className="text-3xl font-bold text-gray-900 mb-2">Paramètres de confidentialité 🔒</h2>
+              <p className="text-gray-600 text-lg mb-8">Contrôlez votre visibilité</p>
+            </div>
 
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                  <div className="flex items-center space-x-3">
-                    <Calendar className="w-5 h-5 text-gray-600" />
-                    <div>
-                      <p className="font-medium text-gray-900">Afficher mon âge</p>
-                      <p className="text-sm text-gray-600">Visible sur votre profil public</p>
-                    </div>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
+                <div className="flex items-center space-x-3">
+                  <MapPin className="w-5 h-5 text-gray-600" />
+                  <div>
+                    <p className="font-medium text-gray-900">Afficher ma localisation</p>
+                    <p className="text-sm text-gray-600">Visible sur votre profil public</p>
                   </div>
-                  <button
-                    onClick={() => setFormData(prev => ({
-                      ...prev,
-                      visibility: {...prev.visibility, age: !prev.visibility.age}
-                    }))}
-                    className={`w-12 h-6 rounded-full transition-all duration-200 ${
-                      formData.visibility.age ? 'bg-blue-500' : 'bg-gray-300'
-                    }`}
-                  >
-                    <div className={`w-5 h-5 bg-white rounded-full shadow-md transition-all duration-200 ${
-                      formData.visibility.age ? 'translate-x-6' : 'translate-x-0.5'
-                    }`} />
-                  </button>
                 </div>
+                <button
+                  onClick={() => setFormData(prev => ({
+                    ...prev,
+                    visibility: {...prev.visibility, location: !prev.visibility.location}
+                  }))}
+                  className={`w-12 h-6 rounded-full transition-all duration-200 ${
+                    formData.visibility.location ? 'bg-blue-500' : 'bg-gray-300'
+                  }`}
+                >
+                  <div className={`w-5 h-5 bg-white rounded-full shadow-md transition-all duration-200 ${
+                    formData.visibility.location ? 'translate-x-6' : 'translate-x-0.5'
+                  }`} />
+                </button>
+              </div>
 
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                  <div className="flex items-center space-x-3">
-                    <Heart className="w-5 h-5 text-gray-600" />
-                    <div>
-                      <p className="font-medium text-gray-900">Afficher mes équipes favorites</p>
-                      <p className="text-sm text-gray-600">Visible sur votre profil public</p>
-                    </div>
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
+                <div className="flex items-center space-x-3">
+                  <Calendar className="w-5 h-5 text-gray-600" />
+                  <div>
+                    <p className="font-medium text-gray-900">Afficher mon âge</p>
+                    <p className="text-sm text-gray-600">Visible sur votre profil public</p>
                   </div>
-                  <button
-                    onClick={() => setFormData(prev => ({
-                      ...prev,
-                      visibility: {...prev.visibility, teams: !prev.visibility.teams}
-                    }))}
-                    className={`w-12 h-6 rounded-full transition-all duration-200 ${
-                      formData.visibility.teams ? 'bg-blue-500' : 'bg-gray-300'
-                    }`}
-                  >
-                    <div className={`w-5 h-5 bg-white rounded-full shadow-md transition-all duration-200 ${
-                      formData.visibility.teams ? 'translate-x-6' : 'translate-x-0.5'
-                    }`} />
-                  </button>
                 </div>
+                <button
+                  onClick={() => setFormData(prev => ({
+                    ...prev,
+                    visibility: {...prev.visibility, age: !prev.visibility.age}
+                  }))}
+                  className={`w-12 h-6 rounded-full transition-all duration-200 ${
+                    formData.visibility.age ? 'bg-blue-500' : 'bg-gray-300'
+                  }`}
+                >
+                  <div className={`w-5 h-5 bg-white rounded-full shadow-md transition-all duration-200 ${
+                    formData.visibility.age ? 'translate-x-6' : 'translate-x-0.5'
+                  }`} />
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
+                <div className="flex items-center space-x-3">
+                  <Heart className="w-5 h-5 text-gray-600" />
+                  <div>
+                    <p className="font-medium text-gray-900">Afficher mes sports favoris</p>
+                    <p className="text-sm text-gray-600">Visible sur votre profil public</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setFormData(prev => ({
+                    ...prev,
+                    visibility: {...prev.visibility, teams: !prev.visibility.teams}
+                  }))}
+                  className={`w-12 h-6 rounded-full transition-all duration-200 ${
+                    formData.visibility.teams ? 'bg-blue-500' : 'bg-gray-300'
+                  }`}
+                >
+                  <div className={`w-5 h-5 bg-white rounded-full shadow-md transition-all duration-200 ${
+                    formData.visibility.teams ? 'translate-x-6' : 'translate-x-0.5'
+                  }`} />
+                </button>
               </div>
             </div>
           </div>
         );
 
-      case 3:
+      case 7:
         return (
           <div className="space-y-8">
             <div className="text-center">
@@ -575,7 +644,7 @@ const OnboardingPage = () => {
                 <Target className="w-10 h-10 text-white" />
               </div>
               <h2 className="text-3xl font-bold text-gray-900 mb-2">Vos objectifs sur Sporating 🎯</h2>
-              <p className="text-gray-600 text-lg">Que voulez-vous accomplir avec nous ?</p>
+              <p className="text-gray-600 text-lg mb-8">Que voulez-vous accomplir avec nous ?</p>
             </div>
 
             <div>
@@ -585,7 +654,7 @@ const OnboardingPage = () => {
                   <button
                     key={goal.id}
                     onClick={() => toggleGoal(goal.id)}
-                    className={`p-6 rounded-xl border-2 transition-all duration-200 text-left ${
+                    className={`p-6 rounded-2xl border-2 transition-all duration-200 text-left ${
                       formData.goals.includes(goal.id)
                         ? 'bg-gradient-to-r from-green-400 to-teal-500 text-white border-transparent shadow-lg'
                         : 'border-gray-200 hover:border-gray-300 bg-white hover:bg-gray-50'
@@ -608,7 +677,7 @@ const OnboardingPage = () => {
               <textarea
                 value={formData.expectations}
                 onChange={(e) => setFormData(prev => ({...prev, expectations: e.target.value}))}
-                className="w-full px-4 py-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg resize-none"
+                className="w-full px-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg resize-none"
                 rows={4}
                 placeholder="Partagez vos attentes, vos espoirs, ou ce qui vous motive à rejoindre notre communauté..."
                 maxLength={300}
@@ -618,7 +687,7 @@ const OnboardingPage = () => {
               </div>
             </div>
 
-            <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 border border-blue-200">
+            <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-6 border border-blue-200">
               <div className="flex items-start space-x-4">
                 <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
                   <Zap className="w-6 h-6 text-white" />
@@ -642,22 +711,22 @@ const OnboardingPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      {/* Progress Bar */}
-      <div className="sticky top-0 z-50 bg-white/90 backdrop-blur-sm border-b border-gray-200">
-        <div className="max-w-4xl mx-auto px-6 py-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 safe-area-inset">
+      {/* Header plus compact et plus bas */}
+      <div className="bg-white/90 backdrop-blur-sm border-b border-gray-200 pt-safe">
+        <div className="max-w-4xl mx-auto px-4 pt-16 pb-4">
           <div className="flex items-center justify-between mb-3">
-            <h1 className="text-lg font-bold text-gray-900">Configuration du profil</h1>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600">
+            <h1 className="text-base font-semibold text-gray-900">Configuration du profil</h1>
+            <div className="flex items-center space-x-3">
+              <span className="text-xs text-gray-600">
                 Étape {currentStep + 1} sur {steps.length}
               </span>
               <button
                 onClick={handleSkip}
-                className="text-sm text-gray-500 hover:text-gray-700 transition-colors px-3 py-1 rounded-lg hover:bg-gray-100"
+                className="text-xs text-gray-500 hover:text-gray-700 transition-colors px-2 py-1 rounded-lg hover:bg-gray-100"
                 disabled={loading}
               >
-                Ignorer la configuration
+                Ignorer
               </button>
             </div>
           </div>
@@ -671,30 +740,34 @@ const OnboardingPage = () => {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-4xl mx-auto px-6 py-8">
-        <div className="bg-white rounded-2xl shadow-xl p-8 md:p-12">
+      <div className="max-w-4xl mx-auto px-4 py-4 pb-28">
+        <div className="bg-white rounded-2xl shadow-lg p-4">
           {renderStepContent()}
+        </div>
+      </div>
 
-          {/* Navigation Buttons */}
-          <div className="flex items-center justify-between mt-12 pt-8 border-t border-gray-200">
+      {/* Navigation plus compacte en bas */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-3 pb-safe">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center justify-between">
             <button
               onClick={prevStep}
               disabled={currentStep === 0 || loading}
-              className={`flex items-center space-x-2 px-6 py-3 rounded-xl font-medium transition-all ${
+              className={`flex items-center space-x-1 px-3 py-2 rounded-xl text-sm font-medium transition-all ${
                 currentStep === 0 || loading
                   ? 'text-gray-400 cursor-not-allowed'
                   : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
               }`}
             >
-              <ChevronLeft className="w-5 h-5" />
+              <ChevronLeft className="w-4 h-4" />
               <span>Précédent</span>
             </button>
 
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2">
               <button
                 onClick={handleSkipStep}
                 disabled={loading}
-                className="text-gray-500 hover:text-gray-700 transition-colors px-4 py-2 rounded-lg hover:bg-gray-100 text-sm font-medium disabled:opacity-50"
+                className="text-gray-500 hover:text-gray-700 transition-colors px-3 py-2 rounded-xl hover:bg-gray-100 text-xs font-medium disabled:opacity-50"
               >
                 Passer cette étape
               </button>
@@ -703,181 +776,50 @@ const OnboardingPage = () => {
                 <button
                   onClick={nextStep}
                   disabled={loading}
-                  className="bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:shadow-lg transform hover:scale-105 flex items-center space-x-2 px-8 py-4 rounded-xl font-semibold transition-all disabled:opacity-50"
+                  className="bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:shadow-md flex items-center space-x-2 px-5 py-2.5 rounded-xl font-medium transition-all disabled:opacity-50 text-sm"
                 >
                   {loading ? (
-                    <Loader className="w-5 h-5 animate-spin" />
+                    <Loader className="w-4 h-4 animate-spin" />
                   ) : (
                     <>
                       <span>{isStepComplete() ? 'Continuer' : 'Continuer quand même'}</span>
-                      <ChevronRight className="w-5 h-5" />
+                      <ChevronRight className="w-4 h-4" />
                     </>
                   )}
                 </button>
               ) : (
-                <div className="flex items-center space-x-3">
-                  <button
-                    onClick={handleSkip}
-                    disabled={loading}
-                    className="text-gray-500 hover:text-gray-700 transition-colors px-4 py-2 rounded-lg hover:bg-gray-100 text-sm font-medium disabled:opacity-50"
-                  >
-                    Terminer plus tard
-                  </button>
-                  
-                  <button
-                    onClick={handleFinish}
-                    disabled={loading}
-                    className="bg-gradient-to-r from-green-500 to-teal-600 text-white hover:shadow-lg transform hover:scale-105 flex items-center space-x-2 px-8 py-4 rounded-xl font-semibold transition-all disabled:opacity-50"
-                  >
-                    {loading ? (
-                      <Loader className="w-5 h-5 animate-spin" />
-                    ) : (
-                      <>
-                        <span>Créer mon profil</span>
-                        <ArrowRight className="w-5 h-5" />
-                      </>
-                    )}
-                  </button>
-                </div>
+                <button
+                  onClick={handleFinish}
+                  disabled={loading}
+                  className="bg-gradient-to-r from-green-500 to-teal-600 text-white hover:shadow-md flex items-center space-x-2 px-5 py-2.5 rounded-xl font-medium transition-all disabled:opacity-50 text-sm"
+                >
+                  {loading ? (
+                    <Loader className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>
+                      <span>Créer mon profil</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
               )}
             </div>
           </div>
 
-          {/* Steps Preview */}
-          <div className="flex items-center justify-center space-x-4 mt-8">
+          {/* Steps Preview plus discret */}
+          <div className="flex items-center justify-center space-x-1.5 mt-3">
             {steps.map((step, index) => (
               <div
                 key={step.id}
-                className={`flex items-center space-x-2 ${
-                  index === currentStep ? 'text-blue-600' : 
-                  index < currentStep ? 'text-green-600' : 'text-gray-400'
+                className={`w-1.5 h-1.5 rounded-full transition-all duration-200 ${
+                  index === currentStep ? 'bg-blue-600 w-6' : 
+                  index < currentStep ? 'bg-green-600' : 'bg-gray-300'
                 }`}
-              >
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
-                  index === currentStep ? 'bg-blue-100 text-blue-600' :
-                  index < currentStep ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
-                }`}>
-                  {index < currentStep ? <Check className="w-4 h-4" /> : index + 1}
-                </div>
-                <span className="hidden md:block text-sm font-medium">{step.title}</span>
-              </div>
+              />
             ))}
           </div>
         </div>
-
-        {/* Additional Tips */}
-        {currentStep === 0 && (
-          <div className="mt-8 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-6 border border-green-200">
-            <div className="flex items-start space-x-3">
-              <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
-                <Star className="w-4 h-4 text-white" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-green-900 mb-1">💡 Conseils pour votre profil</h3>
-                <ul className="text-green-800 text-sm space-y-1">
-                  <li>• Utilisez votre vrai nom pour que vos amis vous trouvent facilement</li>
-                  <li>• Choisissez un nom d'utilisateur unique et mémorable</li>
-                  <li>• Une bio sympa attire plus d'interactions dans la communauté</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {currentStep === 1 && (
-          <div className="mt-8 bg-gradient-to-r from-orange-50 to-red-50 rounded-xl p-6 border border-orange-200">
-            <div className="flex items-start space-x-3">
-              <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center flex-shrink-0">
-                <Trophy className="w-4 h-4 text-white" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-orange-900 mb-1">🔥 Pourquoi c'est important ?</h3>
-                <ul className="text-orange-800 text-sm space-y-1">
-                  <li>• Nous personnaliserons vos recommandations de matchs</li>
-                  <li>• Vous recevrez des notifications pour vos équipes favorites</li>
-                  <li>• Connectez-vous avec des fans qui partagent vos passions</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {currentStep === 2 && (
-          <div className="mt-8 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-6 border border-purple-200">
-            <div className="flex items-start space-x-3">
-              <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
-                <Sparkles className="w-4 h-4 text-white" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-purple-900 mb-1">✨ Exprimez votre personnalité</h3>
-                <ul className="text-purple-800 text-sm space-y-1">
-                  <li>• Votre avatar sera visible sur tous vos commentaires</li>
-                  <li>• Vous pouvez modifier ces paramètres à tout moment</li>
-                  <li>• La confidentialité est importante pour nous</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {currentStep === 3 && (
-          <div className="mt-8 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200">
-            <div className="flex items-start space-x-3">
-              <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
-                <Target className="w-4 h-4 text-white" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-blue-900 mb-1">🎯 Nous adaptons l'expérience</h3>
-                <ul className="text-blue-800 text-sm space-y-1">
-                  <li>• Interface personnalisée selon vos objectifs</li>
-                  <li>• Suggestions de fonctionnalités prioritaires</li>
-                  <li>• Parcours d'apprentissage sur mesure</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
-
-      {/* Preview Card */}
-      {currentStep >= 0 && formData.name && (
-        <div className="fixed bottom-6 right-6 max-w-sm">
-          <div className="bg-white rounded-xl shadow-2xl border border-gray-200 p-4 transform hover:scale-105 transition-all duration-200">
-            <div className="flex items-center space-x-3 mb-3">
-              <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl ${
-                formData.avatar ? 
-                avatarPresets.find(a => a.id === formData.avatar)?.color || 'bg-gray-300' : 
-                'bg-gray-300'
-              }`}>
-                {formData.avatar ? 
-                  avatarPresets.find(a => a.id === formData.avatar)?.emoji || '👤' : 
-                  '👤'
-                }
-              </div>
-              <div>
-                <h4 className="font-semibold text-gray-900">{formData.name || 'Votre nom'}</h4>
-                <p className="text-sm text-gray-500">@{formData.username || 'username'}</p>
-              </div>
-            </div>
-            {formData.bio && (
-              <p className="text-sm text-gray-600 mb-3">{formData.bio}</p>
-            )}
-            <div className="flex flex-wrap gap-2">
-              {formData.favoriteSports.map(sportId => {
-                const sport = sports.find(s => s.id === sportId);
-                return (
-                  <span key={sportId} className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full">
-                    {sport?.name.split(' ')[1]} {sport?.name.split(' ')[0]}
-                  </span>
-                );
-              })}
-            </div>
-            <div className="mt-3 text-center">
-              <p className="text-xs text-blue-600 font-medium">👀 Aperçu de votre profil</p>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

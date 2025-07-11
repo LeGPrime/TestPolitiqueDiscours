@@ -1,7 +1,9 @@
+// pages/api/search.ts - MISE À JOUR avec support combattants MMA
 import { NextApiRequest, NextApiResponse } from 'next'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '../../lib/auth'
 import { prisma } from '../../lib/prisma'
+import axios from 'axios'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const session = await getServerSession(req, res, authOptions)
@@ -14,11 +16,34 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(400).json({ error: 'La recherche doit contenir au moins 2 caractères' })
       }
 
-      console.log(`🔍 Recherche locale pour: "${q}" (sport: ${sport || 'all'})`)
+      console.log(`🔍 Recherche locale pour: "${q}" (sport: ${sport || 'all'}, type: ${type})`)
 
       const results: any = {
         matches: [],
-        users: []
+        users: [],
+        fighters: [] // 🆕 NOUVEAU
+      }
+
+      // 🆕 Rechercher des combattants MMA si pertinent
+      if ((type === 'all' || type === 'fighters') && (!sport || sport === 'all' || sport === 'mma')) {
+        try {
+          console.log(`🥊 Recherche de combattants MMA...`)
+          const fightersResponse = await axios.get(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/fighters/search?q=${encodeURIComponent(q)}&limit=10`)
+          
+          if (fightersResponse.data.success) {
+            results.fighters = fightersResponse.data.fighters || []
+            
+            // Ajouter aussi les combats trouvés aux résultats de matchs
+            if (fightersResponse.data.matches && fightersResponse.data.matches.length > 0) {
+              results.matches.push(...fightersResponse.data.matches)
+            }
+            
+            console.log(`✅ ${results.fighters.length} combattants MMA trouvés`)
+          }
+        } catch (error) {
+          console.error('⚠️ Erreur recherche combattants MMA:', error)
+          // Continue sans les combattants
+        }
       }
 
       // Rechercher des matchs dans notre base uniquement
@@ -29,15 +54,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (sport && sport !== 'all') {
           if (sport === 'football') {
             sportFilter = {
-              competition: {
-                in: ['Premier League', 'La Liga', 'Serie A', 'Bundesliga', 'Ligue 1', 'Champions League', 'Europa League']
-              }
+              sport: 'FOOTBALL'
             }
           } else if (sport === 'basketball') {
             sportFilter = {
-              competition: {
-                in: ['NBA', 'EuroLeague', 'WNBA', 'NBA Playoffs', 'FIBA World Cup']
-              }
+              sport: 'BASKETBALL'
+            }
+          } else if (sport === 'mma') {
+            sportFilter = {
+              sport: 'MMA'
+            }
+          } else {
+            // Pour autres sports, essayer de mapper
+            sportFilter = {
+              sport: sport.toString().toUpperCase()
             }
           }
         }
@@ -69,26 +99,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           take: 20
         })
 
-        results.matches = dbMatches.map(match => ({
-          id: match.id,
-          homeTeam: match.homeTeam,
-          awayTeam: match.awayTeam,
-          homeTeamLogo: match.homeTeamLogo,
-          awayTeamLogo: match.awayTeamLogo,
-          homeScore: match.homeScore,
-          awayScore: match.awayScore,
-          date: match.date.toISOString(),
-          status: match.status,
-          competition: match.competition,
-          venue: match.venue,
-          avgRating: match.avgRating,
-          totalRatings: match.totalRatings,
-          ratings: match.ratings,
-          canRate: true,
-          sport: getSportFromCompetition(match.competition) // 🆕 Détecter le sport
-        }))
+        // Éviter les doublons avec les matchs MMA déjà ajoutés
+        const existingMatchIds = new Set(results.matches.map((m: any) => m.id))
+        
+        const newMatches = dbMatches
+          .filter(match => !existingMatchIds.has(match.id))
+          .map(match => ({
+            id: match.id,
+            homeTeam: match.homeTeam,
+            awayTeam: match.awayTeam,
+            homeTeamLogo: match.homeTeamLogo,
+            awayTeamLogo: match.awayTeamLogo,
+            homeScore: match.homeScore,
+            awayScore: match.awayScore,
+            date: match.date.toISOString(),
+            status: match.status,
+            competition: match.competition,
+            venue: match.venue,
+            avgRating: match.avgRating,
+            totalRatings: match.totalRatings,
+            ratings: match.ratings,
+            canRate: true,
+            sport: getSportFromEnum(match.sport) // 🆕 Conversion enum -> string
+          }))
 
-        console.log(`✅ ${results.matches.length} matchs trouvés (sport: ${sport || 'all'})`)
+        results.matches.push(...newMatches)
+
+        console.log(`✅ ${newMatches.length} matchs supplémentaires trouvés (sport: ${sport || 'all'})`)
       }
 
       // Rechercher des utilisateurs (inchangé)
@@ -161,10 +198,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
       }
 
+      // 🆕 Log final pour debug
+      console.log(`📊 Résultats finaux de recherche:`)
+      console.log(`- Matchs: ${results.matches.length}`)
+      console.log(`- Combattants MMA: ${results.fighters.length}`)
+      console.log(`- Utilisateurs: ${results.users.length}`)
+
       res.status(200).json(results)
     } catch (error) {
       console.error('Erreur recherche:', error)
-      res.status(500).json({ error: 'Erreur serveur' })
+      res.status(500).json({ error: 'Erreur serveur', details: error.message })
     }
   } else {
     res.setHeader('Allow', ['GET'])
@@ -172,13 +215,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 }
 
-// 🆕 Fonction pour détecter le sport depuis la compétition
-function getSportFromCompetition(competition: string): 'football' | 'basketball' {
-  const basketballCompetitions = ['NBA', 'EuroLeague', 'WNBA', 'FIBA']
-  
-  if (basketballCompetitions.some(comp => competition.includes(comp))) {
-    return 'basketball'
+// 🆕 Fonction pour convertir l'enum Sport en string
+function getSportFromEnum(sportEnum: string): string {
+  const sportMap: Record<string, string> = {
+    'FOOTBALL': 'football',
+    'BASKETBALL': 'basketball', 
+    'MMA': 'mma',
+    'RUGBY': 'rugby',
+    'F1': 'f1'
   }
   
-  return 'football'
+  return sportMap[sportEnum] || sportEnum.toLowerCase()
 }

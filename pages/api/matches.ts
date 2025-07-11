@@ -1,3 +1,4 @@
+// pages/api/matches.ts - CORRIGÉ pour supporter MMA
 import { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '../../lib/prisma'
 
@@ -9,7 +10,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         search, 
         days = '14', 
         sport = 'all',
-        competition = 'all', // 🆕 NOUVEAU FILTRE
+        competition = 'all',
         limit = '50' 
       } = req.query
 
@@ -21,9 +22,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         status: 'FINISHED'
       }
 
-      // 🆕 FILTRE PAR SPORT
+      // 🆕 FILTRE PAR SPORT - CORRECTION MAJEURE
       if (sport && sport !== 'all') {
-        whereClause.sport = sport.toString().toUpperCase()
+        // Convertir le sport en format ENUM Prisma (UPPERCASE)
+        const sportUpper = sport.toString().toUpperCase()
+        console.log(`🔍 Filtrage sport: ${sport} -> ${sportUpper}`)
+        whereClause.sport = sportUpper
       }
 
       // 🆕 FILTRE PAR COMPÉTITION
@@ -33,6 +37,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       // Filtrer par recherche si nécessaire
       if (search && typeof search === 'string') {
+        console.log(`🔍 Recherche: "${search}"`)
         whereClause.OR = [
           { homeTeam: { contains: search, mode: 'insensitive' } },
           { awayTeam: { contains: search, mode: 'insensitive' } },
@@ -52,6 +57,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           lt: endOfDay
         }
       }
+
+      console.log('🔍 Clause WHERE finale:', JSON.stringify(whereClause, null, 2))
 
       const dbMatches = await prisma.match.findMany({
         where: whereClause,
@@ -73,11 +80,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       console.log(`✅ Trouvé ${dbMatches.length} événements dans la base locale`)
 
+      // 🆕 DEBUG - Montrer les sports trouvés
+      const sportsFound = [...new Set(dbMatches.map(m => m.sport))]
+      console.log(`🏆 Sports trouvés en base:`, sportsFound)
+
       // Convertir au format attendu avec support multi-sports
       const formattedMatches = dbMatches.map(match => ({
         id: match.id,
         apiId: match.apiMatchId,
-        sport: match.sport.toLowerCase(), // 🆕 SPORT AJOUTÉ
+        sport: match.sport.toLowerCase(), // 🆕 CONVERSION EN MINUSCULE POUR L'INTERFACE
         homeTeam: match.homeTeam,
         awayTeam: match.awayTeam,
         homeScore: match.homeScore,
@@ -122,26 +133,41 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             id: 'desc'
           }
         },
-        take: 20 // Top 20 compétitions
+        take: 20
       })
+
+      // 🆕 DEBUG FINAL
+      console.log(`📊 Stats finales:`)
+      console.log(`- Total matches: ${formattedMatches.length}`)
+      console.log(`- Sports stats:`, sportStats.map(s => `${s.sport}: ${s._count.id}`))
+      console.log(`- Sport filter: ${sport}`)
+      console.log(`- Matches trouvés par sport:`, formattedMatches.reduce((acc, m) => {
+        acc[m.sport] = (acc[m.sport] || 0) + 1
+        return acc
+      }, {} as Record<string, number>))
 
       res.status(200).json({ 
         matches: formattedMatches,
         stats: {
           total: formattedMatches.length,
           bySport: sportStats.map(stat => ({
-            sport: stat.sport.toLowerCase(),
+            sport: stat.sport.toLowerCase(), // 🆕 CONVERSION POUR L'INTERFACE
             count: stat._count.id
           })),
           byCompetition: competitionStats.map(stat => ({
             competition: stat.competition,
             count: stat._count.id
           }))
+        },
+        debug: {
+          whereClause,
+          foundSports: sportsFound,
+          requestedSport: sport
         }
       })
     } catch (error) {
-      console.error('Erreur API matchs:', error)
-      res.status(500).json({ error: 'Erreur serveur' })
+      console.error('❌ Erreur API matchs:', error)
+      res.status(500).json({ error: 'Erreur serveur', details: error.message })
     }
   } else {
     res.setHeader('Allow', ['GET'])
