@@ -18,3 +18,4 @@ logs/
 tmp/
 temp/backup_*.sql
 *.sql
+backup_avant_migration.sql
