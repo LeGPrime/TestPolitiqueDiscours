@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '../../lib/auth'
 import { prisma } from '../../lib/prisma'
+import { notifyFriendRequest } from '../../lib/notifications'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const session = await getServerSession(req, res, authOptions)
@@ -162,6 +163,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           }
         })
 
+        // 🔔 NOTIFICATION DEMANDE D'AMI
+        await notifyFriendRequest(
+          session.user.id,
+          userId,
+          session.user.name || session.user.email || 'Un utilisateur'
+        ).catch(error => {
+          console.error('❌ Erreur notification demande ami:', error)
+        })
+
+        console.log(`✅ Demande d'ami envoyée: ${session.user.name} → ${friendship.receiver.name}`)
+
         res.status(200).json({ friendship })
       } else if (action === 'accept_request') {
         // Accepter demande
@@ -179,6 +191,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           }
         })
 
+        console.log(`✅ Demande d'ami acceptée: ${friendship.sender.name} ↔ ${session.user.name}`)
+
         res.status(200).json({ friendship })
       } else if (action === 'decline_request') {
         // Refuser demande
@@ -189,6 +203,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             status: 'PENDING'
           }
         })
+
+        console.log(`❌ Demande d'ami refusée par ${session.user.name}`)
 
         res.status(200).json({ success: true })
       } else if (action === 'remove_friend') {
@@ -203,6 +219,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           }
         })
 
+        console.log(`💔 Amitié supprimée: ${session.user.name} ↔ ${userId}`)
+
         res.status(200).json({ success: true })
       } else if (action === 'cancel_request') {
         // Annuler demande envoyée
@@ -213,6 +231,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             status: 'PENDING'
           }
         })
+
+        console.log(`🚫 Demande d'ami annulée par ${session.user.name}`)
 
         res.status(200).json({ success: true })
       }

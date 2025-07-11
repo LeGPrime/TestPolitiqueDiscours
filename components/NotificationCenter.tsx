@@ -1,18 +1,19 @@
-// components/NotificationCenter.tsx - Système de notifications complet
+// components/NotificationCenter.tsx - Système de notifications fonctionnel
 import { useState, useEffect, useRef } from 'react'
-import { Bell, X, Check, Users, Star, Trophy, Calendar, Eye, TrendingUp } from 'lucide-react'
+import { Bell, X, Check, Users, Star, Trophy, Calendar, Eye, TrendingUp, UserPlus } from 'lucide-react'
 import Link from 'next/link'
 import axios from 'axios'
+import { toast } from 'react-hot-toast'
 
 interface Notification {
   id: string
-  type: 'friend_request' | 'match_rated' | 'achievement' | 'match_reminder' | 'trending_match'
+  type: 'friend_request' | 'friend_activity' | 'trending_match' | 'team_match'
   title: string
   message: string
   date: Date
   read: boolean
   actionUrl?: string
-  actionData?: any
+  data?: any
 }
 
 interface NotificationCenterProps {
@@ -23,6 +24,7 @@ export default function NotificationCenter({ userId }: NotificationCenterProps) 
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [isOpen, setIsOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   // Fermer le dropdown si on clique ailleurs
@@ -37,124 +39,127 @@ export default function NotificationCenter({ userId }: NotificationCenterProps) 
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Charger les notifications
+  // Charger le count des notifications non lues au montage
+  useEffect(() => {
+    fetchUnreadCount()
+  }, [])
+
+  // Charger les notifications quand on ouvre le dropdown
   useEffect(() => {
     if (isOpen && notifications.length === 0) {
       fetchNotifications()
     }
   }, [isOpen])
 
+  // Poll pour les nouvelles notifications toutes les 30 secondes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchUnreadCount()
+    }, 30000)
+
+    return () => clearInterval(interval)
+  }, [])
+
+  const fetchUnreadCount = async () => {
+    try {
+      const response = await axios.get('/api/notifications?unread_count=true')
+      setUnreadCount(response.data.unreadCount || 0)
+    } catch (error) {
+      console.error('Erreur chargement count notifications:', error)
+    }
+  }
+
   const fetchNotifications = async () => {
     try {
       setLoading(true)
-      const response = await axios.get('/api/notifications')
-      setNotifications(response.data.notifications || generateMockNotifications())
+      const response = await axios.get('/api/notifications?limit=20')
+      const notifs = response.data.notifications || []
+      
+      // Convertir les dates
+      const formattedNotifs = notifs.map((notif: any) => ({
+        ...notif,
+        date: new Date(notif.createdAt)
+      }))
+      
+      setNotifications(formattedNotifs)
     } catch (error) {
       console.error('Erreur chargement notifications:', error)
-      // En attendant l'API, utiliser des données de test
-      setNotifications(generateMockNotifications())
+      toast.error('Erreur lors du chargement des notifications')
     } finally {
       setLoading(false)
     }
   }
 
-  // Données de test en attendant l'API
-  const generateMockNotifications = (): Notification[] => {
-    return [
-      {
-        id: '1',
-        type: 'friend_request',
-        title: 'Nouvelle demande d\'ami',
-        message: 'Thomas Martin veut être votre ami',
-        date: new Date(Date.now() - 1000 * 60 * 30), // 30min ago
-        read: false,
-        actionUrl: '/friends',
-        actionData: { userId: 'thomas123' }
-      },
-      {
-        id: '2', 
-        type: 'match_rated',
-        title: 'Nouveau avis',
-        message: 'Sarah a noté PSG vs Real Madrid 5⭐',
-        date: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2h ago
-        read: false,
-        actionUrl: '/match/psg-real-123'
-      },
-      {
-        id: '3',
-        type: 'achievement',
-        title: 'Nouveau badge !',
-        message: 'Vous avez débloqué "Expert Football" (50 matchs notés)',
-        date: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
-        read: true,
-        actionUrl: '/profile'
-      },
-      {
-        id: '4',
-        type: 'trending_match',
-        title: 'Match tendance',
-        message: 'Liverpool vs Manchester City devient viral sur Sporating !',
-        date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2), // 2 days ago
-        read: true,
-        actionUrl: '/match/liverpool-city-456'
-      },
-      {
-        id: '5',
-        type: 'match_reminder',
-        title: 'Match à venir',
-        message: 'Barcelone vs Arsenal commence dans 1 heure',
-        date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3), // 3 days ago
-        read: true,
-        actionUrl: '/match/barca-arsenal-789'
-      }
-    ]
-  }
-
   const markAsRead = async (notificationId: string) => {
     try {
-      await axios.put(`/api/notifications/${notificationId}`, { read: true })
+      await axios.put('/api/notifications', { notificationId })
+      
       setNotifications(prev => 
         prev.map(notif => 
           notif.id === notificationId ? { ...notif, read: true } : notif
         )
       )
+      
+      // Mettre à jour le count
+      setUnreadCount(prev => Math.max(0, prev - 1))
     } catch (error) {
-      // En attendant l'API, juste mettre à jour l'état local
-      setNotifications(prev => 
-        prev.map(notif => 
-          notif.id === notificationId ? { ...notif, read: true } : notif
-        )
-      )
+      console.error('Erreur marquer comme lu:', error)
+      toast.error('Erreur lors de la mise à jour')
     }
   }
 
   const markAllAsRead = async () => {
     try {
-      await axios.put('/api/notifications/mark-all-read')
+      await axios.put('/api/notifications', { markAllRead: true })
+      
       setNotifications(prev => prev.map(notif => ({ ...notif, read: true })))
+      setUnreadCount(0)
+      toast.success('Toutes les notifications marquées comme lues')
     } catch (error) {
-      // En attendant l'API
-      setNotifications(prev => prev.map(notif => ({ ...notif, read: true })))
+      console.error('Erreur marquer tout comme lu:', error)
+      toast.error('Erreur lors de la mise à jour')
     }
   }
 
   const deleteNotification = async (notificationId: string) => {
     try {
-      await axios.delete(`/api/notifications/${notificationId}`)
-      setNotifications(prev => prev.filter(notif => notif.id !== notificationId))
+      await axios.delete('/api/notifications', { 
+        data: { notificationId } 
+      })
+      
+      setNotifications(prev => {
+        const deletedNotif = prev.find(n => n.id === notificationId)
+        if (deletedNotif && !deletedNotif.read) {
+          setUnreadCount(count => Math.max(0, count - 1))
+        }
+        return prev.filter(notif => notif.id !== notificationId)
+      })
+      
+      toast.success('Notification supprimée')
     } catch (error) {
-      // En attendant l'API
-      setNotifications(prev => prev.filter(notif => notif.id !== notificationId))
+      console.error('Erreur suppression notification:', error)
+      toast.error('Erreur lors de la suppression')
     }
+  }
+
+  const handleNotificationClick = async (notification: Notification) => {
+    // Marquer comme lu si pas encore lu
+    if (!notification.read) {
+      await markAsRead(notification.id)
+    }
+    
+    // Fermer le dropdown
+    setIsOpen(false)
+    
+    // La navigation se fera via le Link
   }
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
-      case 'friend_request': return <Users className="w-5 h-5 text-blue-500" />
-      case 'match_rated': return <Star className="w-5 h-5 text-yellow-500" />
-      case 'achievement': return <Trophy className="w-5 h-5 text-purple-500" />
-      case 'match_reminder': return <Calendar className="w-5 h-5 text-green-500" />
+      case 'friend_request': return <UserPlus className="w-5 h-5 text-blue-500" />
+      case 'friend_activity': return <Users className="w-5 h-5 text-green-500" />
       case 'trending_match': return <TrendingUp className="w-5 h-5 text-red-500" />
+      case 'team_match': return <Calendar className="w-5 h-5 text-purple-500" />
       default: return <Bell className="w-5 h-5 text-gray-500" />
     }
   }
@@ -173,47 +178,60 @@ export default function NotificationCenter({ userId }: NotificationCenterProps) 
     return date.toLocaleDateString('fr-FR')
   }
 
-  const unreadCount = notifications.filter(n => !n.read).length
+  const getNotificationColor = (type: string) => {
+    switch (type) {
+      case 'friend_request': return 'border-l-blue-500'
+      case 'friend_activity': return 'border-l-green-500'
+      case 'trending_match': return 'border-l-red-500'
+      case 'team_match': return 'border-l-purple-500'
+      default: return 'border-l-gray-500'
+    }
+  }
 
   return (
     <div className="relative" ref={dropdownRef}>
       {/* Bouton cloche */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+        className="relative p-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors touch-manipulation"
         title={unreadCount > 0 ? `${unreadCount} nouvelle(s) notification(s)` : 'Notifications'}
       >
         <Bell className="w-5 h-5" />
         
         {/* Badge avec nombre de notifications */}
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full">
-            {unreadCount > 9 ? '9+' : unreadCount}
+          <span className="absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full animate-pulse">
+            {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
       </button>
 
       {/* Dropdown des notifications */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 z-50 max-h-96 overflow-hidden">
+        <div className="absolute right-0 mt-2 w-80 md:w-96 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-gray-200 dark:border-slate-700 z-50 max-h-96 overflow-hidden">
           
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-slate-700">
+          <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-700/50">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
               Notifications
+              {unreadCount > 0 && (
+                <span className="ml-2 text-sm bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 px-2 py-1 rounded-full">
+                  {unreadCount}
+                </span>
+              )}
             </h3>
             <div className="flex items-center space-x-2">
               {unreadCount > 0 && (
                 <button
                   onClick={markAllAsRead}
-                  className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium"
+                  className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium px-2 py-1 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
                 >
-                  Tout marquer lu
+                  Tout lire
                 </button>
               )}
               <button
                 onClick={() => setIsOpen(false)}
-                className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded"
+                className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -230,77 +248,80 @@ export default function NotificationCenter({ userId }: NotificationCenterProps) 
             ) : notifications.length === 0 ? (
               <div className="p-8 text-center">
                 <Bell className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500 dark:text-gray-400">Aucune notification</p>
+                <p className="text-gray-500 dark:text-gray-400 font-medium">Aucune notification</p>
                 <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
                   Les notifications apparaîtront ici
                 </p>
               </div>
             ) : (
-              <div className="divide-y divide-gray-200 dark:divide-slate-700">
+              <div>
                 {notifications.map((notification) => (
                   <div
                     key={notification.id}
-                    className={`p-4 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors ${
-                      !notification.read ? 'bg-blue-50 dark:bg-blue-900/20' : ''
-                    }`}
+                    className={`border-l-4 ${getNotificationColor(notification.type)} ${
+                      !notification.read 
+                        ? 'bg-blue-50 dark:bg-blue-900/10' 
+                        : 'hover:bg-gray-50 dark:hover:bg-slate-700/50'
+                    } transition-colors`}
                   >
-                    <div className="flex items-start space-x-3">
-                      {/* Icône */}
-                      <div className="flex-shrink-0 mt-1">
-                        {getNotificationIcon(notification.type)}
-                      </div>
-                      
-                      {/* Contenu */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-900 dark:text-white">
-                              {notification.title}
-                            </p>
-                            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                              {notification.message}
-                            </p>
-                            <div className="flex items-center space-x-3 mt-2">
-                              <span className="text-xs text-gray-500 dark:text-gray-400">
-                                {formatTime(notification.date)}
-                              </span>
-                              {!notification.read && (
-                                <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-                              )}
+                    <div className="p-4">
+                      <div className="flex items-start space-x-3">
+                        {/* Icône */}
+                        <div className="flex-shrink-0 mt-1">
+                          {getNotificationIcon(notification.type)}
+                        </div>
+                        
+                        {/* Contenu */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <p className={`text-sm font-medium text-gray-900 dark:text-white ${
+                                !notification.read ? 'font-semibold' : ''
+                              }`}>
+                                {notification.title}
+                              </p>
+                              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
+                                {notification.message}
+                              </p>
+                              <div className="flex items-center space-x-3 mt-2">
+                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                  {formatTime(notification.date)}
+                                </span>
+                                {!notification.read && (
+                                  <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                          
-                          {/* Actions */}
-                          <div className="flex items-center space-x-1 ml-2">
-                            {notification.actionUrl && (
-                              <Link
-                                href={notification.actionUrl}
-                                onClick={() => {
-                                  markAsRead(notification.id)
-                                  setIsOpen(false)
-                                }}
-                                className="p-1 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 rounded"
-                                title="Voir"
-                              >
-                                <Eye className="w-4 h-4" />
-                              </Link>
-                            )}
-                            {!notification.read && (
+                            
+                            {/* Actions */}
+                            <div className="flex items-center space-x-1 ml-2">
+                              {notification.actionUrl && (
+                                <Link
+                                  href={notification.actionUrl}
+                                  onClick={() => handleNotificationClick(notification)}
+                                  className="p-1.5 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                                  title="Voir"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                </Link>
+                              )}
+                              {!notification.read && (
+                                <button
+                                  onClick={() => markAsRead(notification.id)}
+                                  className="p-1.5 text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
+                                  title="Marquer comme lu"
+                                >
+                                  <Check className="w-4 h-4" />
+                                </button>
+                              )}
                               <button
-                                onClick={() => markAsRead(notification.id)}
-                                className="p-1 text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 rounded"
-                                title="Marquer comme lu"
+                                onClick={() => deleteNotification(notification.id)}
+                                className="p-1.5 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                                title="Supprimer"
                               >
-                                <Check className="w-4 h-4" />
+                                <X className="w-4 h-4" />
                               </button>
-                            )}
-                            <button
-                              onClick={() => deleteNotification(notification.id)}
-                              className="p-1 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 rounded"
-                              title="Supprimer"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -313,11 +334,11 @@ export default function NotificationCenter({ userId }: NotificationCenterProps) 
 
           {/* Footer */}
           {notifications.length > 0 && (
-            <div className="p-3 border-t border-gray-200 dark:border-slate-700">
+            <div className="p-3 border-t border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-700/50">
               <Link
                 href="/notifications"
                 onClick={() => setIsOpen(false)}
-                className="block text-center text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium"
+                className="block text-center text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium py-2 px-4 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
               >
                 Voir toutes les notifications
               </Link>
@@ -329,43 +350,12 @@ export default function NotificationCenter({ userId }: NotificationCenterProps) 
   )
 }
 
-// Hook pour les notifications en temps réel (optionnel)
-export function useNotifications(userId: string) {
-  const [notifications, setNotifications] = useState<Notification[]>([])
-  const [unreadCount, setUnreadCount] = useState(0)
-
-  useEffect(() => {
-    // Simuler des notifications en temps réel
-    const interval = setInterval(() => {
-      const randomNotifications = [
-        {
-          id: Date.now().toString(),
-          type: 'friend_request' as const,
-          title: 'Nouvelle demande d\'ami',
-          message: 'Alex Martin veut être votre ami',
-          date: new Date(),
-          read: false
-        },
-        {
-          id: Date.now().toString(),
-          type: 'match_rated' as const,
-          title: 'Nouveau avis',
-          message: 'Julie a noté le match que vous suivez',
-          date: new Date(),
-          read: false
-        }
-      ]
-
-      // 20% de chance d'avoir une nouvelle notification toutes les 30s
-      if (Math.random() < 0.2) {
-        const newNotif = randomNotifications[Math.floor(Math.random() * randomNotifications.length)]
-        setNotifications(prev => [newNotif, ...prev.slice(0, 9)]) // Garder max 10 notifications
-        setUnreadCount(prev => prev + 1)
-      }
-    }, 30000) // Toutes les 30 secondes
-
-    return () => clearInterval(interval)
-  }, [userId])
-
-  return { notifications, unreadCount, setNotifications, setUnreadCount }
+// CSS additionnels pour line-clamp (à ajouter dans globals.css si pas déjà présent)
+const additionalCSS = `
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
+`

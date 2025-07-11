@@ -1,4 +1,3 @@
-// pages/top-matches.tsx - Version avec onglets Top Matchs + Ballon d'Or du Peuple
 import { useState, useEffect } from 'react'
 import { useSession, signOut } from 'next-auth/react'
 import Link from 'next/link'
@@ -25,12 +24,16 @@ import {
   Sparkles,
   MessageCircle,
   Eye,
-  ChevronDown
+  ChevronDown,
+  UserCheck
 } from 'lucide-react'
 import axios from 'axios'
 import Navbar from '../components/Navbar'
 
-// Types pour les matchs (existant)
+// ============================================================================
+// INTERFACES ET TYPES
+// ============================================================================
+
 interface Match {
   id: string
   homeTeam: string
@@ -53,12 +56,11 @@ interface Match {
   }>
 }
 
-// Types pour le Ballon d'Or
 interface BallonOrPlayer {
   id: string
   name: string
-  position?: string
-  team: string
+  positions?: string[]
+  teams: string[]
   sport: string
   avgRating: number
   totalRatings: number
@@ -70,6 +72,7 @@ interface BallonOrPlayer {
     awayTeam: string
     date: string
     competition: string
+    team: string
   }
   recentMatches: Array<{
     matchId: string
@@ -79,43 +82,148 @@ interface BallonOrPlayer {
     awayTeam: string
     date: string
     competition: string
+    team: string
   }>
   ratingHistory: Array<{
     month: string
     avgRating: number
     matchCount: number
   }>
+  teamBreakdown: Array<{
+    team: string
+    avgRating: number
+    matchCount: number
+    ratingCount: number
+  }>
 }
+
+interface CholismoCoach {
+  id: string
+  name: string
+  normalizedName: string
+  teams: string[]
+  sport: string
+  avgRating: number
+  totalRatings: number
+  totalMatches: number
+  bestMatch: {
+    id: string
+    rating: number
+    homeTeam: string
+    awayTeam: string
+    date: string
+    competition: string
+    team: string
+  }
+  recentMatches: Array<{
+    matchId: string
+    rating: number
+    comment?: string
+    homeTeam: string
+    awayTeam: string
+    date: string
+    competition: string
+    team: string
+  }>
+  ratingHistory: Array<{
+    month: string
+    avgRating: number
+    matchCount: number
+  }>
+  teamBreakdown: Array<{
+    team: string
+    avgRating: number
+    matchCount: number
+    ratingCount: number
+  }>
+  tacticalInsights: {
+    strongestTeam: string
+    averageByCompetition: Array<{
+      competition: string
+      avgRating: number
+      matchCount: number
+    }>
+    winRate: number
+  }
+}
+
+// ============================================================================
+// COMPOSANT PRINCIPAL
+// ============================================================================
 
 export default function TopMatchesPage() {
   const { data: session } = useSession()
   
   // État des onglets
-  const [activeTab, setActiveTab] = useState<'matches' | 'ballon-or' | 'mvp'>('matches')
+  const [activeTab, setActiveTab] = useState<'matches' | 'ballon-or' | 'cholismo' | 'driver-fans' | 'mvp'>('matches')
   
-  // État pour les matchs
+  // États pour les matchs
   const [matches, setMatches] = useState<Match[]>([])
   const [matchesLoading, setMatchesLoading] = useState(true)
   const [period, setPeriod] = useState<'all-time' | 'this-year' | 'this-month' | 'this-week'>('all-time')
   const [sortBy, setSortBy] = useState<'rating' | 'popularity' | 'recent'>('rating')
   const [sportFilter, setSportFilter] = useState<'all' | 'FOOTBALL' | 'BASKETBALL' | 'MMA' | 'RUGBY' | 'F1'>('all')
 
-  // État pour le Ballon d'Or
+  // États pour le Ballon d'Or (joueurs uniquement)
   const [players, setPlayers] = useState<BallonOrPlayer[]>([])
   const [playersLoading, setPlayersLoading] = useState(true)
   const [ballonOrPeriod, setBallonOrPeriod] = useState<'all-time' | 'this-year' | 'this-season' | 'last-6-months'>('all-time')
   const [positionFilter, setPositionFilter] = useState<string>('all')
   const [minMatches, setMinMatches] = useState(3)
 
+  // États pour le Cholismo du Peuple (coachs uniquement)
+  const [coaches, setCoaches] = useState<CholismoCoach[]>([])
+  const [coachesLoading, setCoachesLoading] = useState(true)
+  const [cholismoPeriod, setCholismoPeriod] = useState<'all-time' | 'this-year' | 'this-season' | 'last-6-months'>('all-time')
+  const [coachSportFilter, setCoachSportFilter] = useState<'all' | 'FOOTBALL' | 'BASKETBALL' | 'MMA' | 'RUGBY' | 'F1'>('FOOTBALL')
+  const [minCoachMatches, setMinCoachMatches] = useState(3)
+
+  // États pour le Driver of the Fans (pilotes F1 uniquement)
+  const [drivers, setDrivers] = useState<BallonOrPlayer[]>([])
+  const [driversLoading, setDriversLoading] = useState(true)
+  const [driverPeriod, setDriverPeriod] = useState<'all-time' | 'this-year' | 'this-season' | 'last-6-months'>('all-time')
+  const [minDriverRaces, setMinDriverRaces] = useState(3)
+
+  // ============================================================================
+  // EFFECTS
+  // ============================================================================
+
   useEffect(() => {
     if (session) {
-      if (activeTab === 'matches') {
-        fetchTopMatches()
-      } else if (activeTab === 'ballon-or') {
-        fetchBallonOr()
+      switch (activeTab) {
+        case 'matches':
+          fetchTopMatches()
+          break
+        case 'ballon-or':
+          fetchBallonOr()
+          break
+        case 'cholismo':
+          fetchCholismo()
+          break
+        case 'driver-fans':
+          fetchDriverOfTheFans()
+          break
       }
     }
-  }, [session, activeTab, period, sortBy, sportFilter, ballonOrPeriod, positionFilter, minMatches])
+  }, [
+    session, 
+    activeTab, 
+    period, 
+    sortBy, 
+    sportFilter, 
+    ballonOrPeriod, 
+    positionFilter, 
+    minMatches, 
+    cholismoPeriod, 
+    coachSportFilter, 
+    minCoachMatches, 
+    driverPeriod, 
+    minDriverRaces
+  ])
+
+  // ============================================================================
+  // FONCTIONS API
+  // ============================================================================
 
   const fetchTopMatches = async () => {
     try {
@@ -143,11 +251,12 @@ export default function TopMatchesPage() {
     try {
       setPlayersLoading(true)
       const params = new URLSearchParams({
-        sport: sportFilter,
+        sport: 'FOOTBALL', // Football uniquement pour le Ballon d'Or
         position: positionFilter,
         period: ballonOrPeriod,
         minMatches: minMatches.toString(),
-        limit: '100'
+        limit: '100',
+        excludeF1: 'true' // Exclure F1 du Ballon d'Or classique
       })
       
       const response = await axios.get(`/api/ballon-or?${params}`)
@@ -161,6 +270,54 @@ export default function TopMatchesPage() {
       setPlayersLoading(false)
     }
   }
+
+  const fetchCholismo = async () => {
+    try {
+      setCoachesLoading(true)
+      const params = new URLSearchParams({
+        sport: coachSportFilter,
+        period: cholismoPeriod,
+        minMatches: minCoachMatches.toString(),
+        limit: '100'
+      })
+      
+      const response = await axios.get(`/api/cholismo?${params}`)
+      
+      if (response.data.success) {
+        setCoaches(response.data.cholismo)
+      }
+    } catch (error) {
+      console.error('Erreur chargement Cholismo:', error)
+    } finally {
+      setCoachesLoading(false)
+    }
+  }
+
+  const fetchDriverOfTheFans = async () => {
+    try {
+      setDriversLoading(true)
+      const params = new URLSearchParams({
+        sport: 'F1', // F1 uniquement
+        period: driverPeriod,
+        minMatches: minDriverRaces.toString(),
+        limit: '50'
+      })
+      
+      const response = await axios.get(`/api/ballon-or?${params}`)
+      
+      if (response.data.success) {
+        setDrivers(response.data.ballonOr)
+      }
+    } catch (error) {
+      console.error('Erreur chargement Driver of the Fans:', error)
+    } finally {
+      setDriversLoading(false)
+    }
+  }
+
+  // ============================================================================
+  // FONCTIONS UTILITAIRES
+  // ============================================================================
 
   const getSportEmoji = (sport: string) => {
     const emojis = {
@@ -208,6 +365,10 @@ export default function TopMatchesPage() {
     })
   }
 
+  // ============================================================================
+  // RENDU CONDITIONNEL - AUTHENTIFICATION
+  // ============================================================================
+
   if (!session) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-100 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center p-4">
@@ -225,6 +386,10 @@ export default function TopMatchesPage() {
     )
   }
 
+  // ============================================================================
+  // RENDU PRINCIPAL
+  // ============================================================================
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
       <Navbar activeTab="home" />
@@ -238,7 +403,7 @@ export default function TopMatchesPage() {
                 <Trophy className="w-6 h-6" />
               </div>
               <div>
-                <h1 className="text-2xl md:text-3xl font-bold">Hall of Fame</h1>
+                <h1 className="text-2xl md:text-3xl font-bold">Le top du top</h1>
                 <p className="text-indigo-100 text-sm">Les meilleurs du sport selon la communauté</p>
               </div>
             </div>
@@ -246,10 +411,10 @@ export default function TopMatchesPage() {
             {/* Onglets principaux */}
             <div className="flex justify-center mb-6">
               <div className="bg-white/10 backdrop-blur rounded-2xl p-1 border border-white/20">
-                <div className="flex space-x-1">
+                <div className="flex space-x-1 overflow-x-auto scrollbar-hide">
                   <button
                     onClick={() => setActiveTab('matches')}
-                    className={`px-6 py-3 rounded-xl font-medium transition-all duration-200 ${
+                    className={`px-3 py-3 rounded-xl font-medium transition-all duration-200 whitespace-nowrap text-xs md:text-sm ${
                       activeTab === 'matches'
                         ? 'bg-white text-indigo-600 shadow-lg'
                         : 'text-white hover:bg-white/10'
@@ -259,22 +424,42 @@ export default function TopMatchesPage() {
                   </button>
                   <button
                     onClick={() => setActiveTab('ballon-or')}
-                    className={`px-6 py-3 rounded-xl font-medium transition-all duration-200 ${
+                    className={`px-3 py-3 rounded-xl font-medium transition-all duration-200 whitespace-nowrap text-xs md:text-sm ${
                       activeTab === 'ballon-or'
                         ? 'bg-white text-indigo-600 shadow-lg'
                         : 'text-white hover:bg-white/10'
                     }`}
                   >
-                    👑 Ballon d'Or du Peuple
+                    👑 Ballon d'Or
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('cholismo')}
+                    className={`px-3 py-3 rounded-xl font-medium transition-all duration-200 whitespace-nowrap text-xs md:text-sm ${
+                      activeTab === 'cholismo'
+                        ? 'bg-white text-indigo-600 shadow-lg'
+                        : 'text-white hover:bg-white/10'
+                    }`}
+                  >
+                    👨‍💼 Cholismo
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('driver-fans')}
+                    className={`px-3 py-3 rounded-xl font-medium transition-all duration-200 whitespace-nowrap text-xs md:text-sm ${
+                      activeTab === 'driver-fans'
+                        ? 'bg-white text-indigo-600 shadow-lg'
+                        : 'text-white hover:bg-white/10'
+                    }`}
+                  >
+                    🏎️ Driver of the Fans
                   </button>
                   <button
                     onClick={() => setActiveTab('mvp')}
                     disabled
-                    className="px-6 py-3 rounded-xl font-medium text-white/50 cursor-not-allowed relative"
+                    className="px-3 py-3 rounded-xl font-medium text-white/50 cursor-not-allowed relative whitespace-nowrap text-xs md:text-sm"
                   >
-                    🌟 MVP du Peuple
-                    <span className="absolute -top-2 -right-2 bg-yellow-500 text-yellow-900 text-xs px-2 py-1 rounded-full font-bold">
-                      Bientôt
+                    🌟 MVP
+                    <span className="absolute -top-2 -right-2 bg-yellow-500 text-yellow-900 text-xs px-1.5 py-0.5 rounded-full font-bold">
+                      Soon
                     </span>
                   </button>
                 </div>
@@ -284,17 +469,27 @@ export default function TopMatchesPage() {
             {/* Description de l'onglet actif */}
             <div className="max-w-2xl mx-auto">
               {activeTab === 'matches' && (
-                <p className="text-indigo-100">
+                <p className="text-indigo-100 text-sm">
                   📊 Les événements sportifs les mieux notés par la communauté
                 </p>
               )}
               {activeTab === 'ballon-or' && (
-                <p className="text-indigo-100">
-                  👑 Le classement des joueurs basé sur la moyenne de TOUTES leurs performances notées
+                <p className="text-indigo-100 text-sm">
+                  👑 Le classement des meilleurs footballeurs selon leurs performances notées
+                </p>
+              )}
+              {activeTab === 'cholismo' && (
+                <p className="text-indigo-100 text-sm">
+                  👨‍💼 Le classement des meilleurs coachs selon leurs performances tactiques évaluées
+                </p>
+              )}
+              {activeTab === 'driver-fans' && (
+                <p className="text-indigo-100 text-sm">
+                  🏎️ Le classement des pilotes F1 les mieux notés par les fans de course
                 </p>
               )}
               {activeTab === 'mvp' && (
-                <p className="text-indigo-100">
+                <p className="text-indigo-100 text-sm">
                   🌟 Les joueurs les plus influents dans les matchs décisifs (bientôt disponible)
                 </p>
               )}
@@ -328,12 +523,42 @@ export default function TopMatchesPage() {
             loading={playersLoading}
             ballonOrPeriod={ballonOrPeriod}
             setBallonOrPeriod={setBallonOrPeriod}
-            sportFilter={sportFilter}
-            setSportFilter={setSportFilter}
             positionFilter={positionFilter}
             setPositionFilter={setPositionFilter}
             minMatches={minMatches}
             setMinMatches={setMinMatches}
+            formatDate={formatDate}
+            getRankIcon={getRankIcon}
+            getRankBgColor={getRankBgColor}
+            getSportEmoji={getSportEmoji}
+          />
+        )}
+
+        {activeTab === 'cholismo' && (
+          <CholismoContent
+            coaches={coaches}
+            loading={coachesLoading}
+            cholismoPeriod={cholismoPeriod}
+            setCholismoPeriod={setCholismoPeriod}
+            coachSportFilter={coachSportFilter}
+            setCoachSportFilter={setCoachSportFilter}
+            minCoachMatches={minCoachMatches}
+            setMinCoachMatches={setMinCoachMatches}
+            formatDate={formatDate}
+            getRankIcon={getRankIcon}
+            getRankBgColor={getRankBgColor}
+            getSportEmoji={getSportEmoji}
+          />
+        )}
+
+        {activeTab === 'driver-fans' && (
+          <DriverOfTheFansContent
+            drivers={drivers}
+            loading={driversLoading}
+            driverPeriod={driverPeriod}
+            setDriverPeriod={setDriverPeriod}
+            minDriverRaces={minDriverRaces}
+            setMinDriverRaces={setMinDriverRaces}
             formatDate={formatDate}
             getRankIcon={getRankIcon}
             getRankBgColor={getRankBgColor}
@@ -365,7 +590,10 @@ export default function TopMatchesPage() {
   )
 }
 
-// Composant pour l'onglet Top Matches
+// ============================================================================
+// COMPOSANTS ENFANTS
+// ============================================================================
+
 function TopMatchesContent({ 
   matches, 
   loading, 
@@ -636,14 +864,11 @@ function TopMatchesContent({
   )
 }
 
-// Composant pour l'onglet Ballon d'Or
 function BallonOrContent({
   players,
   loading,
   ballonOrPeriod,
   setBallonOrPeriod,
-  sportFilter,
-  setSportFilter,
   positionFilter,
   setPositionFilter,
   minMatches,
@@ -673,30 +898,21 @@ function BallonOrContent({
 
   return (
     <>
-      {/* Filters Ballon d'Or */}
+      {/* Filters Ballon d'Or - FOOTBALL UNIQUEMENT */}
       <div className="mb-6">
-        <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-slate-700">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* Sport Filter */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                🏆 Sport
-              </label>
-              <select
-                value={sportFilter}
-                onChange={(e) => setSportFilter(e.target.value as any)}
-                className="w-full p-3 bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
-              >
-                <option value="all">🌟 Tous les sports</option>
-                <option value="FOOTBALL">⚽ Football</option>
-                <option value="BASKETBALL">🏀 Basketball</option>
-                <option value="MMA">🥊 MMA</option>
-                <option value="RUGBY">🏉 Rugby</option>
-                <option value="F1">🏎️ Formule 1</option>
-              </select>
+        <div className="bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-slate-800 dark:to-slate-700 rounded-2xl p-6 shadow-lg border border-yellow-200 dark:border-slate-600">
+          <div className="flex items-center space-x-3 mb-6">
+            <div className="w-12 h-12 bg-gradient-to-br from-yellow-500 to-amber-600 rounded-xl flex items-center justify-center">
+              <Crown className="w-6 h-6 text-white" />
             </div>
-
-            {/* Position Filter */}
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">Filtres Ballon d'Or</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">⚽ Football uniquement - Le prestige mondial</p>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Position Filter - FOOTBALL POSITIONS UNIQUEMENT */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
                 📍 Position
@@ -704,26 +920,13 @@ function BallonOrContent({
               <select
                 value={positionFilter}
                 onChange={(e) => setPositionFilter(e.target.value)}
-                className="w-full p-3 bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                className="w-full p-3 bg-white dark:bg-slate-700 border border-yellow-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
               >
                 <option value="all">Toutes positions</option>
-                {sportFilter === 'FOOTBALL' && (
-                  <>
-                    <option value="GK">Gardien</option>
-                    <option value="DEF">Défenseur</option>
-                    <option value="MID">Milieu</option>
-                    <option value="FWD">Attaquant</option>
-                  </>
-                )}
-                {sportFilter === 'BASKETBALL' && (
-                  <>
-                    <option value="PG">Meneur</option>
-                    <option value="SG">Arrière</option>
-                    <option value="SF">Ailier</option>
-                    <option value="PF">Ailier-Fort</option>
-                    <option value="C">Pivot</option>
-                  </>
-                )}
+                <option value="GK">🥅 Gardien</option>
+                <option value="DEF">🛡️ Défenseur</option>
+                <option value="MID">⚙️ Milieu</option>
+                <option value="FWD">⚽ Attaquant</option>
               </select>
             </div>
 
@@ -735,7 +938,7 @@ function BallonOrContent({
               <select
                 value={ballonOrPeriod}
                 onChange={(e) => setBallonOrPeriod(e.target.value as any)}
-                className="w-full p-3 bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                className="w-full p-3 bg-white dark:bg-slate-700 border border-yellow-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
               >
                 <option value="all-time">🏆 Tous temps</option>
                 <option value="this-year">📅 Cette année</option>
@@ -752,7 +955,7 @@ function BallonOrContent({
               <select
                 value={minMatches}
                 onChange={(e) => setMinMatches(parseInt(e.target.value))}
-                className="w-full p-3 bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                className="w-full p-3 bg-white dark:bg-slate-700 border border-yellow-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
               >
                 <option value={1}>1+ match</option>
                 <option value={3}>3+ matchs</option>
@@ -789,7 +992,6 @@ function BallonOrContent({
           <p className="text-gray-600 dark:text-gray-400 mb-8">Aucun joueur ne correspond à vos critères</p>
           <button
             onClick={() => {
-              setSportFilter('all')
               setPositionFilter('all')
               setBallonOrPeriod('all-time')
               setMinMatches(1)
@@ -801,54 +1003,50 @@ function BallonOrContent({
         </div>
       ) : (
         <div>
-          {/* Podium Top 3 Joueurs */}
-          {players.length >= 3 && (
-            <div className="mb-12">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-8 text-center flex items-center justify-center space-x-2">
-                <Crown className="w-7 h-7 text-yellow-500" />
-                <span>Podium du Ballon d'Or</span>
-              </h2>
-              
+          {/* Podium Top 3 Joueurs - TOUJOURS AFFICHÉ */}
+          <div className="mb-12">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-8 text-center flex items-center justify-center space-x-2">
+              <Crown className="w-7 h-7 text-yellow-500" />
+              <span>Podium du Ballon d'Or</span>
+            </h2>
+            
+            {players.length >= 3 ? (
               <div className="relative max-w-5xl mx-auto">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {players.slice(0, 3).map((player: any, index: number) => (
                     <div 
                       key={player.id}
                       className={`${
-                        index === 0 ? 'md:order-2' : // 1er au centre
-                        index === 1 ? 'md:order-1' : // 2ème à gauche  
-                        'md:order-3'                  // 3ème à droite
+                        index === 0 ? 'md:order-2' : 
+                        index === 1 ? 'md:order-1' : 
+                        'md:order-3'
                       }`}
                     >
                       <div className={`relative group ${
-                        index === 0 ? '' : // 1er : normal
-                        index === 1 ? 'md:mt-8' : // 2ème : 8 plus bas
-                        'md:mt-16' // 3ème : 16 plus bas
+                        index === 0 ? '' : 
+                        index === 1 ? 'md:mt-8' : 
+                        'md:mt-16'
                       }`}>
-                        {/* Carte joueur */}
                         <div 
                           className={`relative overflow-hidden rounded-2xl p-6 text-white shadow-2xl transform transition-all duration-300 hover:scale-105 cursor-pointer ${getRankBgColor(index)}`}
                         >
-                          {/* Badge position */}
                           <div className="absolute top-4 right-4">
                             <div className="w-12 h-12 bg-black/20 backdrop-blur rounded-full flex items-center justify-center border-2 border-white/30">
                               {getRankIcon(index)}
                             </div>
                           </div>
 
-                          {/* Sport */}
                           <div className="absolute top-4 left-4">
                             <div className="w-10 h-10 bg-black/20 backdrop-blur rounded-full flex items-center justify-center text-xl border border-white/30">
-                              {getSportEmoji(player.sport)}
+                              ⚽
                             </div>
                           </div>
 
-                          {/* Infos joueur */}
                           <div className="mt-12 mb-6 text-center">
                             <h3 className="text-xl font-bold mb-2 drop-shadow-lg">{player.name}</h3>
                             <div className="space-y-1">
                               <p className="text-sm opacity-90 bg-black/20 inline-block px-3 py-1 rounded-full">
-                                {player.position || 'Joueur'} • {player.team}
+                                {(player.positions && player.positions.length > 0 ? player.positions.join('/') : 'Joueur')} • {player.teams.join('/')}
                               </p>
                               <p className="text-xs opacity-75">
                                 {player.totalMatches} match{player.totalMatches > 1 ? 's' : ''} • {player.totalRatings} note{player.totalRatings > 1 ? 's' : ''}
@@ -856,7 +1054,6 @@ function BallonOrContent({
                             </div>
                           </div>
 
-                          {/* Note moyenne */}
                           <div className="text-center">
                             <div className="flex items-center justify-center space-x-2 mb-2">
                               <Star className="w-6 h-6 fill-current drop-shadow-lg" />
@@ -867,12 +1064,8 @@ function BallonOrContent({
                               {getRatingLabel(player.avgRating)}
                             </p>
                           </div>
-
-                          {/* Effet brillance */}
-                          <div className="absolute inset-0 bg-gradient-to-t from-transparent via-white/5 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl"></div>
                         </div>
                         
-                        {/* Socle */}
                         <div className={`relative mx-auto w-32 rounded-t-2xl ${
                           index === 0 ? 'h-24 bg-gradient-to-t from-yellow-600 to-yellow-400' :
                           index === 1 ? 'h-20 bg-gradient-to-t from-gray-600 to-gray-400' :
@@ -887,15 +1080,23 @@ function BallonOrContent({
                               {index + 1}
                             </span>
                           </div>
-                          <div className="absolute inset-0 bg-gradient-to-t from-transparent to-white/20 rounded-t-2xl"></div>
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
-            </div>
-          )}
+            ) : (
+              <div className="text-center py-12 bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-slate-800 dark:to-slate-700 rounded-2xl border border-yellow-200 dark:border-slate-600">
+                <div className="w-20 h-20 bg-yellow-100 dark:bg-yellow-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Crown className="w-10 h-10 text-yellow-500" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Podium en attente</h3>
+                <p className="text-gray-600 dark:text-gray-400 mb-4">Pas encore assez de joueurs pour le podium</p>
+                <p className="text-sm text-yellow-600 dark:text-yellow-400">Ajustez les filtres pour voir plus de candidats</p>
+              </div>
+            )}
+          </div>
 
           {/* Classement complet */}
           <div>
@@ -927,7 +1128,450 @@ function BallonOrContent({
   )
 }
 
-// Composant pour une carte joueur dans le Ballon d'Or avec fusion d'équipes
+function CholismoContent({
+  coaches,
+  loading,
+  cholismoPeriod,
+  setCholismoPeriod,
+  coachSportFilter,
+  setCoachSportFilter,
+  minCoachMatches,
+  setMinCoachMatches,
+  formatDate,
+  getRankIcon,
+  getRankBgColor,
+  getSportEmoji
+}: any) {
+  const getRatingColor = (rating: number) => {
+    if (rating >= 9) return 'text-emerald-600'
+    if (rating >= 8) return 'text-green-600'
+    if (rating >= 7) return 'text-blue-600'
+    if (rating >= 6) return 'text-yellow-600'
+    return 'text-red-600'
+  }
+
+  const getRatingLabel = (rating: number) => {
+    if (rating >= 9.5) return 'GÉNIE TACTIQUE'
+    if (rating >= 9) return 'MAÎTRE STRATÈGE'
+    if (rating >= 8.5) return 'TACTIQUE EXCELLENTE'
+    if (rating >= 8) return 'TRÈS BON COACH'
+    if (rating >= 7.5) return 'BON STRATÈGE'
+    if (rating >= 7) return 'COACH CORRECT'
+    return 'EN PROGRESSION'
+  }
+
+  return (
+    <>
+      {/* Filters Cholismo */}
+      <div className="mb-6">
+        <div className="bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-slate-800 dark:to-slate-700 rounded-2xl p-6 shadow-lg border border-purple-200 dark:border-slate-600">
+          <div className="flex items-center space-x-3 mb-6">
+            <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center">
+              <UserCheck className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">Filtres Cholismo du Peuple</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Classement des meilleurs stratèges</p>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Sport Filter */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                🏆 Sport
+              </label>
+              <select
+                value={coachSportFilter}
+                onChange={(e) => setCoachSportFilter(e.target.value as any)}
+                className="w-full p-3 bg-white dark:bg-slate-700 border border-purple-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              >
+                <option value="all">🌟 Tous les sports</option>
+                <option value="FOOTBALL">⚽ Football</option>
+                <option value="BASKETBALL">🏀 Basketball</option>
+                <option value="MMA">🥊 MMA</option>
+                <option value="RUGBY">🏉 Rugby</option>
+              </select>
+            </div>
+
+            {/* Period Filter */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                📅 Période
+              </label>
+              <select
+                value={cholismoPeriod}
+                onChange={(e) => setCholismoPeriod(e.target.value as any)}
+                className="w-full p-3 bg-white dark:bg-slate-700 border border-purple-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              >
+                <option value="all-time">🏆 Tous temps</option>
+                <option value="this-year">📅 Cette année</option>
+                <option value="this-season">⚽ Cette saison</option>
+                <option value="last-6-months">📊 6 derniers mois</option>
+              </select>
+            </div>
+
+            {/* Min Matches Filter */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                🎯 Matchs minimum
+              </label>
+              <select
+                value={minCoachMatches}
+                onChange={(e) => setMinCoachMatches(parseInt(e.target.value))}
+                className="w-full p-3 bg-white dark:bg-slate-700 border border-purple-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              >
+                <option value={1}>1+ match</option>
+                <option value={3}>3+ matchs</option>
+                <option value={5}>5+ matchs</option>
+                <option value={10}>10+ matchs</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Contenu similaire au Ballon d'Or mais pour les coachs */}
+      {loading ? (
+        <div className="space-y-6">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm animate-pulse">
+              <div className="flex items-center space-x-4 mb-4">
+                <div className="w-12 h-12 bg-gray-200 dark:bg-slate-700 rounded-xl"></div>
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-1/3"></div>
+                  <div className="h-6 bg-gray-200 dark:bg-slate-700 rounded w-1/2"></div>
+                </div>
+                <div className="w-16 h-8 bg-gray-200 dark:bg-slate-700 rounded"></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : coaches.length === 0 ? (
+        <div className="text-center py-16 bg-white dark:bg-slate-800 rounded-2xl shadow-sm">
+          <div className="w-24 h-24 bg-purple-100 dark:bg-purple-900/20 rounded-full flex items-center justify-center mx-auto mb-6">
+            <UserCheck className="w-12 h-12 text-purple-500 dark:text-purple-400" />
+          </div>
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">Aucun coach trouvé</h3>
+          <p className="text-gray-600 dark:text-gray-400 mb-8">Aucun coach ne correspond à vos critères</p>
+          <button
+            onClick={() => {
+              setCoachSportFilter('FOOTBALL')
+              setCholismoPeriod('all-time')
+              setMinCoachMatches(1)
+            }}
+            className="btn-mobile-primary"
+          >
+            Réinitialiser les filtres
+          </button>
+        </div>
+      ) : (
+        <div>
+          <p className="text-center text-gray-600 dark:text-gray-400 mb-8">
+            👨‍💼 {coaches.length} coachs trouvés - Le Cholismo du Peuple !
+          </p>
+          
+          {/* Liste des coachs */}
+          <div className="space-y-4">
+            {coaches.map((coach: any, index: number) => (
+              <div key={coach.id} className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-slate-700">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold ${getRankBgColor(index)}`}>
+                      {index < 3 ? getRankIcon(index) : `#${index + 1}`}
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-white">{coach.name}</h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        👨‍💼 Coach • {coach.teams.join(', ')} • {coach.totalMatches} match{coach.totalMatches > 1 ? 's' : ''}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="text-right">
+                    <div className={`text-2xl font-bold ${getRatingColor(coach.avgRating)}`}>
+                      {coach.avgRating.toFixed(2)}
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      {coach.totalRatings} éval{coach.totalRatings > 1 ? 's' : ''}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
+function DriverOfTheFansContent({
+  drivers,
+  loading,
+  driverPeriod,
+  setDriverPeriod,
+  minDriverRaces,
+  setMinDriverRaces,
+  formatDate,
+  getRankIcon,
+  getRankBgColor,
+  getSportEmoji
+}: any) {
+  const getRatingColor = (rating: number) => {
+    if (rating >= 9) return 'text-emerald-600'
+    if (rating >= 8) return 'text-green-600'
+    if (rating >= 7) return 'text-blue-600'
+    if (rating >= 6) return 'text-yellow-600'
+    return 'text-red-600'
+  }
+
+  const getRatingLabel = (rating: number) => {
+    if (rating >= 9.5) return 'LÉGENDE F1'
+    if (rating >= 9) return 'CHAMPION WORLD'
+    if (rating >= 8.5) return 'PILOTE EXCEPTIONNEL'
+    if (rating >= 8) return 'TRÈS BON PILOTE'
+    if (rating >= 7.5) return 'BON PILOTE'
+    if (rating >= 7) return 'PILOTE CORRECT'
+    return 'EN PROGRESSION'
+  }
+
+  return (
+    <>
+      {/* Filters Driver of the Fans */}
+      <div className="mb-6">
+        <div className="bg-gradient-to-br from-red-50 to-orange-50 dark:from-slate-800 dark:to-slate-700 rounded-2xl p-6 shadow-lg border border-red-200 dark:border-slate-600">
+          <div className="flex items-center space-x-3 mb-6">
+            <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-orange-600 rounded-xl flex items-center justify-center">
+              <span className="text-white text-xl">🏎️</span>
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">Filtres Driver of the Fans</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">🏁 Formule 1 uniquement - Les rois de la vitesse</p>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Period Filter */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                📅 Période
+              </label>
+              <select
+                value={driverPeriod}
+                onChange={(e) => setDriverPeriod(e.target.value as any)}
+                className="w-full p-3 bg-white dark:bg-slate-700 border border-red-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent"
+              >
+                <option value="all-time">🏆 Tous temps</option>
+                <option value="this-year">📅 Cette année</option>
+                <option value="this-season">🏁 Cette saison</option>
+                <option value="last-6-months">📊 6 derniers mois</option>
+              </select>
+            </div>
+
+            {/* Min Races Filter */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                🏁 Courses minimum
+              </label>
+              <select
+                value={minDriverRaces}
+                onChange={(e) => setMinDriverRaces(parseInt(e.target.value))}
+                className="w-full p-3 bg-white dark:bg-slate-700 border border-red-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent"
+              >
+                <option value={1}>1+ course</option>
+                <option value={3}>3+ courses</option>
+                <option value={5}>5+ courses</option>
+                <option value={10}>10+ courses</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Loading et contenu Driver of the Fans */}
+      {loading ? (
+        <div className="space-y-6">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm animate-pulse">
+              <div className="flex items-center space-x-4 mb-4">
+                <div className="w-12 h-12 bg-gray-200 dark:bg-slate-700 rounded-xl"></div>
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-1/3"></div>
+                  <div className="h-6 bg-gray-200 dark:bg-slate-700 rounded w-1/2"></div>
+                </div>
+                <div className="w-16 h-8 bg-gray-200 dark:bg-slate-700 rounded"></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : drivers.length === 0 ? (
+        <div className="text-center py-16 bg-white dark:bg-slate-800 rounded-2xl shadow-sm">
+          <div className="w-24 h-24 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-6">
+            <span className="text-4xl">🏎️</span>
+          </div>
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">Aucun pilote trouvé</h3>
+          <p className="text-gray-600 dark:text-gray-400 mb-8">Aucun pilote ne correspond à vos critères</p>
+          <button
+            onClick={() => {
+              setDriverPeriod('all-time')
+              setMinDriverRaces(1)
+            }}
+            className="btn-mobile-primary"
+          >
+            Réinitialiser les filtres
+          </button>
+        </div>
+      ) : (
+        <div>
+          {/* Podium Top 3 Pilotes - TOUJOURS AFFICHÉ */}
+          <div className="mb-12">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-8 text-center flex items-center justify-center space-x-2">
+              <span className="text-3xl">🏎️</span>
+              <span>Podium des Pilotes</span>
+            </h2>
+            
+            {drivers.length >= 3 ? (
+              <div className="relative max-w-5xl mx-auto">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {drivers.slice(0, 3).map((driver: any, index: number) => (
+                    <div 
+                      key={driver.id}
+                      className={`${
+                        index === 0 ? 'md:order-2' : 
+                        index === 1 ? 'md:order-1' : 
+                        'md:order-3'
+                      }`}
+                    >
+                      <div className={`relative group ${
+                        index === 0 ? '' : 
+                        index === 1 ? 'md:mt-8' : 
+                        'md:mt-16'
+                      }`}>
+                        <div 
+                          className={`relative overflow-hidden rounded-2xl p-6 text-white shadow-2xl transform transition-all duration-300 hover:scale-105 cursor-pointer ${getRankBgColor(index)}`}
+                        >
+                          <div className="absolute top-4 right-4">
+                            <div className="w-12 h-12 bg-black/20 backdrop-blur rounded-full flex items-center justify-center border-2 border-white/30">
+                              {getRankIcon(index)}
+                            </div>
+                          </div>
+
+                          <div className="absolute top-4 left-4">
+                            <div className="w-10 h-10 bg-black/20 backdrop-blur rounded-full flex items-center justify-center text-xl border border-white/30">
+                              🏎️
+                            </div>
+                          </div>
+
+                          <div className="absolute top-16 left-4">
+                            <div className="bg-black/30 backdrop-blur px-2 py-1 rounded-full border border-white/30">
+                              <span className="text-xs font-bold">🏁 PILOTE</span>
+                            </div>
+                          </div>
+
+                          <div className="mt-16 mb-6 text-center">
+                            <h3 className="text-xl font-bold mb-2 drop-shadow-lg">{driver.name}</h3>
+                            <div className="space-y-1">
+                              <p className="text-sm opacity-90 bg-black/20 inline-block px-3 py-1 rounded-full">
+                                Pilote • {driver.teams.join('/')}
+                              </p>
+                              <p className="text-xs opacity-75">
+                                {driver.totalMatches} course{driver.totalMatches > 1 ? 's' : ''} • {driver.totalRatings} note{driver.totalRatings > 1 ? 's' : ''}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="text-center">
+                            <div className="flex items-center justify-center space-x-2 mb-2">
+                              <span className="text-2xl">🏎️</span>
+                              <span className="text-3xl font-black drop-shadow-lg">{driver.avgRating.toFixed(2)}</span>
+                              <span className="text-lg opacity-90">/10</span>
+                            </div>
+                            <p className="text-sm font-semibold bg-black/20 inline-block px-3 py-1 rounded-full">
+                              {getRatingLabel(driver.avgRating)}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div className={`relative mx-auto w-32 rounded-t-2xl ${
+                          index === 0 ? 'h-24 bg-gradient-to-t from-yellow-600 to-yellow-400' :
+                          index === 1 ? 'h-20 bg-gradient-to-t from-gray-600 to-gray-400' :
+                          'h-16 bg-gradient-to-t from-orange-700 to-orange-500'
+                        }`}>
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <span className={`font-black text-white drop-shadow-lg ${
+                              index === 0 ? 'text-5xl' :
+                              index === 1 ? 'text-4xl' :
+                              'text-3xl'
+                            }`}>
+                              {index + 1}
+                            </span>
+                          </div>
+                          <div className="absolute bottom-0 left-0 right-0 h-2 bg-gradient-to-r from-transparent via-white/30 to-transparent"></div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-12 bg-gradient-to-br from-red-50 to-orange-50 dark:from-slate-800 dark:to-slate-700 rounded-2xl border border-red-200 dark:border-slate-600">
+                <div className="w-20 h-20 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-4xl">🏎️</span>
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Podium en attente</h3>
+                <p className="text-gray-600 dark:text-gray-400 mb-4">Pas encore assez de pilotes pour le podium</p>
+                <p className="text-sm text-red-600 dark:text-red-400">Ajustez les filtres pour voir plus de candidats</p>
+              </div>
+            )}
+          </div>
+
+          {/* Classement complet des pilotes */}
+          <div>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center space-x-2">
+              <span className="text-2xl">🏁</span>
+              <span>Classement Complet Driver of the Fans</span>
+            </h2>
+            
+            <div className="space-y-4">
+              {drivers.map((driver: any, index: number) => (
+                <div key={driver.id} className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-slate-700">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold ${getRankBgColor(index)}`}>
+                        {index < 3 ? getRankIcon(index) : `#${index + 1}`}
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-white">{driver.name}</h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          🏎️ Pilote F1 • {driver.teams.join(', ')} • {driver.totalMatches} course{driver.totalMatches > 1 ? 's' : ''}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="text-right">
+                      <div className={`text-2xl font-bold ${getRatingColor(driver.avgRating)}`}>
+                        {driver.avgRating.toFixed(2)}
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        {driver.totalRatings} note{driver.totalRatings > 1 ? 's' : ''}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
+// ============================================================================
+// COMPOSANT CARTE JOUEUR BALLON D'OR
+// ============================================================================
+
 function BallonOrPlayerCard({ 
   player, 
   rank, 
@@ -941,7 +1585,6 @@ function BallonOrPlayerCard({
 }: any) {
   const [showDetails, setShowDetails] = useState(false)
 
-  // Affichage intelligent des équipes
   const getTeamsDisplay = (teams: string[]) => {
     if (teams.length === 1) {
       return teams[0]
@@ -952,7 +1595,6 @@ function BallonOrPlayerCard({
     return `${teams.slice(0, 2).join(', ')} +${teams.length - 2}`
   }
 
-  // Couleur pour les joueurs multi-équipes
   const getPlayerBadgeColor = (teams: string[]) => {
     if (teams.length > 1) {
       return 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
@@ -967,13 +1609,11 @@ function BallonOrPlayerCard({
         : 'border-gray-200 dark:border-slate-700 hover:shadow-md'
     }`}>
       <div className="p-6">
-        {/* Header avec rang et infos principales */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-4">
             <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold ${getRankBgColor(rank - 1)} relative`}>
               {rank <= 3 ? getRankIcon(rank - 1) : `#${rank}`}
               
-              {/* Badge multi-équipes */}
               {player.teams && player.teams.length > 1 && (
                 <div className="absolute -top-1 -right-1 w-4 h-4 bg-purple-500 rounded-full border-2 border-white flex items-center justify-center">
                   <span className="text-xs font-bold text-white">{player.teams.length}</span>
@@ -982,15 +1622,15 @@ function BallonOrPlayerCard({
             </div>
             
             <div className="flex items-center space-x-3">
-              <span className="text-xl">{getSportEmoji(player.sport)}</span>
+              <span className="text-xl">⚽</span>
               <div>
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white">{player.name}</h3>
                 <div className="flex items-center space-x-2">
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {(player.positions && player.positions.length > 0 ? player.positions.join('/') : player.position) || 'Joueur'}
+                    {(player.positions && player.positions.length > 0 ? player.positions.join('/') : 'Joueur')}
                   </p>
-                  <div className={`px-2 py-1 rounded-full text-xs font-medium ${getPlayerBadgeColor(player.teams || [player.team])}`}>
-                    {getTeamsDisplay(player.teams || [player.team])}
+                  <div className={`px-2 py-1 rounded-full text-xs font-medium ${getPlayerBadgeColor(player.teams || [])}`}>
+                    {getTeamsDisplay(player.teams || [])}
                   </div>
                   {player.teams && player.teams.length > 1 && (
                     <div className="flex items-center space-x-1 text-xs text-purple-600 dark:text-purple-400">
@@ -1003,7 +1643,6 @@ function BallonOrPlayerCard({
             </div>
           </div>
           
-          {/* Note moyenne */}
           <div className="text-right">
             <div className={`text-2xl font-bold ${getRatingColor(player.avgRating)}`}>
               {player.avgRating.toFixed(2)}
@@ -1014,7 +1653,6 @@ function BallonOrPlayerCard({
           </div>
         </div>
 
-        {/* Stats principales avec info fusion */}
         <div className="grid grid-cols-3 gap-4 mb-4">
           <div className="text-center p-3 bg-gray-50 dark:bg-slate-700 rounded-xl">
             <div className="text-lg font-bold text-gray-900 dark:text-white">{player.totalMatches}</div>
@@ -1032,33 +1670,6 @@ function BallonOrPlayerCard({
           </div>
         </div>
 
-        {/* Répartition par équipe (nouveau) */}
-        {player.teams && player.teams.length > 1 && player.teamBreakdown && (
-          <div className="mb-4">
-            <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center space-x-2">
-              <span>📊 Performance par équipe</span>
-            </h4>
-            <div className="grid grid-cols-2 gap-2">
-              {player.teamBreakdown.slice(0, 4).map((teamStats: any, index: number) => (
-                <div key={index} className="bg-gray-50 dark:bg-slate-700 rounded-lg p-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate">
-                      {teamStats.team}
-                    </span>
-                    <span className={`text-sm font-bold ${getRatingColor(teamStats.avgRating)}`}>
-                      {teamStats.avgRating.toFixed(1)}
-                    </span>
-                  </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">
-                    {teamStats.matchCount} match{teamStats.matchCount > 1 ? 's' : ''}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Toggle détails */}
         <button
           onClick={() => setShowDetails(!showDetails)}
           className="w-full flex items-center justify-center space-x-2 p-3 bg-gray-50 dark:bg-slate-700 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors"
@@ -1069,10 +1680,8 @@ function BallonOrPlayerCard({
           <ChevronRight className={`w-4 h-4 text-gray-500 transition-transform ${showDetails ? 'rotate-90' : ''}`} />
         </button>
 
-        {/* Détails expandables */}
         {showDetails && (
           <div className="mt-4 pt-4 border-t border-gray-200 dark:border-slate-600 space-y-4">
-            {/* Meilleur match avec équipe */}
             <div>
               <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center space-x-2">
                 <Trophy className="w-4 h-4 text-yellow-500" />
@@ -1100,151 +1709,6 @@ function BallonOrPlayerCard({
                   </div>
                   <div className="text-2xl font-bold text-yellow-600">
                     {player.bestMatch.rating}/10
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Matchs récents avec équipes */}
-            {player.recentMatches && player.recentMatches.length > 0 && (
-              <div>
-                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center space-x-2">
-                  <Clock className="w-4 h-4 text-blue-500" />
-                  <span>Derniers matchs</span>
-                </h4>
-                <div className="space-y-2">
-                  {player.recentMatches.slice(0, 3).map((match: any, index: number) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-700 rounded-lg">
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">
-                          {match.homeTeam} vs {match.awayTeam}
-                        </p>
-                        <div className="flex items-center space-x-2 text-xs text-gray-600 dark:text-gray-400">
-                          <span>{formatDate(match.date)}</span>
-                          <span>•</span>
-                          <span>{match.competition}</span>
-                          {match.team && (
-                            <>
-                              <span>•</span>
-                              <span className="font-medium text-purple-600 dark:text-purple-400">
-                                {match.team}
-                              </span>
-                            </>
-                          )}
-                        </div>
-                        {match.comment && (
-                          <p className="text-xs text-gray-500 dark:text-gray-500 italic mt-1">
-                            "{match.comment.substring(0, 60)}..."
-                          </p>
-                        )}
-                      </div>
-                      <div className={`text-lg font-bold ${getRatingColor(match.rating)} ml-3`}>
-                        {match.rating}/10
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Répartition complète par équipe */}
-            {player.teams && player.teams.length > 1 && player.teamBreakdown && (
-              <div>
-                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center space-x-2">
-                  <BarChart3 className="w-4 h-4 text-purple-500" />
-                  <span>Statistiques par équipe</span>
-                </h4>
-                <div className="space-y-2">
-                  {player.teamBreakdown.map((teamStats: any, index: number) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-700 rounded-lg">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2">
-                          <span className="font-medium text-gray-900 dark:text-white">
-                            {teamStats.team}
-                          </span>
-                          {index === 0 && (
-                            <span className="bg-purple-100 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 text-xs px-2 py-1 rounded-full font-medium">
-                              Meilleure
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-xs text-gray-600 dark:text-gray-400">
-                          {teamStats.matchCount} match{teamStats.matchCount > 1 ? 's' : ''} • {teamStats.ratingCount} note{teamStats.ratingCount > 1 ? 's' : ''}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className={`text-lg font-bold ${getRatingColor(teamStats.avgRating)}`}>
-                          {teamStats.avgRating.toFixed(2)}
-                        </div>
-                        
-                        {/* Barre de progression comparative */}
-                        <div className="w-16 bg-gray-200 dark:bg-slate-600 rounded-full h-1 mt-1">
-                          <div 
-                            className={`h-1 rounded-full transition-all duration-500 ${
-                              teamStats.avgRating >= 8 ? 'bg-green-500' :
-                              teamStats.avgRating >= 7 ? 'bg-blue-500' :
-                              teamStats.avgRating >= 6 ? 'bg-yellow-500' :
-                              'bg-red-500'
-                            }`}
-                            style={{ width: `${(teamStats.avgRating / 10) * 100}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                
-                {/* Insight sur les équipes */}
-                <div className="mt-3 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
-                  <div className="flex items-start space-x-2">
-                    <span className="text-purple-500 text-sm">💡</span>
-                    <div className="text-xs text-purple-700 dark:text-purple-300">
-                      <span className="font-semibold">Fusion intelligente :</span> Ce joueur a été noté avec {player.teams.length} équipe{player.teams.length > 1 ? 's' : ''} différente{player.teams.length > 1 ? 's' : ''}.
-                      {player.teamBreakdown.length > 1 && (
-                        <span> Sa meilleure performance est avec {player.teamBreakdown[0].team} ({player.teamBreakdown[0].avgRating.toFixed(1)}/10).</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Évolution des notes */}
-            {player.ratingHistory && player.ratingHistory.length > 0 && (
-              <div>
-                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center space-x-2">
-                  <TrendingUp className="w-4 h-4 text-green-500" />
-                  <span>Évolution (derniers mois)</span>
-                </h4>
-                <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
-                  {player.ratingHistory.slice(-4).map((period: any) => (
-                    <div key={period.month} className="text-center p-2 bg-gray-50 dark:bg-slate-700 rounded-lg">
-                      <div className={`text-sm font-bold ${getRatingColor(period.avgRating)}`}>
-                        {period.avgRating.toFixed(1)}
-                      </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
-                        {period.month.split('-')[1]}/{period.month.split('-')[0].slice(2)}
-                      </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
-                        {period.matchCount}m
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Info technique sur la fusion */}
-            <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-              <div className="flex items-start space-x-2">
-                <span className="text-blue-500 text-sm">🔗</span>
-                <div className="text-xs text-blue-700 dark:text-blue-300">
-                  <span className="font-semibold">Données fusionnées :</span>
-                  <div className="mt-1 space-y-1">
-                    <div>• <span className="font-medium">{player.totalRatings} notes</span> collectées à travers <span className="font-medium">{player.totalMatches} matchs</span></div>
-                    <div>• Équipes : <span className="font-medium">{(player.teams || [player.team]).join(', ')}</span></div>
-                    <div>• Position{(player.positions || [player.position]).length > 1 ? 's' : ''} : <span className="font-medium">{(player.positions || [player.position]).join(', ') || 'Non définie'}</span></div>
-                    <div>• Moyenne globale calculée sur toutes les performances</div>
                   </div>
                 </div>
               </div>

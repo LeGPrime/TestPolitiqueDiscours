@@ -1,4 +1,4 @@
-// pages/api/ballon-or.ts - Version avec fusion intelligente des joueurs
+// pages/api/ballon-or.ts - Version complète avec support F1 et exclusion coachs
 import { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '../../lib/prisma'
 
@@ -56,17 +56,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       minMatches = '3',
       limit = '50',
       period = 'all-time',
-      excludeF1 = 'false' // 🆕 Paramètre pour exclure F1
+      excludeF1 = 'false'
     } = req.query
 
-    console.log(`🏆 Calcul Ballon d'Or avec fusion joueurs - Sport: ${sport}, Min matchs: ${minMatches}`)
+    console.log(`🏆 Calcul Ballon d'Or/Driver - Sport: ${sport}, Min matchs: ${minMatches}`)
 
     // 1. Construire les filtres
     let sportFilter = {}
     if (sport !== 'all') {
       sportFilter = { sport: sport.toString().toUpperCase() }
     } else if (excludeF1 === 'true') {
-      // 🚫 Exclure F1 du Ballon d'Or classique
+      // 🚫 Exclure F1 du Ballon d'Or classique UNIQUEMENT si excludeF1=true
       sportFilter = { 
         sport: { 
           not: 'F1' 
@@ -106,10 +106,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         break
     }
 
-    // 3. Récupérer TOUS les joueurs avec leurs notes
+    // 3. 🚫 EXCLURE EXPLICITEMENT LES COACHS - Inclure F1 si demandé explicitement
+    let additionalFilters = {}
+    
+    // Toujours exclure les coachs
+    additionalFilters.position = { not: 'COACH' }
+    
+    // Exclure F1 SEULEMENT si pas explicitement demandé ET excludeF1=true
+    if (sport !== 'F1' && excludeF1 === 'true') {
+      additionalFilters.sport = { not: 'F1' }
+    }
+
     const playersWithRatings = await prisma.player.findMany({
       where: {
         ...sportFilter,
+        ...additionalFilters,
         ratings: {
           some: {
             ...dateFilter
@@ -142,18 +153,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     })
 
-    console.log(`👥 ${playersWithRatings.length} joueurs bruts récupérés`)
+    console.log(`👥 ${playersWithRatings.length} entités récupérées (SANS COACHS${sport === 'F1' ? ' - PILOTES F1' : excludeF1 === 'true' ? ' & SANS F1' : ''})`)
 
-    // 4. 🧠 FUSION INTELLIGENTE DES JOUEURS
+    // 4. 🧠 FUSION INTELLIGENTE - VERSION AMÉLIORÉE
     const fusedPlayers = new Map<string, any>()
 
     for (const player of playersWithRatings) {
       if (player.ratings.length === 0) continue
 
-      // Normaliser le nom pour la fusion
-      const normalizedName = normalizePlayerName(player.name)
+      // Normaliser le nom pour la fusion (pilotes F1 ou joueurs)
+      const normalizedName = sport === 'F1' ? normalizeDriverName(player.name) : normalizePlayerName(player.name)
       
-      // Si le joueur existe déjà (même nom normalisé), fusionner
+      // Si le joueur/pilote existe déjà (même nom normalisé), fusionner
       if (fusedPlayers.has(normalizedName)) {
         const existingPlayer = fusedPlayers.get(normalizedName)
         
@@ -164,24 +175,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           existingPlayer.positions.add(player.position)
         }
         
-        console.log(`🔗 Fusion: ${player.name} (${player.team}) avec ${existingPlayer.name}`)
+        console.log(`🔗 Fusion réussie: ${player.name} (${player.team}) avec ${existingPlayer.name}`)
+        console.log(`   -> Total ratings: ${existingPlayer.ratings.length}, équipes: ${Array.from(existingPlayer.teams).join(', ')}`)
       } else {
-        // Nouveau joueur
+        // Nouveau joueur/pilote
         fusedPlayers.set(normalizedName, {
           originalId: player.id,
-          name: player.name, // Garder le nom original du premier
+          name: sport === 'F1' ? chooseBestDriverName(player.name, normalizedName) : chooseBestPlayerName(player.name, normalizedName),
           normalizedName,
           sport: player.sport,
           teams: new Set([player.team]),
           positions: new Set(player.position ? [player.position] : []),
           ratings: [...player.ratings]
         })
+        
+        console.log(`🆕 Nouvelle entité: ${player.name} (${player.team})`)
       }
     }
 
-    console.log(`🔗 Après fusion: ${fusedPlayers.size} joueurs uniques`)
+    console.log(`🔗 Après fusion intelligente: ${fusedPlayers.size} entités uniques`)
 
-    // 5. Calculer les statistiques pour chaque joueur fusionné
+    // 5. Calculer les statistiques pour chaque entité fusionnée
     const ballonOrCandidates: BallonOrPlayer[] = []
 
     for (const [normalizedName, fusedPlayer] of fusedPlayers.entries()) {
@@ -227,7 +241,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           const matchAvgRating = matchData.ratings.reduce((sum: number, r: any) => sum + r.rating, 0) / matchData.ratings.length
           const bestComment = matchData.ratings.find((r: any) => r.comment)?.comment
           
-          // Déterminer l'équipe du joueur pour ce match
+          // Déterminer l'équipe du joueur/pilote pour ce match
           const playerTeam = getPlayerTeamForMatch(matchData.match, Array.from(fusedPlayer.teams))
           
           return {
@@ -304,9 +318,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
-    console.log(`🏆 Ballon d'Or avec fusion calculé:`)
-    console.log(`   - ${playersWithRatings.length} joueurs originaux`)
-    console.log(`   - ${ballonOrCandidates.length} joueurs après fusion`)
+    console.log(`🏆 ${sport === 'F1' ? 'Driver of the Fans' : 'Ballon d\'Or'} calculé:`)
+    console.log(`   - ${playersWithRatings.length} entités originales`)
+    console.log(`   - ${ballonOrCandidates.length} entités après fusion intelligente`)
     console.log(`   - Leader: ${topPlayers[0]?.name} (${topPlayers[0]?.avgRating}/10)`)
     console.log(`   - Équipes: ${topPlayers[0]?.teams.join(', ')}`)
 
@@ -318,12 +332,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         sport,
         position,
         period,
-        minMatches: parseInt(minMatches.toString())
+        minMatches: parseInt(minMatches.toString()),
+        playersOnly: true, // 🆕 Indicateur que c'est uniquement des joueurs/pilotes
+        excludeCoaches: true, // 🆕 Les coachs sont exclus
+        excludeF1: sport !== 'F1' && excludeF1 === 'true', // 🆕 F1 exclu sauf si explicitement demandé
+        isF1: sport === 'F1' // 🆕 Indicateur si c'est spécifiquement F1
       }
     })
 
   } catch (error) {
-    console.error('❌ Erreur Ballon d\'Or avec fusion:', error)
+    console.error('❌ Erreur Ballon d\'Or/Driver:', error)
     res.status(500).json({
       success: false,
       error: 'Erreur serveur',
@@ -332,7 +350,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 }
 
-// 🧠 Fonction de normalisation intelligente des noms
+// 🧠 Fonction de normalisation intelligente des noms - VERSION AMÉLIORÉE
 function normalizePlayerName(name: string): string {
   let normalized = name
     .toLowerCase()
@@ -346,34 +364,266 @@ function normalizePlayerName(name: string): string {
     // Supprimer les espaces en début/fin
     .trim()
 
-  // 🔍 Normalisation spéciale pour les noms avec initiales
-  // "K. Mbappé" -> "kylian mbappe"  
-  // "R. Cherki" -> "rayan cherki"
-  const initialMappings = {
+  // 🔍 NORMALISATION SPÉCIALE POUR LES GRANDES STARS
+  const starMappings = {
+    // Lionel Messi
+    'l messi': 'lionel messi',
+    'l. messi': 'lionel messi',
+    'leo messi': 'lionel messi',
+    'lionel messi': 'lionel messi',
+    'messi': 'lionel messi',
+    
+    // Kylian Mbappé
     'k mbappe': 'kylian mbappe',
     'k. mbappe': 'kylian mbappe',
     'kylian mbappe': 'kylian mbappe',
+    'mbappe': 'kylian mbappe',
+    
+    // Cristiano Ronaldo
+    'c ronaldo': 'cristiano ronaldo',
+    'c. ronaldo': 'cristiano ronaldo',
+    'cristiano ronaldo': 'cristiano ronaldo',
+    'ronaldo': 'cristiano ronaldo',
+    'cr7': 'cristiano ronaldo',
+    
+    // Rayan Cherki
     'r cherki': 'rayan cherki', 
     'r. cherki': 'rayan cherki',
     'rayan cherki': 'rayan cherki',
+    'cherki': 'rayan cherki',
+    
+    // Antoine Griezmann
     'a griezmann': 'antoine griezmann',
     'a. griezmann': 'antoine griezmann',
     'antoine griezmann': 'antoine griezmann',
+    'griezmann': 'antoine griezmann',
+    
+    // Neymar
+    'neymar jr': 'neymar',
+    'neymar junior': 'neymar',
+    'neymar': 'neymar',
+    
+    // Erling Haaland
+    'e haaland': 'erling haaland',
+    'e. haaland': 'erling haaland',
+    'erling haaland': 'erling haaland',
+    'haaland': 'erling haaland',
+    
+    // Vinicius Jr
+    'vinicius jr': 'vinicius junior',
+    'vinicius junior': 'vinicius junior',
+    'vini jr': 'vinicius junior',
+    'vinicius': 'vinicius junior',
+    
+    // LeBron James (basketball)
     'l james': 'lebron james',
     'l. james': 'lebron james',
-    'lebron james': 'lebron james'
+    'lebron james': 'lebron james',
+    'james': 'lebron james',
+    
+    // Stephen Curry
+    's curry': 'stephen curry',
+    's. curry': 'stephen curry',
+    'stephen curry': 'stephen curry',
+    'steph curry': 'stephen curry',
+    'curry': 'stephen curry'
   }
 
   // Vérifier si on a une correspondance dans les mappings
-  if (initialMappings[normalized]) {
-    normalized = initialMappings[normalized]
+  if (starMappings[normalized]) {
+    normalized = starMappings[normalized]
+    console.log(`⭐ Star détectée: "${name}" -> "${normalized}"`)
+    return normalized
   }
 
-  console.log(`🔍 Normalisation: "${name}" -> "${normalized}"`)
+  // 🔍 NORMALISATION GÉNÉRIQUE POUR LES INITIALES
+  // Pattern: "Initiale. Nom" -> "prenom nom"
+  const initialPattern = /^([a-z])\.\s*([a-z]+)$/
+  const match = normalized.match(initialPattern)
+  
+  if (match) {
+    const initial = match[1]
+    const lastName = match[2]
+    
+    // Essayer de deviner le prénom complet pour certains noms
+    const commonNames = {
+      'm': { 
+        'mbappe': 'kylian',
+        'salah': 'mohamed'
+      },
+      'l': {
+        'messi': 'lionel',
+        'suarez': 'luis',
+        'modric': 'luka'
+      },
+      'c': {
+        'ronaldo': 'cristiano',
+        'mbappe': 'kylian' // Au cas où
+      },
+      'r': {
+        'cherki': 'rayan',
+        'mahrez': 'riyad'
+      },
+      'a': {
+        'griezmann': 'antoine',
+        'mbappe': 'kylian' // Parfois mal écrit
+      }
+    }
+    
+    if (commonNames[initial] && commonNames[initial][lastName]) {
+      const fullName = `${commonNames[initial][lastName]} ${lastName}`
+      console.log(`🔍 Expansion initiale: "${name}" -> "${fullName}"`)
+      return fullName
+    }
+  }
+
+  console.log(`🔍 Normalisation standard: "${name}" -> "${normalized}"`)
   return normalized
 }
 
-// Fonction pour déterminer l'équipe du joueur dans un match
+// 🏎️ Fonction de normalisation spéciale pour les pilotes F1
+function normalizeDriverName(name: string): string {
+  let normalized = name
+    .toLowerCase()
+    .trim()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z\s-]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  // 🔍 NORMALISATION SPÉCIALE POUR LES PILOTES F1
+  const driverMappings = {
+    // Max Verstappen
+    'm verstappen': 'max verstappen',
+    'm. verstappen': 'max verstappen',
+    'max verstappen': 'max verstappen',
+    'verstappen': 'max verstappen',
+    
+    // Lewis Hamilton
+    'l hamilton': 'lewis hamilton',
+    'l. hamilton': 'lewis hamilton',
+    'lewis hamilton': 'lewis hamilton',
+    'hamilton': 'lewis hamilton',
+    
+    // Charles Leclerc
+    'c leclerc': 'charles leclerc',
+    'c. leclerc': 'charles leclerc',
+    'charles leclerc': 'charles leclerc',
+    'leclerc': 'charles leclerc',
+    
+    // Lando Norris
+    'l norris': 'lando norris',
+    'l. norris': 'lando norris',
+    'lando norris': 'lando norris',
+    'norris': 'lando norris',
+    
+    // George Russell
+    'g russell': 'george russell',
+    'g. russell': 'george russell',
+    'george russell': 'george russell',
+    'russell': 'george russell',
+    
+    // Carlos Sainz
+    'c sainz': 'carlos sainz',
+    'c. sainz': 'carlos sainz',
+    'carlos sainz': 'carlos sainz',
+    'sainz': 'carlos sainz',
+    
+    // Fernando Alonso
+    'f alonso': 'fernando alonso',
+    'f. alonso': 'fernando alonso',
+    'fernando alonso': 'fernando alonso',
+    'alonso': 'fernando alonso',
+    
+    // Sergio Perez
+    's perez': 'sergio perez',
+    's. perez': 'sergio perez',
+    'sergio perez': 'sergio perez',
+    'checo perez': 'sergio perez',
+    'perez': 'sergio perez'
+  }
+
+  // Vérifier si on a une correspondance dans les mappings
+  if (driverMappings[normalized]) {
+    normalized = driverMappings[normalized]
+    console.log(`🏎️ Pilote détecté: "${name}" -> "${normalized}"`)
+    return normalized
+  }
+
+  console.log(`🔍 Normalisation pilote standard: "${name}" -> "${normalized}"`)
+  return normalized
+}
+
+// 🎯 Fonction pour choisir le meilleur nom d'affichage
+function chooseBestPlayerName(originalName: string, normalizedName: string): string {
+  // Préférer les noms complets aux initiales
+  const hasInitial = originalName.includes('.')
+  
+  // Pour les stars connues, utiliser le nom complet canonique
+  const canonicalNames = {
+    'lionel messi': 'Lionel Messi',
+    'cristiano ronaldo': 'Cristiano Ronaldo',
+    'kylian mbappe': 'Kylian Mbappé',
+    'neymar': 'Neymar Jr',
+    'erling haaland': 'Erling Haaland',
+    'vinicius junior': 'Vinicius Jr',
+    'rayan cherki': 'Rayan Cherki',
+    'antoine griezmann': 'Antoine Griezmann',
+    'lebron james': 'LeBron James',
+    'stephen curry': 'Stephen Curry'
+  }
+  
+  // Si on a un nom canonique, l'utiliser
+  if (canonicalNames[normalizedName]) {
+    console.log(`⭐ Nom canonique choisi: ${canonicalNames[normalizedName]}`)
+    return canonicalNames[normalizedName]
+  }
+  
+  // Sinon, préférer le nom sans initiale
+  if (hasInitial) {
+    // Essayer de construire un nom complet
+    const parts = originalName.split(' ')
+    if (parts.length >= 2 && parts[0].includes('.')) {
+      // Format "A. Nom" -> garder tel quel si pas de correspondance
+      return originalName
+    }
+  }
+  
+  // Capitaliser proprement le nom original
+  return originalName
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ')
+}
+
+// 🏎️ Fonction pour choisir le meilleur nom d'affichage pour les pilotes
+function chooseBestDriverName(originalName: string, normalizedName: string): string {
+  // Noms canoniques pour les pilotes F1
+  const canonicalDriverNames = {
+    'max verstappen': 'Max Verstappen',
+    'lewis hamilton': 'Lewis Hamilton',
+    'charles leclerc': 'Charles Leclerc',
+    'lando norris': 'Lando Norris',
+    'george russell': 'George Russell',
+    'carlos sainz': 'Carlos Sainz',
+    'fernando alonso': 'Fernando Alonso',
+    'sergio perez': 'Sergio Pérez'
+  }
+  
+  // Si on a un nom canonique, l'utiliser
+  if (canonicalDriverNames[normalizedName]) {
+    console.log(`🏎️ Nom canonique pilote choisi: ${canonicalDriverNames[normalizedName]}`)
+    return canonicalDriverNames[normalizedName]
+  }
+  
+  // Sinon, capitaliser proprement le nom original
+  return originalName
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ')
+}
+
+// Fonction pour déterminer l'équipe du joueur/pilote dans un match
 function getPlayerTeamForMatch(match: any, playerTeams: string[]): string {
   // Essayer de faire correspondre avec les équipes du match
   const homeTeam = match.homeTeam.toLowerCase()

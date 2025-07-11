@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '../../lib/auth'
 import { prisma } from '../../lib/prisma'
+import { notifyFriendActivity, checkAndNotifyTrendingMatch } from '../../lib/notifications'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const session = await getServerSession(req, res, authOptions)
@@ -17,6 +18,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (!matchId || !rating || rating < 1 || rating > 5) {
         return res.status(400).json({ error: 'Données invalides' })
       }
+
+      // Vérifier si l'utilisateur avait déjà noté (pour savoir si c'est une création ou update)
+      const existingRating = await prisma.rating.findUnique({
+        where: {
+          userId_matchId: {
+            userId: session.user.id,
+            matchId: matchId,
+          }
+        }
+      })
+
+      const isNewRating = !existingRating
 
       // Créer ou mettre à jour la notation
       const userRating = await prisma.rating.upsert({
@@ -36,6 +49,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         include: {
           user: {
             select: { id: true, name: true, email: true }
+          },
+          match: {
+            select: { 
+              id: true, 
+              homeTeam: true, 
+              awayTeam: true, 
+              totalRatings: true 
+            }
           }
         }
       })
@@ -55,7 +76,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
       })
 
-      res.status(200).json({ rating: userRating, avgRating, totalRatings: ratings.length })
+      // 🔔 NOTIFICATIONS ASYNCHRONES (ne bloque pas la réponse)
+      if (isNewRating) {
+        // Lancer les notifications en arrière-plan
+        Promise.all([
+          // 1. Notifier les amis de l'activité (seulement pour les nouvelles notes)
+          notifyFriendActivity(
+            session.user.id,
+            session.user.name || session.user.email || 'Un utilisateur',
+            `${userRating.match.homeTeam} vs ${userRating.match.awayTeam}`,
+            rating,
+            matchId,
+            !!comment
+          ),
+          
+          // 2. Vérifier si le match devient trending
+          checkAndNotifyTrendingMatch(matchId)
+        ]).catch(error => {
+          console.error('❌ Erreur notifications asynchrones:', error)
+        })
+      }
+
+      console.log(`✅ ${isNewRating ? 'Nouvelle' : 'Mise à jour'} notation: ${session.user.name} → ${userRating.match.homeTeam} vs ${userRating.match.awayTeam} (${rating}⭐)`)
+
+      res.status(200).json({ 
+        rating: userRating, 
+        avgRating, 
+        totalRatings: ratings.length,
+        isNewRating 
+      })
     } catch (error) {
       console.error('Erreur notation:', error)
       res.status(500).json({ error: 'Erreur serveur' })
