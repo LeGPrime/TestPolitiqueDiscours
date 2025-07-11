@@ -57,7 +57,7 @@ export default function MobileAppNavigation() {
                 <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
                   <Trophy className="w-4 h-4 text-white" />
                 </div>
-                <span className="text-lg font-bold text-gray-900 dark:text-white">Sporating</span>
+                <span className="text-lg font-bold text-gray-900 dark:text-white">Sporatting</span>
               </div>
               
               <Link

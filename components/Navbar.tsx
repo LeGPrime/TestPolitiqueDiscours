@@ -1,11 +1,11 @@
-// components/Navbar.tsx - Version redesignée mobile avec profil dans bottom nav
+// components/Navbar.tsx - Version redesignée mobile avec profil dans bottom nav et logo SVG
 import { useSession, signOut } from 'next-auth/react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/router'
 import { useState } from 'react'
 import {
-  Trophy, Search, Users, LogOut, Bell, Settings, 
+  Search, Users, LogOut, Bell, Settings, 
   User, BarChart3, Calendar, Target, Menu, X, Home, Crown
 } from 'lucide-react'
 import ThemeToggle from './ThemeToggle'
@@ -111,12 +111,14 @@ export default function Navbar({ activeTab }: NavbarProps) {
         <div className="max-w-7xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
-              <div className="relative">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                  <Trophy className="w-6 h-6 text-white" />
-                </div>
-                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-gradient-to-r from-blue-500 to-green-500 rounded-full flex items-center justify-center">
-                </div>
+              <div className="w-10 h-10">
+                <Image
+                  src="/global.png"
+                  alt="Sporating"
+                  width={40}
+                  height={40}
+                  className="w-full h-full object-contain"
+                />
               </div>
               
               <div>
@@ -148,12 +150,14 @@ export default function Navbar({ activeTab }: NavbarProps) {
           <div className="flex items-center justify-between">
             {/* Logo */}
             <Link href="/" className="flex items-center space-x-3 hover:opacity-80 transition-opacity group">
-              <div className="relative">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center group-hover:scale-105 transition-transform">
-                  <Trophy className="w-6 h-6 text-white" />
-                </div>
-                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-gradient-to-r from-blue-500 to-green-500 rounded-full flex items-center justify-center group-hover:rotate-12 transition-transform">
-                </div>
+              <div className="w-10 h-10 group-hover:scale-105 transition-transform">
+                <Image
+                  src="/global.png"
+                  alt="Sporating"
+                  width={40}
+                  height={40}
+                  className="w-full h-full object-contain"
+                />
               </div>
               
               <div>
@@ -257,21 +261,22 @@ export default function Navbar({ activeTab }: NavbarProps) {
       <header className="md:hidden bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg shadow-sm border-b border-gray-200 dark:border-slate-700 sticky top-0 z-50">
         <div className="pt-safe-area-inset-top">
           <div className="flex items-center justify-between px-4 py-4">
-            {/* Logo centré avec Sporating à gauche */}
-            <div className="flex items-center space-x-3 flex-1">
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Sporating</h1>
-              
-              {/* Logo au centre */}
-              <div className="flex-1 flex justify-center">
-                <Link href="/" className="touch-manipulation">
-                  <div className="relative group">
-                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg group-active:scale-95 transition-transform">
-                      <Trophy className="w-7 h-7 text-white" />
-                    </div>
-                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-gradient-to-r from-blue-500 to-green-500 rounded-full border-2 border-white dark:border-slate-900"></div>
-                  </div>
-                </Link>
-              </div>
+            {/* Texte Sporating à gauche */}
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white">Sporating.</h1>
+            
+            {/* Logo centré */}
+            <div className="flex-1 flex justify-center items-center -ml-12">
+              <Link href="/" className="touch-manipulation">
+                <div className="w-16 h-16 group-active:scale-95 transition-transform">
+                  <Image
+                    src="/global.png"
+                    alt="Sporating"
+                    width={48}
+                    height={68}
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+              </Link>
             </div>
             
             {/* Notifications à droite */}
