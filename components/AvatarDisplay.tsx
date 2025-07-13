@@ -1,5 +1,6 @@
-// components/AvatarDisplay.tsx - Version avec debug pour identifier le problème
+// components/AvatarDisplay.tsx - Version mise à jour avec session tracking
 import React from 'react'
+import { useSession } from 'next-auth/react'
 
 // AVATARS PRÉDÉFINIS - EXACTEMENT LES MÊMES IDs que dans AvatarUpload
 const PRESET_AVATARS = {
@@ -43,6 +44,7 @@ interface AvatarDisplayProps {
   className?: string
   showBorder?: boolean
   onClick?: () => void
+  useSessionImage?: boolean // 🆕 Option pour utiliser l'image de session
 }
 
 export default function AvatarDisplay({ 
@@ -51,22 +53,33 @@ export default function AvatarDisplay({
   size = 'md', 
   className = '', 
   showBorder = true,
-  onClick 
+  onClick,
+  useSessionImage = false // 🆕 Par défaut false pour rétro-compatibilité
 }: AvatarDisplayProps) {
   
+  const { data: session } = useSession() // 🆕 Hook pour accéder à la session
+  
+  // 🆕 Utiliser l'image de session si demandé et disponible
+  const effectiveImage = useSessionImage && session?.user?.image 
+    ? session.user.image 
+    : image
+
   // DEBUG: Logguer les informations pour identifier le problème
   React.useEffect(() => {
-    if (image) {
-      console.log('🔍 AvatarDisplay Debug:', {
-        image,
+    if (useSessionImage) {
+      console.log('🔍 AvatarDisplay Session Debug:', {
+        sessionImage: session?.user?.image,
+        propImage: image,
+        effectiveImage,
         name,
-        isPresetAvatar: !!PRESET_AVATARS[image as keyof typeof PRESET_AVATARS],
-        isDataURL: image.startsWith('data:'),
-        isHttpURL: image.startsWith('http'),
-        presetData: PRESET_AVATARS[image as keyof typeof PRESET_AVATARS]
+        userName: session?.user?.name,
+        isPresetAvatar: !!PRESET_AVATARS[effectiveImage as keyof typeof PRESET_AVATARS],
+        isDataURL: effectiveImage?.startsWith('data:'),
+        isHttpURL: effectiveImage?.startsWith('http'),
+        presetData: PRESET_AVATARS[effectiveImage as keyof typeof PRESET_AVATARS]
       })
     }
-  }, [image, name])
+  }, [effectiveImage, image, name, session, useSessionImage])
   
   const sizeClasses = {
     xs: 'w-6 h-6',
@@ -113,7 +126,7 @@ export default function AvatarDisplay({
 
   // Rendre le contenu de l'avatar
   const renderAvatarContent = () => {
-    if (!image) {
+    if (!effectiveImage) {
       // Avatar par défaut (initiales)
       console.log('📝 Rendu avatar par défaut pour:', name)
       return (
@@ -126,9 +139,9 @@ export default function AvatarDisplay({
     }
 
     // Vérifier si c'est un avatar prédéfini
-    const presetAvatar = PRESET_AVATARS[image as keyof typeof PRESET_AVATARS]
+    const presetAvatar = PRESET_AVATARS[effectiveImage as keyof typeof PRESET_AVATARS]
     if (presetAvatar) {
-      console.log('🎨 Rendu avatar prédéfini:', image, presetAvatar)
+      console.log('🎨 Rendu avatar prédéfini:', effectiveImage, presetAvatar)
       return (
         <div className={`w-full h-full bg-gradient-to-br ${presetAvatar.bg} flex items-center justify-center`}>
           <span className={`${textSizes[size]} font-bold`}>
@@ -139,12 +152,12 @@ export default function AvatarDisplay({
     }
 
     // Image uploadée
-    if (image.startsWith('data:') || image.startsWith('http')) {
+    if (effectiveImage.startsWith('data:') || effectiveImage.startsWith('http')) {
       console.log('🖼️ Rendu image uploadée pour:', name)
       return (
         <>
           <img
-            src={image}
+            src={effectiveImage}
             alt={`Avatar de ${name}`}
             className="w-full h-full object-cover"
             onError={(e) => {
@@ -165,7 +178,7 @@ export default function AvatarDisplay({
     }
 
     // Type d'avatar non reconnu - fallback vers avatar par défaut
-    console.warn('⚠️ Type d\'avatar non reconnu, fallback vers défaut:', image)
+    console.warn('⚠️ Type d\'avatar non reconnu, fallback vers défaut:', effectiveImage)
     return (
       <div className={`w-full h-full bg-gradient-to-br ${getDefaultAvatarColor()} flex items-center justify-center`}>
         <span className={`${textSizes[size]} font-bold text-white`}>

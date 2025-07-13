@@ -1,6 +1,7 @@
-// components/NotificationCenter.tsx - Système de notifications fonctionnel
+// components/NotificationCenter.tsx - Système de notifications avec portal
 import { useState, useEffect, useRef } from 'react'
-import { Bell, X, Check, Users, Star, Trophy, Calendar, Eye, TrendingUp, UserPlus } from 'lucide-react'
+import { createPortal } from 'react-dom'
+import { Bell, X, Check, Users, Star, Trophy, Calendar, Eye, TrendingUp, UserPlus, ExternalLink } from 'lucide-react'
 import Link from 'next/link'
 import axios from 'axios'
 import { toast } from 'react-hot-toast'
@@ -25,12 +26,15 @@ export default function NotificationCenter({ userId }: NotificationCenterProps) 
   const [isOpen, setIsOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0 })
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
 
   // Fermer le dropdown si on clique ailleurs
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node) &&
+          buttonRef.current && !buttonRef.current.contains(event.target as Node)) {
         setIsOpen(false)
       }
     }
@@ -38,6 +42,17 @@ export default function NotificationCenter({ userId }: NotificationCenterProps) 
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  // Calculer la position du dropdown quand on l'ouvre
+  useEffect(() => {
+    if (isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect()
+      setDropdownPosition({
+        top: rect.bottom + 8,
+        right: window.innerWidth - rect.right
+      })
+    }
+  }, [isOpen])
 
   // Charger le count des notifications non lues au montage
   useEffect(() => {
@@ -189,9 +204,10 @@ export default function NotificationCenter({ userId }: NotificationCenterProps) 
   }
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="relative" style={{ position: 'relative' }}>
       {/* Bouton cloche */}
       <button
+        ref={buttonRef}
         onClick={() => setIsOpen(!isOpen)}
         className="relative p-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors touch-manipulation"
         title={unreadCount > 0 ? `${unreadCount} nouvelle(s) notification(s)` : 'Notifications'}
@@ -206,9 +222,17 @@ export default function NotificationCenter({ userId }: NotificationCenterProps) 
         )}
       </button>
 
-      {/* Dropdown des notifications */}
-      {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 md:w-96 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-gray-200 dark:border-slate-700 z-50 max-h-96 overflow-hidden">
+      {/* Dropdown des notifications avec Portal */}
+      {isOpen && typeof window !== 'undefined' && createPortal(
+        <div 
+          ref={dropdownRef}
+          className="fixed z-[9999] w-80 md:w-96 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-gray-200 dark:border-slate-700 max-h-96 overflow-hidden"
+          style={{
+            top: dropdownPosition.top,
+            right: dropdownPosition.right,
+            zIndex: 9999
+          }}
+        >
           
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-700/50">
@@ -249,13 +273,23 @@ export default function NotificationCenter({ userId }: NotificationCenterProps) 
               <div className="p-8 text-center">
                 <Bell className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                 <p className="text-gray-500 dark:text-gray-400 font-medium">Aucune notification</p>
-                <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
+                <p className="text-sm text-gray-400 dark:text-gray-500 mt-1 mb-4">
                   Les notifications apparaîtront ici
                 </p>
+                
+                {/* Bouton "Voir mes notifications" dans l'état vide */}
+                <Link
+                  href="/notifications"
+                  onClick={() => setIsOpen(false)}
+                  className="inline-flex items-center space-x-2 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium px-3 py-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors border border-blue-200 dark:border-blue-800"
+                >
+                  <Bell className="w-4 h-4" />
+                  <span>Voir mes notifications</span>
+                </Link>
               </div>
             ) : (
               <div>
-                {notifications.map((notification) => (
+                {notifications.slice(0, 5).map((notification) => (
                   <div
                     key={notification.id}
                     className={`border-l-4 ${getNotificationColor(notification.type)} ${
@@ -332,19 +366,22 @@ export default function NotificationCenter({ userId }: NotificationCenterProps) 
             )}
           </div>
 
-          {/* Footer */}
+          {/* Footer avec bouton "Voir toutes les notifications" plus visible */}
           {notifications.length > 0 && (
             <div className="p-3 border-t border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-700/50">
               <Link
                 href="/notifications"
                 onClick={() => setIsOpen(false)}
-                className="block text-center text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium py-2 px-4 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                className="flex items-center justify-center space-x-2 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium py-2 px-4 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors border border-blue-200 dark:border-blue-800"
               >
-                Voir toutes les notifications
+                <Bell className="w-4 h-4" />
+                <span>Voir toutes mes notifications</span>
+                <ExternalLink className="w-3 h-3" />
               </Link>
             </div>
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

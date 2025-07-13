@@ -1,11 +1,11 @@
-// pages/notifications.tsx - Page dédiée aux notifications
+// pages/notifications.tsx - Page dédiée aux notifications avec section du jour
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
 import { 
   Bell, Check, X, Users, Star, TrendingUp, Calendar, UserPlus,
-  ArrowLeft, Filter, MoreVertical, Trash2, CheckCheck
+  ArrowLeft, Filter, MoreVertical, Trash2, CheckCheck, Clock, History
 } from 'lucide-react'
 import axios from 'axios'
 import { toast } from 'react-hot-toast'
@@ -139,29 +139,143 @@ export default function NotificationsPage() {
   const formatTime = (date: Date) => {
     const now = new Date()
     const diff = now.getTime() - date.getTime()
+    const minutes = Math.floor(diff / (1000 * 60))
     const hours = Math.floor(diff / (1000 * 60 * 60))
     const days = Math.floor(diff / (1000 * 60 * 60 * 24))
 
-    if (hours < 24) return `Il y a ${hours}h`
-    if (days < 7) return `Il y a ${days}j`
+    if (minutes < 1) return 'À l\'instant'
+    if (minutes < 60) return `${minutes}min`
+    if (hours < 24) return `${hours}h`
+    if (days < 7) return `${days}j`
     return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
   }
 
-  const getFilteredNotifications = () => {
+  const formatFullTime = (date: Date) => {
+    return date.toLocaleDateString('fr-FR', { 
+      day: 'numeric', 
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
+
+  // Séparer les notifications par période
+  const getNotificationsByPeriod = () => {
+    const now = new Date()
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    
+    const todayNotifs = notifications.filter(n => n.date >= startOfToday)
+    const olderNotifs = notifications.filter(n => n.date < startOfToday)
+    
+    return { todayNotifs, olderNotifs }
+  }
+
+  const getFilteredNotifications = (notifList: Notification[]) => {
     switch (filter) {
       case 'unread':
-        return notifications.filter(n => !n.read)
+        return notifList.filter(n => !n.read)
       case 'friends':
-        return notifications.filter(n => n.type === 'friend_request' || n.type === 'friend_activity')
+        return notifList.filter(n => n.type === 'friend_request' || n.type === 'friend_activity')
       case 'matches':
-        return notifications.filter(n => n.type === 'trending_match' || n.type === 'team_match')
+        return notifList.filter(n => n.type === 'trending_match' || n.type === 'team_match')
       default:
-        return notifications
+        return notifList
     }
   }
 
-  const filteredNotifications = getFilteredNotifications()
+  const { todayNotifs, olderNotifs } = getNotificationsByPeriod()
+  const filteredTodayNotifs = getFilteredNotifications(todayNotifs)
+  const filteredOlderNotifs = getFilteredNotifications(olderNotifs)
   const unreadCount = notifications.filter(n => !n.read).length
+
+  // Composant pour afficher une notification
+  const NotificationItem = ({ notification, showDate = false }: { notification: Notification, showDate?: boolean }) => (
+    <div
+      key={notification.id}
+      className={`bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 transition-all duration-200 hover:shadow-md ${
+        !notification.read ? 'ring-2 ring-blue-500/20' : ''
+      } ${
+        selectedNotifs.has(notification.id) ? 'ring-2 ring-purple-500/20 bg-purple-50 dark:bg-purple-900/10' : ''
+      }`}
+    >
+      <div className="p-6">
+        <div className="flex items-start space-x-4">
+          {/* Checkbox */}
+          <div className="flex items-center pt-1">
+            <input
+              type="checkbox"
+              checked={selectedNotifs.has(notification.id)}
+              onChange={() => toggleSelection(notification.id)}
+              className="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500 dark:focus:ring-purple-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+            />
+          </div>
+
+          {/* Icône */}
+          <div className="flex-shrink-0 pt-1">
+            {getNotificationIcon(notification.type)}
+          </div>
+          
+          {/* Contenu */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <p className={`text-sm font-medium text-gray-900 dark:text-white ${
+                  !notification.read ? 'font-semibold' : ''
+                }`}>
+                  {notification.title}
+                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  {notification.message}
+                </p>
+                <div className="flex items-center space-x-4 mt-3">
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    {showDate ? formatFullTime(notification.date) : formatTime(notification.date)}
+                  </span>
+                  {!notification.read && (
+                    <span className="flex items-center space-x-1 text-xs text-blue-600 dark:text-blue-400">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      <span>Non lu</span>
+                    </span>
+                  )}
+                </div>
+              </div>
+              
+              {/* Actions */}
+              <div className="flex items-center space-x-2 ml-4">
+                {notification.actionUrl && (
+                  <Link
+                    href={notification.actionUrl}
+                    onClick={() => !notification.read && markAsRead(notification.id)}
+                    className="px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-sm font-medium rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+                  >
+                    Voir
+                  </Link>
+                )}
+                
+                {!notification.read && (
+                  <button
+                    onClick={() => markAsRead(notification.id)}
+                    className="p-2 text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
+                    title="Marquer comme lu"
+                  >
+                    <Check className="w-4 h-4" />
+                  </button>
+                )}
+                
+                <button
+                  onClick={() => deleteNotification(notification.id)}
+                  className="p-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                  title="Supprimer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
 
   if (!session) {
     return (
@@ -207,6 +321,9 @@ export default function NotificationsPage() {
                 </h1>
                 <p className="text-gray-600 dark:text-gray-400">
                   {unreadCount > 0 ? `${unreadCount} non lue(s)` : 'Tout lu'}
+                  {filteredTodayNotifs.length > 0 && (
+                    <span className="ml-2">• {filteredTodayNotifs.length} aujourd'hui</span>
+                  )}
                 </p>
               </div>
             </div>
@@ -284,108 +401,70 @@ export default function NotificationsPage() {
               </div>
             ))}
           </div>
-        ) : filteredNotifications.length === 0 ? (
+        ) : notifications.length === 0 ? (
           <div className="text-center py-16">
             <Bell className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-              {filter === 'all' ? 'Aucune notification' : `Aucune notification ${filter === 'unread' ? 'non lue' : filter}`}
+              Aucune notification
             </h3>
             <p className="text-gray-600 dark:text-gray-400">
-              {filter === 'all' 
-                ? 'Les notifications apparaîtront ici quand vous en recevrez'
-                : 'Changez de filtre pour voir d\'autres notifications'
-              }
+              Les notifications apparaîtront ici quand vous en recevrez
             </p>
           </div>
         ) : (
-          <div className="space-y-2">
-            {filteredNotifications.map((notification) => (
-              <div
-                key={notification.id}
-                className={`bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 transition-all duration-200 hover:shadow-md ${
-                  !notification.read ? 'ring-2 ring-blue-500/20' : ''
-                } ${
-                  selectedNotifs.has(notification.id) ? 'ring-2 ring-purple-500/20 bg-purple-50 dark:bg-purple-900/10' : ''
-                }`}
-              >
-                <div className="p-6">
-                  <div className="flex items-start space-x-4">
-                    {/* Checkbox */}
-                    <div className="flex items-center pt-1">
-                      <input
-                        type="checkbox"
-                        checked={selectedNotifs.has(notification.id)}
-                        onChange={() => toggleSelection(notification.id)}
-                        className="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500 dark:focus:ring-purple-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                      />
-                    </div>
-
-                    {/* Icône */}
-                    <div className="flex-shrink-0 pt-1">
-                      {getNotificationIcon(notification.type)}
-                    </div>
-                    
-                    {/* Contenu */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <p className={`text-sm font-medium text-gray-900 dark:text-white ${
-                            !notification.read ? 'font-semibold' : ''
-                          }`}>
-                            {notification.title}
-                          </p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                            {notification.message}
-                          </p>
-                          <div className="flex items-center space-x-4 mt-3">
-                            <span className="text-xs text-gray-500 dark:text-gray-400">
-                              {formatTime(notification.date)}
-                            </span>
-                            {!notification.read && (
-                              <span className="flex items-center space-x-1 text-xs text-blue-600 dark:text-blue-400">
-                                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                                <span>Non lu</span>
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        
-                        {/* Actions */}
-                        <div className="flex items-center space-x-2 ml-4">
-                          {notification.actionUrl && (
-                            <Link
-                              href={notification.actionUrl}
-                              onClick={() => !notification.read && markAsRead(notification.id)}
-                              className="px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-sm font-medium rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
-                            >
-                              Voir
-                            </Link>
-                          )}
-                          
-                          {!notification.read && (
-                            <button
-                              onClick={() => markAsRead(notification.id)}
-                              className="p-2 text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
-                              title="Marquer comme lu"
-                            >
-                              <Check className="w-4 h-4" />
-                            </button>
-                          )}
-                          
-                          <button
-                            onClick={() => deleteNotification(notification.id)}
-                            className="p-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                            title="Supprimer"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+          <div className="space-y-8">
+            {/* Notifications d'aujourd'hui */}
+            {filteredTodayNotifs.length > 0 && (
+              <section>
+                <div className="flex items-center space-x-2 mb-4">
+                  <Clock className="w-5 h-5 text-blue-500" />
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Aujourd'hui
+                  </h2>
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                    ({filteredTodayNotifs.length})
+                  </span>
                 </div>
+                <div className="space-y-2">
+                  {filteredTodayNotifs.map((notification) => (
+                    <NotificationItem key={notification.id} notification={notification} />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Notifications plus anciennes */}
+            {filteredOlderNotifs.length > 0 && (
+              <section>
+                <div className="flex items-center space-x-2 mb-4">
+                  <History className="w-5 h-5 text-gray-500" />
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Plus ancien
+                  </h2>
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                    ({filteredOlderNotifs.length})
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  {filteredOlderNotifs.map((notification) => (
+                    <NotificationItem key={notification.id} notification={notification} showDate />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* État vide filtré */}
+            {filteredTodayNotifs.length === 0 && filteredOlderNotifs.length === 0 && filter !== 'all' && (
+              <div className="text-center py-16">
+                <Bell className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                  Aucune notification {filter === 'unread' ? 'non lue' : filter}
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400">
+                  Changez de filtre pour voir d'autres notifications
+                </p>
               </div>
-            ))}
+            )}
           </div>
         )}
       </main>

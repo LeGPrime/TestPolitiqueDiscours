@@ -193,7 +193,7 @@ export default function Navbar({ activeTab }: NavbarProps) {
                 title="Mon profil"
               >
                 <AvatarDisplay
-                  image={session.user?.image}
+                  useSessionImage={true}
                   name={session.user?.name || session.user?.email || 'User'}
                   size="sm"
                   showBorder={true}
@@ -315,11 +315,11 @@ export default function Navbar({ activeTab }: NavbarProps) {
                   <div className={`relative transition-transform duration-200 ${tab.active ? 'scale-110' : 'group-active:scale-95'}`}>
                     {isProfile ? (
                       <AvatarDisplay
-                        image={session.user?.image}
-                        name={session.user?.name || session.user?.email || 'User'}
-                        size="sm"
-                        showBorder={true}
-                      />
+  useSessionImage={true} // 🆕 Utiliser automatiquement l'image de session
+  name={session.user?.name || session.user?.email || 'User'}
+  size="sm"
+  showBorder={true}
+/>
                     ) : (
                       <Icon className="w-5 h-5" />
                     )}
