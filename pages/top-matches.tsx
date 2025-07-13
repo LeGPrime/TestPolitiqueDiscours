@@ -585,7 +585,7 @@ export default function TopMatchesPage() {
         )}
       </main>
 
-      <div className="safe-bottom"></div>
+      <div className="h-24 safe-bottom"></div>
     </div>
   )
 }

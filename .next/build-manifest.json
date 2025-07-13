@@ -32,16 +32,6 @@
       "static/chunks/main.js",
       "static/chunks/pages/profile.js"
     ],
-    "/search": [
-      "static/chunks/webpack.js",
-      "static/chunks/main.js",
-      "static/chunks/pages/search.js"
-    ],
-    "/secret-login": [
-      "static/chunks/webpack.js",
-      "static/chunks/main.js",
-      "static/chunks/pages/secret-login.js"
-    ],
     "/top-matches": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",

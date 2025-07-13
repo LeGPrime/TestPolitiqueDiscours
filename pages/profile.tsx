@@ -1541,6 +1541,8 @@ export default function ModernProfilePage() {
         </div>
       </main>
 
+      
+
       {/* MODALS */}
       <TeamSearchModal
         isOpen={showTeamSearch}
@@ -1614,6 +1616,9 @@ export default function ModernProfilePage() {
           animation: slide-in-from-bottom-4 0.5s ease-out;
         }
       `}</style>
+
+      {/* 📱 ESPACE POUR LA NAVIGATION BOTTOM */}
+      <div className="h-20 md:h-0"></div>
     </div>
   )
 }
