@@ -1,3 +1,4 @@
+// pages/auth/register.tsx - Version corrigée
 import { useState } from 'react'
 import { signIn } from 'next-auth/react'
 import Link from 'next/link'
@@ -64,6 +65,7 @@ export default function Register() {
     setErrors({})
 
     try {
+      // Créer le compte
       await axios.post('/api/auth/register', {
         name: formData.name,
         email: formData.email,
@@ -81,10 +83,10 @@ export default function Register() {
         })
 
         if (result?.ok) {
-          // 🆕 Rediriger vers l'onboarding au lieu de la homepage
+          // Rediriger vers l'onboarding pour finaliser le profil
           router.push('/onboarding?from=register')
         }
-      }, 2000) // Augmenté à 2s pour laisser le temps de voir le succès
+      }, 2000)
 
     } catch (error: any) {
       const message = error.response?.data?.message || 'Une erreur est survenue'
@@ -152,14 +154,14 @@ export default function Register() {
               ))}
             </div>
 
-            {/* 🆕 Section onboarding preview */}
+            {/* Section onboarding preview */}
             <div className="mt-8 p-4 bg-white/10 rounded-xl backdrop-blur border border-white/20">
               <div className="flex items-center space-x-2 mb-2">
                 <Sparkles className="w-5 h-5 text-yellow-300" />
                 <span className="font-semibold text-yellow-100">Après inscription</span>
               </div>
               <p className="text-white/90 text-sm">
-                Personnalisez votre profil en 4 étapes simples : vos infos, vos sports favoris, 
+                Personnalisez votre profil en quelques étapes simples : vos infos, vos sports favoris, 
                 votre avatar et vos objectifs. Entièrement optionnel !
               </p>
             </div>
@@ -288,14 +290,14 @@ export default function Register() {
                 )}
               </div>
 
-              {/* 🆕 Info onboarding */}
+              {/* Info onboarding */}
               <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-4">
                 <div className="flex items-start space-x-3">
                   <Sparkles className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
                   <div>
                     <h4 className="font-medium text-blue-900 text-sm">Que se passe-t-il après ?</h4>
                     <p className="text-blue-800 text-xs mt-1">
-                      Après la création de votre compte, nous vous proposons 4 étapes simples pour 
+                      Après la création de votre compte, nous vous proposons quelques étapes simples pour 
                       personnaliser votre expérience. Vous pouvez les ignorer si vous préférez !
                     </p>
                   </div>
@@ -328,26 +330,26 @@ export default function Register() {
               </p>
             </div>
 
-            {/* 🆕 Aperçu des étapes onboarding */}
+            {/* Aperçu des étapes onboarding */}
             <div className="mt-8 lg:hidden">
               <div className="bg-gray-50 rounded-xl p-4">
-                <h4 className="font-semibold text-gray-900 mb-3 text-center">🎯 Étapes de personnalisation</h4>
+                <h4 className="font-semibold text-gray-900 mb-3 text-center">🎯 Configuration après inscription</h4>
                 <div className="space-y-2 text-sm">
                   <div className="flex items-center space-x-3">
                     <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-bold">1</div>
-                    <span className="text-gray-700">Vos informations de base</span>
+                    <span className="text-gray-700">Finaliser vos informations</span>
                   </div>
                   <div className="flex items-center space-x-3">
                     <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-bold">2</div>
-                    <span className="text-gray-700">Vos sports et équipes favorites</span>
+                    <span className="text-gray-700">Choisir votre nom d'utilisateur</span>
                   </div>
                   <div className="flex items-center space-x-3">
                     <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-bold">3</div>
-                    <span className="text-gray-700">Avatar et préférences</span>
+                    <span className="text-gray-700">Vos sports et équipes favorites</span>
                   </div>
                   <div className="flex items-center space-x-3">
                     <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-bold">4</div>
-                    <span className="text-gray-700">Vos objectifs sur Sporating</span>
+                    <span className="text-gray-700">Avatar et préférences</span>
                   </div>
                 </div>
                 <div className="mt-3 text-center">

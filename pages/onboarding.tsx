@@ -1,4 +1,4 @@
-// pages/onboarding.tsx
+// pages/onboarding.tsx - Version corrigée sans les champs mot de passe
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
@@ -6,7 +6,7 @@ import {
   User, Mail, MapPin, Heart, Trophy, Star, 
   ChevronRight, ChevronLeft, Check, Sparkles,
   Globe, Calendar, Briefcase, Users, Camera,
-  ArrowRight, Flag, Target, Zap, Loader, Eye, EyeOff
+  ArrowRight, Flag, Target, Zap, Loader
 } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
@@ -16,15 +16,10 @@ const OnboardingPage = () => {
   const { data: session, status } = useSession();
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formData, setFormData] = useState({
-    // Étape 1 - Inscription complète
+    // Étape 1 - Informations de base (sans mot de passe)
     firstName: '',
     lastName: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
     
     // Étape 2 - Username
     username: '',
@@ -69,8 +64,7 @@ const OnboardingPage = () => {
       setFormData(prev => ({
         ...prev,
         firstName: nameParts[0] || '',
-        lastName: nameParts.slice(1).join(' ') || '',
-        email: session.user.email || ''
+        lastName: nameParts.slice(1).join(' ') || ''
       }));
     }
   }, [session, status, router]);
@@ -109,10 +103,11 @@ const OnboardingPage = () => {
     { id: 'collections', name: 'Créer des collections de matchs', emoji: '📚' }
   ];
 
+  // Étapes mises à jour (une de moins)
   const steps = [
-    { id: 'signup', title: 'Inscription', desc: 'Créez votre compte' },
+    { id: 'info', title: 'Informations', desc: 'Finalisez votre profil' },
     { id: 'username', title: 'Nom d\'utilisateur', desc: 'Choisissez votre pseudo' },
-    { id: 'location-age', title: 'Informations', desc: 'Âge et localisation' },
+    { id: 'location-age', title: 'Détails', desc: 'Âge et localisation' },
     { id: 'sports', title: 'Sports préférés', desc: 'Vos passions' },
     { id: 'watching', title: 'Style de visionnage', desc: 'Comment regardez-vous ?' },
     { id: 'avatar', title: 'Avatar', desc: 'Personnalisez votre profil' },
@@ -226,8 +221,8 @@ const OnboardingPage = () => {
 
   const isStepComplete = () => {
     switch(currentStep) {
-      case 0:
-        return formData.firstName.trim() && formData.lastName.trim() && formData.email.trim() && formData.password && formData.confirmPassword && formData.password === formData.confirmPassword;
+      case 0: // Informations de base (sans mot de passe)
+        return formData.firstName.trim() && formData.lastName.trim();
       case 1:
         return formData.username.trim();
       case 2:
@@ -260,15 +255,24 @@ const OnboardingPage = () => {
 
   const renderStepContent = () => {
     switch(currentStep) {
-      case 0:
+      case 0: // Informations de base sans mot de passe
         return (
           <div className="space-y-6">
             <div className="text-center">
               <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
                 <User className="w-8 h-8 text-white" />
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-1">Créer un compte</h2>
-              <p className="text-gray-600 text-sm mb-6">Rejoignez Sporating en quelques secondes</p>
+              <h2 className="text-2xl font-bold text-gray-900 mb-1">Bienvenue sur Sporating ! 🎉</h2>
+              <p className="text-gray-600 text-sm mb-6">Finalisons votre profil</p>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+              <div className="flex items-center space-x-3">
+                <Check className="w-5 h-5 text-green-600" />
+                <p className="text-blue-800 text-sm">
+                  <strong>Votre compte est créé !</strong> Maintenant, personnalisons votre expérience en quelques étapes simples.
+                </p>
+              </div>
             </div>
 
             <div className="space-y-4">
@@ -299,64 +303,28 @@ const OnboardingPage = () => {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  Email 📧
-                </label>
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData(prev => ({...prev, email: e.target.value}))}
-                  className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                  placeholder="votre@email.com"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  Mot de passe 🔑
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    value={formData.password}
-                    onChange={(e) => setFormData(prev => ({...prev, password: e.target.value}))}
-                    className="w-full px-3 py-2.5 pr-10 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                    placeholder="Votre mot de passe"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-2.5 text-gray-500 hover:text-gray-700"
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
+              <div className="bg-gray-50 rounded-xl p-4">
+                <div className="flex items-center space-x-3">
+                  <Mail className="w-5 h-5 text-gray-600" />
+                  <div>
+                    <p className="font-medium text-gray-900">Email confirmé</p>
+                    <p className="text-sm text-gray-600">{session?.user?.email}</p>
+                  </div>
+                  <Check className="w-5 h-5 text-green-600 ml-auto" />
                 </div>
               </div>
+            </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  Confirmer le mot de passe 🔐
-                </label>
-                <div className="relative">
-                  <input
-                    type={showConfirmPassword ? "text" : "password"}
-                    value={formData.confirmPassword}
-                    onChange={(e) => setFormData(prev => ({...prev, confirmPassword: e.target.value}))}
-                    className="w-full px-3 py-2.5 pr-10 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                    placeholder="Confirmez votre mot de passe"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-2.5 text-gray-500 hover:text-gray-700"
-                  >
-                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
+            <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4 border border-purple-200">
+              <div className="flex items-start space-x-3">
+                <Sparkles className="w-5 h-5 text-purple-600 mt-0.5" />
+                <div>
+                  <h4 className="font-semibold text-purple-900 text-sm">Configuration personnalisée</h4>
+                  <p className="text-purple-800 text-xs mt-1">
+                    Ces informations nous aident à personnaliser votre expérience. 
+                    Toutes les étapes sont optionnelles et modifiables plus tard !
+                  </p>
                 </div>
-                {formData.confirmPassword && formData.password !== formData.confirmPassword && (
-                  <p className="text-red-500 text-xs mt-1">Les mots de passe ne correspondent pas</p>
-                )}
               </div>
             </div>
           </div>
@@ -369,14 +337,14 @@ const OnboardingPage = () => {
               <div className="w-20 h-20 bg-gradient-to-r from-purple-500 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-6">
                 <User className="w-10 h-10 text-white" />
               </div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">Bienvenue sur Sporating ! 🎉</h2>
-              <p className="text-gray-600 text-lg mb-8">Comment vous appelez-vous ?</p>
+              <h2 className="text-3xl font-bold text-gray-900 mb-2">Choisissez votre pseudo 🎯</h2>
+              <p className="text-gray-600 text-lg mb-8">Comment vous appelez-vous dans la communauté ?</p>
             </div>
 
             <div className="space-y-6">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-3">
-                  Nom d'utilisateur unique 🎯
+                  Nom d'utilisateur unique
                 </label>
                 <div className="relative">
                   <span className="absolute left-4 top-4 text-gray-500 text-lg">@</span>
@@ -388,11 +356,15 @@ const OnboardingPage = () => {
                     placeholder="votre_pseudo"
                   />
                 </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  💡 Ce sera votre identifiant unique sur Sporating
+                </p>
               </div>
             </div>
           </div>
         );
 
+      // Les autres étapes restent identiques...
       case 2:
         return (
           <div className="space-y-8">

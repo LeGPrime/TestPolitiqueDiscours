@@ -403,18 +403,18 @@ export default function TopMatchesPage() {
                 <Trophy className="w-6 h-6" />
               </div>
               <div>
-                <h1 className="text-2xl md:text-3xl font-bold">Le top du top</h1>
+                <h1 className="text-2xl md:text-3xl font-bold">Le Top des fans</h1>
                 <p className="text-indigo-100 text-sm">Les meilleurs du sport selon la communauté</p>
               </div>
             </div>
 
             {/* Onglets principaux */}
-            <div className="flex justify-center mb-6">
-              <div className="bg-white/10 backdrop-blur rounded-2xl p-1 border border-white/20">
-                <div className="flex space-x-1 overflow-x-auto scrollbar-hide">
+            <div className="flex justify-center mb-6 px-4">
+              <div className="bg-white/10 backdrop-blur rounded-2xl p-1 border border-white/20 w-full max-w-4xl">
+                <div className="grid grid-cols-2 md:flex md:justify-center gap-1 md:gap-0 md:space-x-1">
                   <button
                     onClick={() => setActiveTab('matches')}
-                    className={`px-3 py-3 rounded-xl font-medium transition-all duration-200 whitespace-nowrap text-xs md:text-sm ${
+                    className={`px-2 md:px-3 py-3 rounded-xl font-medium transition-all duration-200 text-xs md:text-sm ${
                       activeTab === 'matches'
                         ? 'bg-white text-indigo-600 shadow-lg'
                         : 'text-white hover:bg-white/10'
@@ -424,7 +424,7 @@ export default function TopMatchesPage() {
                   </button>
                   <button
                     onClick={() => setActiveTab('ballon-or')}
-                    className={`px-3 py-3 rounded-xl font-medium transition-all duration-200 whitespace-nowrap text-xs md:text-sm ${
+                    className={`px-2 md:px-3 py-3 rounded-xl font-medium transition-all duration-200 text-xs md:text-sm ${
                       activeTab === 'ballon-or'
                         ? 'bg-white text-indigo-600 shadow-lg'
                         : 'text-white hover:bg-white/10'
@@ -434,31 +434,29 @@ export default function TopMatchesPage() {
                   </button>
                   <button
                     onClick={() => setActiveTab('cholismo')}
-                    className={`px-3 py-3 rounded-xl font-medium transition-all duration-200 whitespace-nowrap text-xs md:text-sm ${
+                    className={`px-2 md:px-3 py-3 rounded-xl font-medium transition-all duration-200 text-xs md:text-sm ${
                       activeTab === 'cholismo'
                         ? 'bg-white text-indigo-600 shadow-lg'
                         : 'text-white hover:bg-white/10'
                     }`}
                   >
-                    👨‍💼 Cholismo
+                    🧠 Cholismo
                   </button>
                   <button
-                    onClick={() => setActiveTab('driver-fans')}
-                    className={`px-3 py-3 rounded-xl font-medium transition-all duration-200 whitespace-nowrap text-xs md:text-sm ${
-                      activeTab === 'driver-fans'
-                        ? 'bg-white text-indigo-600 shadow-lg'
-                        : 'text-white hover:bg-white/10'
-                    }`}
-                  >
-                    🏎️ Driver of the Fans
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('mvp')}
                     disabled
-                    className="px-3 py-3 rounded-xl font-medium text-white/50 cursor-not-allowed relative whitespace-nowrap text-xs md:text-sm"
+                    className="px-2 md:px-3 py-3 rounded-xl font-medium text-white/50 cursor-not-allowed relative text-xs md:text-sm"
                   >
-                    🌟 MVP
-                    <span className="absolute -top-2 -right-2 bg-yellow-500 text-yellow-900 text-xs px-1.5 py-0.5 rounded-full font-bold">
+                    🏎️ Driver
+                    <span className="absolute -top-1 -right-1 bg-yellow-500 text-yellow-900 text-xs px-1 py-0.5 rounded-full font-bold text-[10px]">
+                      Soon
+                    </span>
+                  </button>
+                  <button
+                    disabled
+                    className="px-2 md:px-3 py-3 rounded-xl font-medium text-white/50 cursor-not-allowed relative text-xs md:text-sm col-span-2 md:col-span-1"
+                  >
+                    🏀 MVP
+                    <span className="absolute -top-1 -right-1 bg-yellow-500 text-yellow-900 text-xs px-1 py-0.5 rounded-full font-bold text-[10px]">
                       Soon
                     </span>
                   </button>

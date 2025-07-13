@@ -363,7 +363,7 @@ export default function Home() {
               Sporating
             </h1>
             <p className="text-xl text-white/90 mb-2 font-medium">Ton oeil sur le sport</p>
-            <p className="text-white/70 mb-8 text-sm">⚽🏀🥊🏉🏎️ Notez tous vos événements sportifs favoris</p>
+            <p className="text-white/70 mb-8 text-sm">Notez tous vos événements sportifs favoris</p>
             
             <div className="space-y-4">
               <Link
