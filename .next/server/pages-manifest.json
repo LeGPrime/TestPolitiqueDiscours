@@ -2,12 +2,7 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
-  "/profile": "pages/profile.js",
-  "/top-matches": "pages/top-matches.js",
-  "/api/teams": "pages/api/teams.js",
-  "/api/notifications": "pages/api/notifications.js",
-  "/api/profile/check-password": "pages/api/profile/check-password.js",
-  "/top-reviews": "pages/top-reviews.js",
-  "/api/profile/fixed": "pages/api/profile/fixed.js",
-  "/api/profile/avatar": "pages/api/profile/avatar.js"
+  "/": "pages/index.js",
+  "/match/[id]": "pages/match/[id].js",
+  "/profile": "pages/profile.js"
 }

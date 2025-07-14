@@ -354,16 +354,7 @@ export default function EnhancedLineupsTab({
         </div>
       </div>
 
-      {/* Coach Section - NOUVEAU PLACEMENT */}
-      <CoachSection 
-        coach={currentLineup.coach}
-        teamName={activeTeam === 'home' ? lineups.home.teamName : lineups.away.teamName}
-        team={activeTeam}
-        userRating={getUserRatingForCoach(currentLineup.coach, activeTeam)}
-        coachStats={getCoachStats(currentLineup.coach, activeTeam)}
-        onRateCoach={enhancedOnRateCoach}
-        onSelectCoach={setSelectedCoach}
-      />
+      
 
       {/* Content based on view mode */}
       {viewMode === 'tactical' && (
@@ -373,7 +364,10 @@ export default function EnhancedLineupsTab({
           currentLineup={currentLineup}
           getPlayerStats={getPlayerStats}
           getUserRatingForPlayer={getUserRatingForPlayer}
+          getUserRatingForCoach={getUserRatingForCoach}  // 🆕 Ajoute ça
+  getCoachStats={getCoachStats}  // 🆕 Ajoute ça
           onPlayerSelect={setSelectedPlayer}
+          setSelectedCoach={setSelectedCoach}
           showRatingsOverlay={showRatingsOverlay}
           homeTeam={lineups.home.teamName}
           awayTeam={lineups.away.teamName}
@@ -558,7 +552,10 @@ function MobileTacticalView({
   currentLineup, 
   getPlayerStats, 
   getUserRatingForPlayer, 
+  getUserRatingForCoach,  // 🆕 Ajoute ça
+  getCoachStats,  // 🆕 Ajoute ça
   onPlayerSelect, 
+  setSelectedCoach,
   showRatingsOverlay,
   homeTeam,
   awayTeam
@@ -601,6 +598,34 @@ function MobileTacticalView({
           <div className="absolute top-2 left-1/2 w-20 h-8 border-2 border-white transform -translate-x-1/2 border-t-0 rounded-b-lg"></div>
           <div className="absolute bottom-2 left-1/2 w-20 h-8 border-2 border-white transform -translate-x-1/2 border-b-0 rounded-t-lg"></div>
         </div>
+
+        {/* 👨‍💼 COACH INTÉGRÉ - Position dans ton carré rouge */}
+<div className="absolute top-4 left-4 z-10">
+  <div
+    onClick={() => setSelectedCoach({
+      name: currentLineup.coach,
+      team: activeTeam,
+      teamName: activeTeam === 'home' ? homeTeam : awayTeam,
+      userRating: getUserRatingForCoach(currentLineup.coach, activeTeam),
+      coachStats: getCoachStats(currentLineup.coach, activeTeam)
+    })}
+    className="cursor-pointer group transition-all duration-300 hover:scale-110 touch-target"
+  >
+    <div className={`w-12 h-12 md:w-20 md:h-13 rounded-xl flex items-center justify-center text-white font-black text-sm border-2 border-white/70 transition-all duration-500 ${
+      activeTeam === 'home' 
+        ? 'bg-gradient-to-br from-yellow-500 to-yellow-700' 
+        : 'bg-gradient-to-br from-yellow-500 to-yellow-700'
+    } ${getUserRatingForCoach(currentLineup.coach, activeTeam) ? 'ring-2 ring-yellow-400/80' : ''} group-hover:shadow-2xl group-hover:scale-105`}>
+      👨‍💼
+      
+      {getUserRatingForCoach(currentLineup.coach, activeTeam) && showRatingsOverlay && (
+        <div className="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-br from-yellow-300 to-yellow-500 rounded-full flex items-center justify-center text-xs font-black text-gray-900 shadow-lg">
+          {getUserRatingForCoach(currentLineup.coach, activeTeam).rating}
+        </div>
+      )}
+    </div>
+  </div>
+</div>
 
         {/* Positionnement mobile-optimized */}
         <div className="absolute inset-0 flex flex-col justify-between p-4 md:p-6">
@@ -711,6 +736,8 @@ function MobileTacticalView({
           </div>
         </div>
       </div>
+
+      
 
       {/* Remplaçants mobile-optimized */}
       <div className="bg-gradient-to-br from-slate-50 to-gray-100 border-t border-gray-200">
