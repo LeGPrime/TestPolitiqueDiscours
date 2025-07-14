@@ -603,35 +603,36 @@ export default function ModernProfilePage() {
               {/* Avatar et infos principales - Design mobile optimisé */}
               <div className="flex flex-col items-center text-center space-y-4">
                 {/* Avatar plus petit et élégant */}
-                <div className="relative group">
-                  <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full blur-sm opacity-75 group-hover:opacity-100 transition-opacity" />
-                  <div className="relative">
-                    {isOwnProfile ? (
-                      <AvatarUpload
-                        currentImage={profile.user.image}
-                        userName={profile.user.name || profile.user.username || 'User'}
-                        onImageChange={handleAvatarChange}
-                        size="lg" // Taille réduite pour mobile
-                      />
-                    ) : (
-                      <div className="w-20 h-20 rounded-full overflow-hidden border-3 border-white shadow-lg">
-                        {profile.user.image ? (
-                          <img 
-                            src={profile.user.image} 
-                            alt={profile.user.name || profile.user.username || 'User'}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xl font-bold">
-                            {(profile.user.name || profile.user.username || 'U').charAt(0).toUpperCase()}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  {/* Badge de statut plus petit */}
-                  <div className="absolute -bottom-1 -right-1 bg-green-500 border-3 border-white dark:border-slate-800 rounded-full w-5 h-5 shadow-lg" />
-                </div>
+  <div className="relative group">
+  <div className="absolute -inset-1 bg-gradient-to-r from-green-400 via-blue-500 via-purple-600 to-pink-500 rounded-full blur-sm opacity-60 animate-spin-slow group-hover:scale-110 transition-all duration-300"></div>
+  <div className="relative -mt-1">
+    {isOwnProfile ? (
+      <AvatarUpload
+        currentImage={profile.user.image}
+        userName={profile.user.name || profile.user.username || 'User'}
+        onImageChange={handleAvatarChange}
+        size="lg"
+      />
+    ) : (
+      <div className="w-20 h-20 rounded-full overflow-hidden border-3 border-white shadow-lg">
+        {profile.user.image ? (
+          <img 
+            src={profile.user.image} 
+            alt={profile.user.name || profile.user.username || 'User'}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xl font-bold">
+            {(profile.user.name || profile.user.username || 'U').charAt(0).toUpperCase()}
+          </div>
+        )}
+      </div>
+    )}
+   </div>
+  <div className="absolute -bottom-2 -right-1 bg-green-500 border-3 border-white dark:border-slate-800 rounded-full w-5 h-5 shadow-lg" />
+</div>
+
+                 
                 
                 {/* Nom et username */}
                 <div>

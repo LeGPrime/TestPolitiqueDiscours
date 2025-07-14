@@ -1,4 +1,4 @@
-// pages/api/user/update-avatar.ts
+// pages/api/user/update-avatar.ts - Version corrigée
 import { NextApiRequest, NextApiResponse } from 'next'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '../../../lib/auth'
@@ -10,7 +10,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // Vérifier l'authentification
     const session = await getServerSession(req, res, authOptions)
     if (!session?.user?.id) {
       return res.status(401).json({ message: 'Non authentifié' })
@@ -18,12 +17,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const { image } = req.body
 
-    // Validation basique
     if (image !== null && typeof image !== 'string') {
       return res.status(400).json({ message: 'Format d\'image invalide' })
     }
 
-    // Si c'est un avatar prédéfini, valider l'ID
     if (image && !image.startsWith('data:') && !image.startsWith('http')) {
       const validAvatarIds = [
         'avatar_sport_1', 'avatar_sport_2', 'avatar_sport_3', 'avatar_sport_4', 'avatar_sport_5', 'avatar_sport_6',
@@ -37,24 +34,38 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
-    // Mettre à jour l'utilisateur dans la base de données
+    // 🔥 CORRECTION 1: Mettre à jour l'utilisateur ET son compte
     const updatedUser = await prisma.user.update({
       where: { id: session.user.id },
-      data: { image },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        image: true,
-        username: true
-      }
+      data: { image }
     })
 
-    console.log('✅ Avatar mis à jour en DB pour:', session.user.email, '| Nouvel avatar:', image)
+    // 🔥 CORRECTION 2: Mettre à jour aussi la table Account si elle existe
+    try {
+      await prisma.account.updateMany({
+        where: { userId: session.user.id },
+        data: { 
+          // Forcer la mise à jour pour déclencher un refresh de session
+          updatedAt: new Date()
+        }
+      })
+    } catch (error) {
+      // Ignorer si la table Account n'a pas ce champ
+      console.log('Table Account mise à jour optionnelle')
+    }
 
+    console.log('✅ Avatar mis à jour:', image)
+
+    // 🔥 CORRECTION 3: Retourner un signal pour forcer le refresh
     res.status(200).json({ 
       message: 'Avatar mis à jour avec succès',
-      user: updatedUser
+      user: {
+        id: updatedUser.id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        image: updatedUser.image
+      },
+      forceSessionRefresh: true // 🆕 Signal pour le frontend
     })
 
   } catch (error) {

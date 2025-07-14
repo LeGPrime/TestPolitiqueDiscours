@@ -267,18 +267,7 @@ export default function AvatarUpload({ currentImage, userName, onImageChange, si
       </div>
 
       {/* Bouton principal */}
-      <button
-        onClick={() => setShowAvatarPicker(true)}
-        disabled={uploading}
-        className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-      >
-        {uploading ? (
-          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-        ) : (
-          <Palette className="w-4 h-4" />
-        )}
-        <span>Changer l'avatar</span>
-      </button>
+      
 
       {/* Message d'erreur */}
       {error && (

@@ -430,23 +430,24 @@ export default function Home() {
           <div className="max-w-4xl mx-auto">
             {/* Search Bar */}
             <form onSubmit={handleSearch} className="mb-6">
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Rechercher équipe, compétition, événement..."
-                  className="w-full pl-12 pr-4 py-4 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border border-gray-200 dark:border-slate-600 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-lg"
-                />
-                <button
-                  type="submit"
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-6 py-2 rounded-xl hover:from-indigo-600 hover:to-purple-700 transition-all duration-200 active:scale-95"
-                >
-                  Chercher
-                </button>
-              </div>
-            </form>
+  <div className="relative">
+    <Search className="absolute left-3 md:left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-gray-400 z-10" />
+    <input
+      type="text"
+      value={searchTerm}
+      onChange={(e) => setSearchTerm(e.target.value)}
+      placeholder="Rechercher équipe, compétition..."
+      className="w-full pl-10 md:pl-12 pr-20 md:pr-24 py-3 md:py-4 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border border-gray-200 dark:border-slate-600 rounded-xl md:rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm md:text-lg placeholder:text-sm md:placeholder:text-base"
+    />
+    <button
+      type="submit"
+      className="absolute right-1 md:right-2 top-1/2 transform -translate-y-1/2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-3 md:px-6 py-1.5 md:py-2 rounded-lg md:rounded-xl hover:from-indigo-600 hover:to-purple-700 transition-all duration-200 active:scale-95 text-xs md:text-sm font-medium"
+    >
+      <Search className="w-4 h-4 md:hidden" />
+      <span className="hidden md:inline">Chercher</span>
+    </button>
+  </div>
+</form>
 
             {/* 🆕 SECTION TRI - PLACEMENT STRATÉGIQUE */}
             <div className="mb-6">

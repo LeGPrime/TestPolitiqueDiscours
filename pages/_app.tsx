@@ -1,9 +1,10 @@
-// pages/_app.tsx - Version corrigée avec ThemeProvider
-import { SessionProvider } from 'next-auth/react'
+// pages/_app.tsx - Version avec AvatarProvider
+import { SessionProvider, useSession } from 'next-auth/react'
 import { AppProps } from 'next/app'
 import Head from 'next/head'
 import { Toaster } from 'react-hot-toast'
 import { ThemeProvider } from '../lib/theme-context'
+import { AvatarProvider } from '../lib/avatar-context' // 🆕 Import AvatarProvider
 import '../styles/globals.css'
 
 function FootRateApp({ Component, pageProps: { session, ...pageProps } }: AppProps) {
@@ -51,39 +52,59 @@ function FootRateApp({ Component, pageProps: { session, ...pageProps } }: AppPro
       
       <ThemeProvider>
         <SessionProvider session={session}>
-          <Component {...pageProps} />
-          
-          <Toaster
-            position="top-center"
-            toastOptions={{
-              duration: 3000,
-              style: {
-                background: 'rgb(var(--card))',
-                color: 'rgb(var(--card-foreground))',
-                borderRadius: '12px',
-                border: '1px solid rgb(var(--border))',
-                fontSize: '14px',
-                maxWidth: '90vw', // 📱 Responsive width
-                wordBreak: 'break-word'
-              },
-              success: {
-                iconTheme: {
-                  primary: '#10b981',
-                  secondary: '#ffffff',
+          {/* 🆕 WRAPPER AVEC AVATARPROVIDER POUR LES USERS CONNECTÉS */}
+          <SessionAwareAvatarProvider>
+            <Component {...pageProps} />
+            
+            <Toaster
+              position="top-center"
+              toastOptions={{
+                duration: 3000,
+                style: {
+                  background: 'rgb(var(--card))',
+                  color: 'rgb(var(--card-foreground))',
+                  borderRadius: '12px',
+                  border: '1px solid rgb(var(--border))',
+                  fontSize: '14px',
+                  maxWidth: '90vw', // 📱 Responsive width
+                  wordBreak: 'break-word'
                 },
-              },
-              error: {
-                iconTheme: {
-                  primary: '#ef4444',
-                  secondary: '#ffffff',
+                success: {
+                  iconTheme: {
+                    primary: '#10b981',
+                    secondary: '#ffffff',
+                  },
                 },
-              },
-            }}
-          />
+                error: {
+                  iconTheme: {
+                    primary: '#ef4444',
+                    secondary: '#ffffff',
+                  },
+                },
+              }}
+            />
+          </SessionAwareAvatarProvider>
         </SessionProvider>
       </ThemeProvider>
     </>
   )
+}
+
+// 🆕 COMPOSANT WRAPPER POUR CONDITIONNER L'AVATARPROVIDER
+function SessionAwareAvatarProvider({ children }: { children: React.ReactNode }) {
+  const { data: session } = useSession()
+  
+  // Seulement utiliser AvatarProvider si l'utilisateur est connecté
+  if (session?.user) {
+    return (
+      <AvatarProvider>
+        {children}
+      </AvatarProvider>
+    )
+  }
+  
+  // Pas de provider si pas connecté
+  return <>{children}</>
 }
 
 export default FootRateApp
