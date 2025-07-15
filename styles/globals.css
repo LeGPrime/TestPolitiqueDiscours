@@ -538,3 +538,234 @@ a {
     box-shadow: 0 0 20px rgba(168, 85, 247, 0.5);
   }
 }
+@keyframes animate-in {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-in {
+  animation: animate-in 0.3s ease-out;
+}
+
+/* Animation slide-in-from-bottom pour les modals */
+@keyframes slide-in-from-bottom {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.slide-in-from-bottom {
+  animation: slide-in-from-bottom 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Animation fade-in pour les overlays */
+@keyframes fade-in {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+.fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+/* Effet hover scale pour les éléments interactifs */
+.hover\:scale-102:hover {
+  transform: scale(1.02);
+}
+
+.hover\:scale-105:hover {
+  transform: scale(1.05);
+}
+
+/* Animation shimmer pour les effets de loading */
+@keyframes shimmer-loading {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+.animate-shimmer-loading {
+  background: linear-gradient(
+    90deg,
+    #f3f4f6,
+    #e5e7eb,
+    #f3f4f6
+  );
+  background-size: 200% 100%;
+  animation: shimmer-loading 1.5s infinite;
+}
+
+/* Pulse effect pour les badges importants */
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(251, 191, 36, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(251, 191, 36, 0.6);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s infinite;
+}
+
+/* Effet bounce subtil pour les icônes */
+@keyframes subtle-bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+.animate-subtle-bounce {
+  animation: subtle-bounce 2s infinite;
+}
+
+/* 📱 AMÉLIORATIONS SPÉCIFIQUES MOBILE */
+
+@media (max-width: 768px) {
+  /* Réduire les animations sur mobile pour de meilleures performances */
+  .animate-pulse-glow,
+  .animate-subtle-bounce {
+    animation: none;
+  }
+  
+  /* Améliorer les zones de touch */
+  .touch-target-mobile {
+    min-height: 48px;
+    min-width: 48px;
+    padding: 12px;
+  }
+  
+  /* Réduire les ombres sur mobile */
+  .mobile-shadow-reduce {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+  }
+  
+  /* Améliorer la lisibilité des textes sur petit écran */
+  .mobile-text-contrast {
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  }
+}
+
+/* 🎯 ÉTATS DE FOCUS AMÉLIORÉS POUR L'ACCESSIBILITÉ */
+.focus-ring-yellow {
+  @apply focus:outline-none focus:ring-4 focus:ring-yellow-500/25 focus:border-yellow-500;
+}
+
+.focus-ring-blue {
+  @apply focus:outline-none focus:ring-4 focus:ring-blue-500/25 focus:border-blue-500;
+}
+
+/* 🌈 GRADIENTS PERSONNALISÉS */
+.gradient-golden {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%);
+}
+
+.gradient-silver {
+  background: linear-gradient(135deg, #e5e7eb 0%, #9ca3af 50%, #6b7280 100%);
+}
+
+.gradient-bronze {
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 50%, #dc2626 100%);
+}
+
+/* 🎨 BACKGROUND PATTERNS SUBTILS */
+.pattern-dots {
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.pattern-grid {
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* 🔥 EFFETS HOVER SPÉCIAUX */
+.hover-glow:hover {
+  filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.4));
+  transition: filter 0.3s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  transition: transform 0.3s ease;
+}
+
+/* 📱 SAFE AREA SUPPORT POUR LE WIDGET */
+@supports (padding: env(safe-area-inset-top)) {
+  .widget-safe-area {
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
+}
+
+/* 🎪 ANIMATIONS DE SUCCÈS */
+@keyframes celebrate {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+  }
+  25% {
+    transform: scale(1.1) rotate(5deg);
+  }
+  75% {
+    transform: scale(1.1) rotate(-5deg);
+  }
+}
+
+.animate-celebrate {
+  animation: celebrate 0.6s ease-in-out;
+}
+
+/* 💫 PARTICULES FLOTTANTES (optionnel) */
+@keyframes float-particle {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+    opacity: 0.7;
+  }
+  50% {
+    transform: translateY(-10px) rotate(180deg);
+    opacity: 1;
+  }
+}
+
+.animate-float-particle {
+  animation: float-particle 3s ease-in-out infinite;
+}
+
+/* 🌟 SCROLLBAR PERSONNALISÉE POUR LE WIDGET */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(243, 244, 246, 0.5);
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+}

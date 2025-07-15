@@ -1,4 +1,4 @@
-// pages/api/man-of-match.ts - API pour voter pour l'homme du match
+// pages/api/man-of-match.ts - API avec création automatique des joueurs
 import { NextApiRequest, NextApiResponse } from 'next'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '../../lib/auth'
@@ -13,9 +13,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (req.method === 'POST') {
     try {
-      const { playerId, matchId, comment } = req.body
+      const { playerId, playerData, matchId, comment } = req.body
 
-      console.log('🏆 Vote homme du match reçu:', { playerId, matchId, comment })
+      console.log('🏆 Vote homme du match reçu:', { playerId, playerData, matchId, comment })
 
       if (!playerId || !matchId) {
         return res.status(400).json({ 
@@ -24,13 +24,53 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         })
       }
 
-      // Vérifier que c'est bien un joueur (pas un coach)
-      const player = await prisma.player.findUnique({
+      // 🆕 NOUVELLE LOGIQUE : Vérifier si le joueur existe, sinon le créer
+      let player = await prisma.player.findUnique({
         where: { id: playerId }
       })
 
+      if (!player && playerData) {
+        console.log('🔧 Joueur non trouvé, création automatique...', playerData)
+        
+        try {
+          // Créer le joueur avec les données fournies
+          player = await prisma.player.create({
+            data: {
+              id: playerId, // Utiliser l'ID fourni
+              name: playerData.name,
+              position: playerData.position || null,
+              number: playerData.number || null,
+              team: playerData.team,
+              sport: playerData.sport || 'FOOTBALL'
+            }
+          })
+          console.log('✅ Joueur créé:', player)
+        } catch (createError) {
+          console.error('❌ Erreur création joueur:', createError)
+          
+          // Si la création échoue (ex: ID déjà pris), essayer de le trouver à nouveau
+          player = await prisma.player.findFirst({
+            where: {
+              name: playerData.name,
+              team: playerData.team,
+              sport: playerData.sport || 'FOOTBALL'
+            }
+          })
+          
+          if (!player) {
+            return res.status(400).json({ 
+              error: 'Impossible de créer ou trouver le joueur',
+              details: createError instanceof Error ? createError.message : 'Erreur inconnue'
+            })
+          }
+        }
+      }
+
       if (!player) {
-        return res.status(404).json({ error: 'Joueur non trouvé' })
+        return res.status(404).json({ 
+          error: 'Joueur non trouvé et aucune donnée fournie pour le créer',
+          playerId 
+        })
       }
 
       if (player.position === 'COACH') {
@@ -62,7 +102,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const vote = await prisma.manOfMatchVote.create({
         data: {
           userId: session.user.id,
-          playerId: playerId,
+          playerId: player.id, // Utiliser l'ID du joueur trouvé/créé
           matchId: matchId,
           comment: comment || null,
         },
@@ -91,40 +131,66 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
       })
 
-      // Grouper par joueur
-      const playerVotes = allVotes.reduce((acc, vote) => {
+      // Grouper par joueur avec structure corrigée
+      const playerVotesMap = new Map<string, {
+        player: typeof vote.player
+        votes: typeof allVotes
+        count: number
+        percentage: number
+        recentVoters: Array<{ id: string; name?: string; username?: string }>
+      }>()
+
+      allVotes.forEach(vote => {
         const playerId = vote.playerId
-        if (!acc[playerId]) {
-          acc[playerId] = {
+        if (!playerVotesMap.has(playerId)) {
+          playerVotesMap.set(playerId, {
             player: vote.player,
             votes: [],
-            count: 0
-          }
+            count: 0,
+            percentage: 0,
+            recentVoters: []
+          })
         }
-        acc[playerId].votes.push(vote)
-        acc[playerId].count++
-        return acc
-      }, {} as Record<string, any>)
+        
+        const playerData = playerVotesMap.get(playerId)!
+        playerData.votes.push(vote)
+        playerData.count++
+        playerData.percentage = allVotes.length > 0 ? Math.round((playerData.count / allVotes.length) * 100) : 0
+        
+        // Ajouter aux votants récents (3 derniers)
+        if (playerData.recentVoters.length < 3) {
+          playerData.recentVoters.push({
+            id: vote.user.id,
+            name: vote.user.name || undefined,
+            username: vote.user.username || undefined
+          })
+        }
+      })
 
-      // Trouver le leader actuel
-      const sortedPlayers = Object.values(playerVotes).sort((a: any, b: any) => b.count - a.count)
+      // Convertir Map en objet pour l'API
+      const playerVotes = Object.fromEntries(playerVotesMap)
+
+      // Trier par nombre de votes pour le top 3
+      const sortedPlayers = Array.from(playerVotesMap.values()).sort((a, b) => b.count - a.count)
       const leader = sortedPlayers[0] || null
+      const topThree = sortedPlayers.slice(0, Math.min(10, sortedPlayers.length))
 
       res.status(200).json({ 
         success: true,
         vote, 
         stats: {
           totalVotes: allVotes.length,
-          playerVotes,
+          uniquePlayers: playerVotesMap.size,
           leader: leader ? {
             player: leader.player,
-            votes: leader.count,
-            percentage: leader.count > 0 ? Math.round((leader.count / allVotes.length) * 100) : 0
+            count: leader.count,
+            percentage: leader.percentage
           } : null,
-          topThree: sortedPlayers.slice(0, 3).map((p: any) => ({
+          topThree: topThree.map(p => ({
             player: p.player,
-            votes: p.count,
-            percentage: p.count > 0 ? Math.round((p.count / allVotes.length) * 100) : 0
+            count: p.count,
+            percentage: p.percentage,
+            recentVoters: p.recentVoters
           }))
         },
         message: `${player.name} voté comme homme du match !`
@@ -139,7 +205,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
   } else if (req.method === 'GET') {
-    // Récupérer les votes d'un match
+    // ... (reste du code GET inchangé)
     try {
       const { matchId, includeComments = 'true' } = req.query
 
@@ -162,18 +228,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         orderBy: { createdAt: 'desc' }
       })
 
-      // Grouper par joueur
-      const playerVotes = votes.reduce((acc, vote) => {
+      // Grouper par joueur avec la même structure que POST
+      const playerVotesMap = new Map<string, {
+        player: (typeof votes)[0]['player']
+        votes: Array<{
+          id: string
+          userId: string
+          createdAt: Date
+          user: (typeof votes)[0]['user']
+          comment?: string
+        }>
+        count: number
+        percentage: number
+        recentVoters: Array<{ id: string; name?: string; username?: string }>
+      }>()
+
+      votes.forEach(vote => {
         const playerId = vote.playerId
-        if (!acc[playerId]) {
-          acc[playerId] = {
+        if (!playerVotesMap.has(playerId)) {
+          playerVotesMap.set(playerId, {
             player: vote.player,
             votes: [],
-            count: 0
-          }
+            count: 0,
+            percentage: 0,
+            recentVoters: []
+          })
         }
         
-        // Inclure ou non les commentaires selon le paramètre
+        const playerData = playerVotesMap.get(playerId)!
+        
+        // Ajouter le vote avec ou sans commentaire selon le paramètre
         const voteData = {
           id: vote.id,
           userId: vote.userId,
@@ -182,24 +266,37 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           ...(includeComments === 'true' && { comment: vote.comment })
         }
         
-        acc[playerId].votes.push(voteData)
-        acc[playerId].count++
-        return acc
-      }, {} as Record<string, any>)
+        playerData.votes.push(voteData)
+        playerData.count++
+        playerData.percentage = votes.length > 0 ? Math.round((playerData.count / votes.length) * 100) : 0
+        
+        // Ajouter aux votants récents (3 derniers)
+        if (playerData.recentVoters.length < 3) {
+          playerData.recentVoters.push({
+            id: vote.user.id,
+            name: vote.user.name || undefined,
+            username: vote.user.username || undefined
+          })
+        }
+      })
+
+      // Convertir Map en objet
+      const playerVotes = Object.fromEntries(playerVotesMap)
 
       // Trier par nombre de votes
-      const sortedPlayers = Object.values(playerVotes).sort((a: any, b: any) => b.count - a.count)
+      const sortedPlayers = Array.from(playerVotesMap.values()).sort((a, b) => b.count - a.count)
       
       // Vote de l'utilisateur actuel
       const userVote = votes.find(v => v.userId === session.user.id)
 
-      console.log(`📊 ${votes.length} votes trouvés pour ${Object.keys(playerVotes).length} joueurs`)
+      console.log(`📊 ${votes.length} votes trouvés pour ${playerVotesMap.size} joueurs`)
 
       res.status(200).json({ 
         success: true,
         votes,
         playerVotes,
         userVote: userVote ? {
+          id: userVote.id,
           playerId: userVote.playerId,
           player: userVote.player,
           comment: includeComments === 'true' ? userVote.comment : undefined,
@@ -207,13 +304,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         } : null,
         stats: {
           totalVotes: votes.length,
-          uniquePlayers: Object.keys(playerVotes).length,
+          uniquePlayers: playerVotesMap.size,
           leader: sortedPlayers[0] || null,
-          topThree: sortedPlayers.slice(0, 3).map((p: any) => ({
+          topThree: sortedPlayers.slice(0, 10).map(p => ({
             player: p.player,
-            votes: p.count,
-            percentage: votes.length > 0 ? Math.round((p.count / votes.length) * 100) : 0,
-            recentVoters: p.votes.slice(0, 3).map((v: any) => v.user) // 3 derniers votants
+            count: p.count,
+            percentage: p.percentage,
+            recentVoters: p.recentVoters
           }))
         }
       })
@@ -227,7 +324,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
   } else if (req.method === 'DELETE') {
-    // Supprimer son vote
+    // ... (reste du code DELETE inchangé)
     try {
       const { matchId } = req.query
 

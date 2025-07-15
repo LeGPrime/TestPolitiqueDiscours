@@ -79,10 +79,10 @@ const OnboardingPage = () => {
   ];
 
   const watchingStyles = [
-    { id: 'casual', name: 'Spectateur Occasionnel', desc: 'Je regarde de temps en temps', emoji: '😊' },
-    { id: 'passionate', name: 'Fan Passionné', desc: 'Je ne rate jamais un match important', emoji: '🔥' },
-    { id: 'analyst', name: 'Analyste', desc: 'J\'adore décortiquer les tactiques', emoji: '🧠' },
-    { id: 'social', name: 'Social Viewer', desc: 'Je préfère regarder avec des amis', emoji: '👥' }
+    { id: 'Spectateur Occasionnel', name: 'Spectateur Occasionnel', desc: 'Je regarde de temps en temps', emoji: '😊' },
+    { id: 'Fan Passionné', name: 'Fan Passionné', desc: 'Je ne rate jamais un match important', emoji: '🔥' },
+    { id: 'Analyste', name: 'Analyste', desc: 'J\'adore décortiquer les tactiques', emoji: '🧠' },
+    { id: 'Social Viewer', name: 'Social Viewer', desc: 'Je préfère regarder avec des amis', emoji: '👥' }
   ];
 
   const avatarPresets = [
