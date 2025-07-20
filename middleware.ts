@@ -10,7 +10,7 @@ export function middleware(request: NextRequest) {
   
   // Vérifier si connecté
   const accessCookie = request.cookies.get('secret_access')
-  if (accessCookie?.value === 'MonAccesSecret2025!') {
+  if (accessCookie?.value === 'motdepasse') {
     return NextResponse.next()
   }
   

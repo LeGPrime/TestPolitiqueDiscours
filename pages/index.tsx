@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useSession, signIn, signOut } from 'next-auth/react'
-import { Star, Trophy, LogOut, RefreshCw, Search, Users, Calendar, Filter, BarChart3, Eye, X, ChevronDown, Play, Clock, MapPin, TrendingUp, Flame, MessageCircle, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
+import { Star, Trophy, LogOut, RefreshCw, Search, Users, Calendar, Filter, BarChart3, Eye, X, ChevronDown, Play, Clock, MapPin, TrendingUp, Flame, MessageCircle, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Plus, Loader2 } from 'lucide-react'
 import axios from 'axios'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { toast } from 'react-hot-toast'
 import ThemeToggle from '../components/ThemeToggle'
 import Navbar from '../components/Navbar'
+import AnimatedCircularNote from '../components/AnimatedCircularNote'
 import React from 'react'
 
 interface Match {
@@ -47,7 +48,7 @@ interface FilterStats {
   }>
 }
 
-// Fonctions utilitaires pour les équipes
+// Fonctions utilitaires
 const getTeamInitials = (teamName: string) => {
   const cleanName = teamName
     .replace(/FC|CF|AC|AS|SC|United|City|Athletic|Club|Real|Olympique/gi, '')
@@ -119,18 +120,18 @@ const getSportGradient = (sport: string) => {
 }
 
 // Composant TeamLogo
-const TeamLogo = ({ teamName, size = 'md' }: { teamName: string, size?: 'sm' | 'md' | 'lg' }) => {
+const TeamLogo = ({ teamName, size = 'sm' }: { teamName: string, size?: 'xs' | 'sm' | 'md' }) => {
   const colors = getTeamColors(teamName)
   const initials = getTeamInitials(teamName)
   
   const sizeClasses = {
+    xs: 'w-5 h-5 text-xs',
     sm: 'w-6 h-6 text-xs',
-    md: 'w-8 h-8 text-sm',
-    lg: 'w-10 h-10 text-base'
+    md: 'w-8 h-8 text-sm'
   }
   
   return (
-    <div className={`bg-gradient-to-br ${colors.primary} ${sizeClasses[size]} rounded-lg flex items-center justify-center font-bold ${colors.secondary} shadow-lg ring-1 ring-white/20`}>
+    <div className={`bg-gradient-to-br ${colors.primary} ${sizeClasses[size]} rounded-md flex items-center justify-center font-bold ${colors.secondary} shadow-sm ring-1 ring-white/20`}>
       {initials}
     </div>
   )
@@ -141,6 +142,9 @@ export default function Home() {
   const router = useRouter()
   const [matches, setMatches] = useState<Match[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(true)
+  const [page, setPage] = useState(1)
   const [refreshing, setRefreshing] = useState(false)
   const [filter, setFilter] = useState<'recent' | 'today'>('recent')
   const [sportFilter, setSportFilter] = useState<'all' | 'football' | 'basketball' | 'mma' | 'rugby' | 'f1'>('all')
@@ -148,13 +152,14 @@ export default function Home() {
   const [searchTerm, setSearchTerm] = useState('')
   const [stats, setStats] = useState<FilterStats | null>(null)
   const [showFilters, setShowFilters] = useState(false)
+  const [showSortDropdown, setShowSortDropdown] = useState(false)
   const [availableCompetitions, setAvailableCompetitions] = useState<Array<{competition: string, count: number, sport: string}>>([])
-  
-  // 🆕 ÉTAT POUR LE TRI
   const [sortBy, setSortBy] = useState<'date' | 'popularity' | 'rating'>('date')
-  const [currentSortBy, setCurrentSortBy] = useState<string>('date') // Pour l'affichage
+  const [currentSortBy, setCurrentSortBy] = useState<string>('date')
 
-  // 🆕 Gérer les redirections depuis l'onboarding
+  const MATCHES_PER_PAGE = 20
+
+  // Gestion des redirections onboarding
   useEffect(() => {
     const { welcome, fromOnboarding } = router.query
 
@@ -177,22 +182,46 @@ export default function Home() {
     }
   }, [router])
 
+  // Charger les matchs initiaux
   useEffect(() => {
     if (session) {
-      fetchMatches()
+      resetAndFetchMatches()
       fetchFilterStats()
     }
-  }, [session, filter, sportFilter, competitionFilter, sortBy]) // 🆕 AJOUT DE SORTBY
+  }, [session, filter, sportFilter, competitionFilter, sortBy])
 
-  const fetchMatches = async () => {
+  // Fonction pour reset et charger les premiers matchs
+  const resetAndFetchMatches = async () => {
+    setLoading(true)
+    setPage(1)
+    setHasMore(true)
+    await fetchMatches(1, true)
+    setLoading(false)
+  }
+
+  // Fonction pour charger plus de matchs
+  const loadMoreMatches = async () => {
+    if (!hasMore || loadingMore) return
+    
+    setLoadingMore(true)
+    const nextPage = page + 1
+    await fetchMatches(nextPage, false)
+    setPage(nextPage)
+    setLoadingMore(false)
+  }
+
+  // Fonction principale pour récupérer les matchs
+  const fetchMatches = async (pageNum: number, isReset: boolean = false) => {
     try {
-      setRefreshing(true)
+      if (isReset) setRefreshing(true)
+      
       const params = new URLSearchParams({
         type: filter,
         sport: sportFilter,
         days: '365',
-        limit: '10',
-        sortBy: sortBy // 🆕 AJOUT DU PARAMÈTRE DE TRI
+        limit: MATCHES_PER_PAGE.toString(),
+        page: pageNum.toString(),
+        sortBy: sortBy
       })
       
       if (searchTerm) {
@@ -204,13 +233,24 @@ export default function Home() {
       }
 
       const response = await axios.get(`/api/matches?${params}`)
-      setMatches(response.data.matches)
+      const newMatches = response.data.matches
+      
+      if (isReset) {
+        setMatches(newMatches)
+      } else {
+        setMatches(prev => [...prev, ...newMatches])
+      }
+      
       setStats(response.data.stats)
-      setCurrentSortBy(response.data.sortBy || 'date') // 🆕 METTRE À JOUR LE TRI ACTUEL
+      setCurrentSortBy(response.data.sortBy || 'date')
+      
+      // Vérifier s'il y a plus de matchs
+      setHasMore(newMatches.length === MATCHES_PER_PAGE)
+      
     } catch (error) {
       console.error('Erreur chargement matchs:', error)
+      toast.error('Erreur lors du chargement des matchs')
     } finally {
-      setLoading(false)
       setRefreshing(false)
     }
   }
@@ -229,7 +269,14 @@ export default function Home() {
   const rateMatch = async (matchId: string, rating: number, comment?: string) => {
     try {
       await axios.post('/api/ratings', { matchId, rating, comment })
-      fetchMatches()
+      // Mettre à jour le match dans la liste
+      setMatches(prevMatches => 
+        prevMatches.map(match => 
+          match.id === matchId 
+            ? { ...match, ratings: [...match.ratings, { id: 'temp', rating, comment, user: { id: session?.user?.id || '', name: session?.user?.name, email: session?.user?.email || '' } }] }
+            : match
+        )
+      )
       showMobileNotification('⭐ Événement noté avec succès !', 'success')
     } catch (error) {
       console.error('Erreur notation:', error)
@@ -238,33 +285,15 @@ export default function Home() {
   }
 
   const showMobileNotification = (message: string, type: 'success' | 'error') => {
-    const notification = document.createElement('div')
-    notification.className = `fixed top-4 left-4 right-4 z-50 px-4 py-3 rounded-xl shadow-lg transform transition-all duration-300 ${
-      type === 'success' 
-        ? 'bg-green-500 text-white' 
-        : 'bg-red-500 text-white'
-    }`
-    notification.innerHTML = `
-      <div class="flex items-center justify-center space-x-2">
-        <span class="font-medium">${message}</span>
-      </div>
-    `
-    document.body.appendChild(notification)
-    
-    setTimeout(() => {
-      notification.style.transform = 'translateY(-100px)'
-      notification.style.opacity = '0'
-      setTimeout(() => {
-        if (document.body.contains(notification)) {
-          document.body.removeChild(notification)
-        }
-      }, 300)
-    }, 3000)
+    toast[type](message, {
+      duration: 3000,
+      position: 'top-center',
+    })
   }
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
-    fetchMatches()
+    resetAndFetchMatches()
   }
 
   const clearFilters = () => {
@@ -272,7 +301,7 @@ export default function Home() {
     setCompetitionFilter('all')
     setSearchTerm('')
     setFilter('recent')
-    setSortBy('date') // 🆕 RÉINITIALISER LE TRI
+    setSortBy('date')
   }
 
   useEffect(() => {
@@ -290,7 +319,6 @@ export default function Home() {
     { id: 'f1', name: 'F1', emoji: '🏎️', color: 'from-blue-500 to-cyan-600' }
   ]
 
-  // 🆕 OPTIONS DE TRI
   const sortOptions = [
     { 
       id: 'date', 
@@ -330,20 +358,23 @@ export default function Home() {
     if (competitionFilter !== 'all') count++
     if (searchTerm) count++
     if (filter !== 'recent') count++
-    if (sortBy !== 'date') count++ // 🆕 COMPTER LE TRI
+    if (sortBy !== 'date') count++
     return count
   }
 
-  // 🆕 FONCTION POUR OBTENIR L'ICÔNE DU TRI ACTUEL
   const getCurrentSortIcon = () => {
     const currentSort = sortOptions.find(option => option.id === sortBy)
     return currentSort?.icon || Clock
   }
 
-  // 🆕 FONCTION POUR OBTENIR LE NOM DU TRI ACTUEL
   const getCurrentSortName = () => {
     const currentSort = sortOptions.find(option => option.id === sortBy)
     return currentSort?.name || 'Plus récents'
+  }
+
+  const handleSortChange = (newSortBy: string) => {
+    setSortBy(newSortBy as any)
+    setShowSortDropdown(false)
   }
 
   if (!session) {
@@ -351,7 +382,6 @@ export default function Home() {
       <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800">
         <div className="absolute inset-0 bg-black/20"></div>
         <div className="relative flex min-h-screen items-center justify-center px-4">
-          {/* Floating background elements */}
           <div className="absolute top-20 left-10 w-72 h-72 bg-gradient-to-br from-blue-400/30 to-purple-600/30 rounded-full blur-3xl animate-pulse"></div>
           <div className="absolute bottom-20 right-10 w-96 h-96 bg-gradient-to-br from-pink-400/30 to-red-600/30 rounded-full blur-3xl animate-pulse delay-1000"></div>
           
@@ -400,188 +430,187 @@ export default function Home() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-indigo-900">
       <Navbar activeTab="home" />
 
-      <main className="max-w-7xl mx-auto px-4 py-6 md:py-8 safe-bottom">
+<main className="max-w-7xl mx-auto px-4 py-4 md:py-8 pb-28">
         {/* Hero Section */}
-        <div className="mb-8">
-          <div className="text-center mb-6">
-            <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent mb-4">
+        <div className="mb-6 md:mb-8">
+          <div className="text-center mb-4 md:mb-6">
+            <h1 className="text-2xl md:text-5xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent mb-2 md:mb-4">
               Événements à noter
             </h1>
-            <p className="text-lg text-gray-600 dark:text-gray-300 mb-6">
+            <p className="text-sm md:text-lg text-gray-600 dark:text-gray-300 mb-3 md:mb-6">
               Découvrez et notez vos sports favoris !
             </p>
             
             {/* Quick Stats */}
             {stats && (
-              <div className="flex items-center justify-center space-x-6 text-sm text-gray-500 dark:text-gray-400">
+              <div className="flex items-center justify-center space-x-4 md:space-x-6 text-xs md:text-sm text-gray-500 dark:text-gray-400">
                 <div className="flex items-center space-x-1">
-                  <TrendingUp className="w-4 h-4" />
+                  <TrendingUp className="w-3 h-3 md:w-4 md:h-4" />
                   <span>{stats.total} événements</span>
                 </div>
                 <div className="flex items-center space-x-1">
-                  <Flame className="w-4 h-4" />
+                  <Flame className="w-3 h-3 md:w-4 md:h-4" />
                   <span>Nouvelles notes</span>
                 </div>
               </div>
             )}
           </div>
           
-          {/* Enhanced Search & Filters */}
+          {/* Search & Filters */}
           <div className="max-w-4xl mx-auto">
             {/* Search Bar */}
-            <form onSubmit={handleSearch} className="mb-6">
-  <div className="relative">
-    <Search className="absolute left-3 md:left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-gray-400 z-10" />
-    <input
-      type="text"
-      value={searchTerm}
-      onChange={(e) => setSearchTerm(e.target.value)}
-      placeholder="Rechercher équipe, compétition..."
-      className="w-full pl-10 md:pl-12 pr-20 md:pr-24 py-3 md:py-4 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border border-gray-200 dark:border-slate-600 rounded-xl md:rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm md:text-lg placeholder:text-sm md:placeholder:text-base"
-    />
+            <form onSubmit={handleSearch} className="mb-4 md:mb-6">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 z-10" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Rechercher équipe, compétition..."
+                  className="w-full pl-10 pr-20 py-2.5 md:py-4 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border border-gray-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm md:text-lg placeholder:text-sm"
+                />
+                <button
+                  type="submit"
+                  className="absolute right-1 top-1/2 transform -translate-y-1/2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-3 md:px-6 py-1.5 md:py-2 rounded-lg hover:from-indigo-600 hover:to-purple-700 transition-all duration-200 active:scale-95 text-xs md:text-sm font-medium"
+                >
+                  <Search className="w-4 h-4 md:hidden" />
+                  <span className="hidden md:inline">Chercher</span>
+                </button>
+              </div>
+            </form>
+
+            {/* Sports Filter - 3 par ligne sur mobile */}
+            <div className="mb-4 md:mb-6">
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:flex md:flex-wrap gap-2 md:gap-3 md:justify-center">
+  {sports.map((sport) => (
     <button
-      type="submit"
-      className="absolute right-1 md:right-2 top-1/2 transform -translate-y-1/2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-3 md:px-6 py-1.5 md:py-2 rounded-lg md:rounded-xl hover:from-indigo-600 hover:to-purple-700 transition-all duration-200 active:scale-95 text-xs md:text-sm font-medium"
+      key={sport.id}
+      onClick={() => setSportFilter(sport.id as any)}
+      className={`flex flex-col items-center justify-center h-16 w-full rounded-xl md:flex-row md:px-4 md:py-2 md:h-auto md:w-auto md:rounded-full transition-all duration-200 active:scale-95 text-[11px] md:text-sm ${
+        sportFilter === sport.id
+          ? `bg-gradient-to-r ${sport.color} text-white shadow`
+          : 'bg-white/60 dark:bg-slate-800/60 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-slate-600'
+      }`}
     >
-      <Search className="w-4 h-4 md:hidden" />
-      <span className="hidden md:inline">Chercher</span>
+      <span className="text-lg">{sport.emoji}</span>
+      <span className="font-medium mt-0.5 md:mt-0 md:ml-2">{sport.name}</span>
+      <span className="text-[10px] mt-0.5 md:mt-0 md:ml-2 bg-white/10 md:bg-transparent px-1.5 rounded-full">
+        {sport.id === 'all'
+          ? stats?.total
+          : stats?.bySport.find((s: any) => s.sport === sport.id)?.count || 0}
+      </span>
     </button>
-  </div>
-</form>
-
-            {/* 🆕 SECTION TRI - PLACEMENT STRATÉGIQUE */}
-            <div className="mb-6">
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                {/* Titre avec indicateur du tri actuel */}
-                <div className="flex items-center space-x-3">
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    Trier par :
-                  </h2>
-                  <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
-                    {React.createElement(getCurrentSortIcon(), { className: "w-4 h-4" })}
-                    <span>{getCurrentSortName()}</span>
-                  </div>
-                </div>
-
-                {/* 🆕 BOUTONS DE TRI MODERNES - MOBILE FRIENDLY */}
-                <div className="flex bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-2xl p-2 border border-gray-200 dark:border-slate-600 w-full sm:w-auto">
-                  {sortOptions.map((option) => {
-                    const IconComponent = option.icon
-                    const isActive = sortBy === option.id
-                    
-                    return (
-                      <button
-                        key={option.id}
-                        onClick={() => setSortBy(option.id as any)}
-                        className={`flex items-center space-x-2 px-3 py-2 rounded-xl transition-all duration-300 active:scale-95 flex-1 sm:flex-none ${
-                          isActive
-                            ? `bg-gradient-to-r ${option.color} text-white shadow-lg font-semibold`
-                            : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-slate-700/50'
-                        }`}
-                      >
-                        <IconComponent className="w-4 h-4" />
-                        <span className="text-sm font-medium hidden sm:inline">
-                          {option.name.split(' ')[1] || option.name} {/* Mobile: mot clé */}
-                        </span>
-                        <span className="text-xs sm:hidden">
-                          {option.name.split(' ')[0]} {/* Mobile version courte */}
-                        </span>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-
-              {/* 🆕 DESCRIPTION DU TRI ACTUEL */}
-              <div className="mt-3 text-center">
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {sortBy === 'date' && '📅 Événements les plus récents en premier'}
-                  {sortBy === 'popularity' && '🔥 Événements avec le plus de notes en premier'}
-                  {sortBy === 'rating' && '⭐ Événements les meilleures notés'}
-                </p>
-              </div>
+  ))}
+</div>
             </div>
 
-            {/* Sports Filter Pills */}
-            <div className="mb-6">
-              <div className="flex flex-wrap gap-3 justify-center">
-                {sports.map((sport) => (
+            {/* Filtres à dérouler côte à côte - MOBILE FIXED */}
+            <div className="mb-4 md:mb-6">
+              <div className="flex flex-row gap-2 md:gap-4 items-center justify-center">
+                {/* Dropdown de tri */}
+                <div className="relative flex-1 md:flex-none">
                   <button
-                    key={sport.id}
-                    onClick={() => setSportFilter(sport.id as any)}
-                    className={`flex items-center space-x-2 px-4 py-2 rounded-full transition-all duration-200 active:scale-95 ${
-                      sportFilter === sport.id
-                        ? `bg-gradient-to-r ${sport.color} text-white shadow-lg`
-                        : 'bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm text-gray-700 dark:text-gray-300 hover:bg-white/80 dark:hover:bg-slate-700/80 border border-gray-200 dark:border-slate-600'
-                    }`}
+                    onClick={() => {
+                      setShowSortDropdown(!showSortDropdown)
+                      setShowFilters(false)
+                    }}
+                    className="flex items-center justify-between w-full bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-xl px-3 py-2.5 border border-gray-200 dark:border-slate-600 hover:bg-white/80 dark:hover:bg-slate-700/80 transition-all active:scale-95 md:min-w-[180px]"
                   >
-                    <span className="text-lg">{sport.emoji}</span>
-                    <span className="font-medium">{sport.name}</span>
-                    {stats?.bySport && (
-                      <span className={`text-xs px-2 py-1 rounded-full ${
-                        sportFilter === sport.id ? 'bg-white/20' : 'bg-gray-100 dark:bg-slate-600'
-                      }`}>
-                        {sport.id === 'all' 
-                          ? stats.total
-                          : stats.bySport.find((s: any) => s.sport === sport.id)?.count || 0
-                        }
+                    <div className="flex items-center space-x-2">
+                      {React.createElement(getCurrentSortIcon(), { className: "w-4 h-4 text-gray-600 dark:text-gray-400" })}
+                      <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                        {getCurrentSortName()}
                       </span>
-                    )}
+                    </div>
+                    <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showSortDropdown ? 'rotate-180' : ''}`} />
                   </button>
-                ))}
+
+                  {showSortDropdown && (
+                    <div className="absolute top-full mt-2 left-0 right-0 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-gray-200 dark:border-slate-600 z-50 md:min-w-[200px]">
+                      {sortOptions.map((option) => {
+                        const IconComponent = option.icon
+                        const isActive = sortBy === option.id
+                        
+                        return (
+                          <button
+                            key={option.id}
+                            onClick={() => handleSortChange(option.id)}
+                            className={`w-full flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-slate-700 transition-all first:rounded-t-xl last:rounded-b-xl ${
+                              isActive ? 'bg-indigo-50 dark:bg-indigo-900/20 border-r-2 border-indigo-500' : ''
+                            }`}
+                          >
+                            <IconComponent className={`w-4 h-4 ${isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400'}`} />
+                            <div className="flex-1 text-left">
+                              <div className={`text-sm font-medium ${isActive ? 'text-indigo-900 dark:text-indigo-100' : 'text-gray-900 dark:text-white'}`}>
+                                {option.name}
+                              </div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400">
+                                {option.description}
+                              </div>
+                            </div>
+                            {isActive && (
+                              <div className="w-2 h-2 bg-indigo-500 rounded-full"></div>
+                            )}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Bouton Filtres */}
+                <div className="relative flex-1 md:flex-none">
+                  <button
+                    onClick={() => {
+                      setShowFilters(!showFilters)
+                      setShowSortDropdown(false)
+                    }}
+                    className="flex items-center justify-between w-full bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-xl px-3 py-2.5 border border-gray-200 dark:border-slate-600 hover:bg-white/80 dark:hover:bg-slate-700/80 transition-all active:scale-95 md:min-w-[140px]"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <Filter className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">Filtres</span>
+                      {getActiveFiltersCount() > 0 && (
+                        <span className="bg-indigo-500 text-white text-xs px-1.5 py-0.5 rounded-full">
+                          {getActiveFiltersCount()}
+                        </span>
+                      )}
+                    </div>
+                    <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+                  </button>
+                </div>
               </div>
             </div>
 
-            {/* Advanced Filters Toggle */}
-            <div className="flex items-center justify-center space-x-4">
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center space-x-2 px-4 py-2 bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm border border-gray-200 dark:border-slate-600 rounded-xl hover:bg-white/80 dark:hover:bg-slate-700/80 transition-all active:scale-95"
-              >
-                <Filter className="w-4 h-4" />
-                <span className="font-medium">Filtres avancés</span>
-                {getActiveFiltersCount() > 0 && (
-                  <span className="bg-indigo-500 text-white text-xs px-2 py-1 rounded-full">
-                    {getActiveFiltersCount()}
-                  </span>
-                )}
-                <ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
-              </button>
-              
+            {/* Actions supplémentaires */}
+            <div className="flex items-center justify-center space-x-3 md:space-x-4 mb-4">
               {getActiveFiltersCount() > 0 && (
                 <button
                   onClick={clearFilters}
-                  className="flex items-center space-x-1 px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                  className="flex items-center space-x-1 px-3 py-1.5 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors text-sm"
                 >
                   <X className="w-4 h-4" />
-                  <span>Effacer</span>
+                  <span>Effacer filtres</span>
                 </button>
               )}
               
-              <button
-                onClick={fetchMatches}
-                disabled={refreshing}
-                className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-slate-700/60 rounded-xl transition-all active:scale-95"
-              >
-                <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
-              </button>
+              
             </div>
           </div>
 
-          {/* Collapsible Advanced Filters */}
+          {/* Filtres avancés collapsibles */}
           {showFilters && (
-            <div className="max-w-4xl mx-auto mt-6 p-6 bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-2xl border border-gray-200 dark:border-slate-600">
-              <div className="grid md:grid-cols-2 gap-6">
-                {/* Period Filter */}
+            <div className="max-w-4xl mx-auto mt-4 md:mt-6 p-4 md:p-6 bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-slate-600">
+              <div className="grid md:grid-cols-2 gap-4 md:gap-6">
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center space-x-2">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2 flex items-center space-x-2">
                     <Calendar className="w-4 h-4" />
                     <span>Période</span>
                   </h3>
-                  <div className="flex bg-gray-100 dark:bg-slate-700 rounded-xl p-1">
+                  <div className="flex bg-gray-100 dark:bg-slate-700 rounded-lg p-1">
                     <button
                       onClick={() => setFilter('recent')}
-                      className={`flex-1 py-2 px-3 text-sm font-medium rounded-lg transition-all ${
+                      className={`flex-1 py-1.5 px-3 text-xs md:text-sm font-medium rounded-md transition-all ${
                         filter === 'recent' ? 'bg-white dark:bg-slate-600 text-gray-900 dark:text-white shadow-sm' : 'text-gray-600 dark:text-gray-400'
                       }`}
                     >
@@ -589,7 +618,7 @@ export default function Home() {
                     </button>
                     <button
                       onClick={() => setFilter('today')}
-                      className={`flex-1 py-2 px-3 text-sm font-medium rounded-lg transition-all ${
+                      className={`flex-1 py-1.5 px-3 text-xs md:text-sm font-medium rounded-md transition-all ${
                         filter === 'today' ? 'bg-white dark:bg-slate-600 text-gray-900 dark:text-white shadow-sm' : 'text-gray-600 dark:text-gray-400'
                       }`}
                     >
@@ -598,16 +627,15 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Competition Filter */}
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center space-x-2">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2 flex items-center space-x-2">
                     <BarChart3 className="w-4 h-4" />
                     <span>Compétitions</span>
                   </h3>
                   <select
                     value={competitionFilter}
                     onChange={(e) => setCompetitionFilter(e.target.value)}
-                    className="w-full p-2 bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    className="w-full p-2 bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-xs md:text-sm"
                   >
                     <option value="all">Toutes les compétitions</option>
                     {getFilteredCompetitions().map((comp) => (
@@ -624,20 +652,20 @@ export default function Home() {
 
         {/* Content */}
         {loading ? (
-          <div className="text-center py-16">
-            <div className="loading-spinner w-10 h-10 mx-auto mb-4 text-indigo-600"></div>
-            <p className="text-xl text-gray-600 dark:text-gray-400 mb-2">Chargement des événements...</p>
+          <div className="text-center py-12 md:py-16">
+            <div className="loading-spinner w-8 h-8 md:w-10 md:h-10 mx-auto mb-4 text-indigo-600"></div>
+            <p className="text-lg md:text-xl text-gray-600 dark:text-gray-400 mb-2">Chargement des événements...</p>
             <p className="text-gray-500 dark:text-gray-500">⚽🏀🥊🏉🏎️</p>
           </div>
         ) : matches.length === 0 ? (
-          <div className="text-center py-16">
-            <div className="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-slate-700 dark:to-slate-800 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Trophy className="w-12 h-12 text-gray-400" />
+          <div className="text-center py-12 md:py-16">
+            <div className="w-16 h-16 md:w-24 md:h-24 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-slate-700 dark:to-slate-800 rounded-full flex items-center justify-center mx-auto mb-4 md:mb-6">
+              <Trophy className="w-8 h-8 md:w-12 md:h-12 text-gray-400" />
             </div>
-            <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
+            <h3 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white mb-2 md:mb-3">
               {getActiveFiltersCount() > 0 ? 'Aucun événement trouvé' : 'Aucun événement disponible'}
             </h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
+            <p className="text-gray-600 dark:text-gray-400 mb-4 md:mb-6 max-w-md mx-auto text-sm md:text-base">
               {getActiveFiltersCount() > 0 
                 ? 'Aucun événement ne correspond à vos critères de recherche'
                 : 'Les événements apparaîtront ici une fois terminés'
@@ -646,7 +674,7 @@ export default function Home() {
             {getActiveFiltersCount() > 0 && (
               <button
                 onClick={clearFilters}
-                className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-6 py-3 rounded-xl hover:from-indigo-600 hover:to-purple-700 transition-all duration-200 active:scale-95 font-semibold"
+                className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-4 md:px-6 py-2 md:py-3 rounded-lg hover:from-indigo-600 hover:to-purple-700 transition-all duration-200 active:scale-95 font-semibold text-sm md:text-base"
               >
                 Voir tous les événements
               </button>
@@ -654,60 +682,10 @@ export default function Home() {
           </div>
         ) : (
           <div>
-            {/* 🆕 ENHANCED RESULTS SUMMARY AVEC INFO SUR LE TRI */}
-            <div className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-2xl p-6 mb-8 border border-indigo-200 dark:border-indigo-800">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center">
-                    {React.createElement(getCurrentSortIcon(), { className: "w-5 h-5 text-white" })}
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-indigo-800 dark:text-indigo-200">
-                      {matches.length} événement{matches.length > 1 ? 's' : ''} trouvé{matches.length > 1 ? 's' : ''}
-                    </h2>
-                    <p className="text-indigo-600 dark:text-indigo-400 text-sm">
-                      {sortBy === 'date' && '📅 Triés par date (plus récents d\'abord)'}
-                      {sortBy === 'popularity' && '🔥 Triés par popularité (plus de notes d\'abord)'}
-                      {sortBy === 'rating' && '⭐ Triés par note moyenne (mieux notés d\'abord)'}
-                    </p>
-                  </div>
-                </div>
-                {getActiveFiltersCount() > 0 && (
-                  <div className="flex items-center space-x-2 text-sm text-indigo-600 dark:text-indigo-400 bg-white/50 dark:bg-slate-800/50 px-3 py-2 rounded-xl">
-                    <Filter className="w-4 h-4" />
-                    <span>{getActiveFiltersCount()} filtre{getActiveFiltersCount() > 1 ? 's' : ''} actif{getActiveFiltersCount() > 1 ? 's' : ''}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* 🆕 APERÇU QUICK DES STATISTIQUES SELON LE TRI */}
-              {sortBy === 'popularity' && matches.length > 0 && (
-                <div className="mt-4 pt-4 border-t border-indigo-200 dark:border-indigo-700">
-                  <div className="flex items-center justify-between text-sm text-indigo-600 dark:text-indigo-400">
-                    <span>🏆 Plus populaire: <strong>{matches[0]?.homeTeam} vs {matches[0]?.awayTeam}</strong></span>
-                    <span className="bg-white/50 dark:bg-slate-800/50 px-2 py-1 rounded-lg">
-                      {matches[0]?.totalRatings} note{matches[0]?.totalRatings > 1 ? 's' : ''}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {sortBy === 'rating' && matches.length > 0 && (
-                <div className="mt-4 pt-4 border-t border-indigo-200 dark:border-indigo-700">
-                  <div className="flex items-center justify-between text-sm text-indigo-600 dark:text-indigo-400">
-                    <span>⭐ Mieux noté: <strong>{matches[0]?.homeTeam} vs {matches[0]?.awayTeam}</strong></span>
-                    <span className="bg-white/50 dark:bg-slate-800/50 px-2 py-1 rounded-lg">
-                      {matches[0]?.avgRating?.toFixed(1)}/5 ⭐
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Matches Grid */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {/* Grille des matchs */}
+            <div className="grid gap-3 md:gap-4 md:grid-cols-2 lg:grid-cols-3">
               {matches.map((match) => (
-                <OptimizedMatchCard
+                <CompactMatchCard
                   key={match.id}
                   match={match}
                   onRate={rateMatch}
@@ -715,29 +693,77 @@ export default function Home() {
                 />
               ))}
             </div>
+
+            {/* Bouton Load More */}
+            {hasMore && (
+              <div className="text-center mt-6 md:mt-8">
+                <button
+                  onClick={loadMoreMatches}
+                  disabled={loadingMore}
+                  className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-6 md:px-8 py-3 md:py-4 rounded-xl hover:from-indigo-600 hover:to-purple-700 transition-all duration-200 active:scale-95 font-semibold text-sm md:text-base disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 mx-auto"
+                >
+                  {loadingMore ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Chargement...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-4 h-4" />
+                      <span>Charger 20 événements de plus</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+
+            {/* Fin de liste */}
+            {!hasMore && matches.length > 0 && (
+              <div className="text-center mt-6 md:mt-8 py-4 md:py-6">
+                <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-3 md:mb-4">
+                  <Trophy className="w-6 h-6 md:w-8 md:h-8 text-white" />
+                </div>
+                <p className="text-gray-600 dark:text-gray-400 font-medium text-sm md:text-base">
+                  🎉 Vous avez vu tous les événements !
+                </p>
+                <p className="text-gray-500 dark:text-gray-500 text-xs md:text-sm mt-1">
+                  Revenez plus tard pour découvrir de nouveaux matchs
+                </p>
+              </div>
+            )}
           </div>
         )}
       </main>
+
+      {/* Fermer les dropdowns au clic extérieur */}
+      {(showSortDropdown || showFilters) && (
+        <div 
+          className="fixed inset-0 z-10" 
+          onClick={() => {
+            setShowSortDropdown(false)
+            setShowFilters(false)
+          }}
+        />
+      )}
     </div>
   )
 }
 
-// Composant de carte optimisée
-function OptimizedMatchCard({ match, onRate, currentUserId }: {
+// Composant CompactMatchCard - VERSION AMÉLIORÉE
+function CompactMatchCard({ match, onRate, currentUserId }: {
   match: Match
   onRate: (matchId: string, rating: number, comment?: string) => void
   currentUserId?: string
 }) {
   const [selectedRating, setSelectedRating] = useState(0)
   const [comment, setComment] = useState('')
-  const [showRatingForm, setShowRatingForm] = useState(false)
+  const [showRatingModal, setShowRatingModal] = useState(false)
   const [isRating, setIsRating] = useState(false)
   const router = useRouter()
 
   const userRating = match.ratings.find(r => r.user.id === currentUserId)
-  
-  // Compter seulement les commentaires non vides
   const commentsCount = match.ratings.filter(r => r.comment && r.comment.trim() !== '').length
+  const likesCount = match.totalRatings // Nombre total de notes = likes
 
   const handleRate = async (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -745,7 +771,7 @@ function OptimizedMatchCard({ match, onRate, currentUserId }: {
       setIsRating(true)
       try {
         await onRate(match.id, selectedRating, comment)
-        setShowRatingForm(false)
+        setShowRatingModal(false)
         setSelectedRating(0)
         setComment('')
       } finally {
@@ -760,13 +786,16 @@ function OptimizedMatchCard({ match, onRate, currentUserId }: {
 
   const handleRatingClick = (e: React.MouseEvent) => {
     e.stopPropagation()
-    setShowRatingForm(true)
+    setShowRatingModal(true)
   }
 
-  // 🔧 FONCTION FORMATAGE SCORE CORRIGÉE POUR MMA
+  const handleQuickRatingClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setShowRatingModal(true)
+  }
+
   const formatScore = (homeScore: any, awayScore: any, sport: string, details?: any) => {
     if (sport === 'mma') {
-      // Vérifier s'il y a un gagnant dans les détails
       const winner = details?.winner || details?.processed?.result?.winner || details?.api_data?.winner
       const method = details?.method || details?.processed?.result?.method || details?.api_data?.method
       
@@ -774,7 +803,6 @@ function OptimizedMatchCard({ match, onRate, currentUserId }: {
         return `${winner} victoire` + (method ? ` (${method})` : '')
       }
       
-      // Si pas de résultat, afficher "Combat MMA"
       if (homeScore === null && awayScore === null) {
         return 'Combat MMA'
       }
@@ -787,264 +815,303 @@ function OptimizedMatchCard({ match, onRate, currentUserId }: {
   }
 
   return (
-    <div 
-      onClick={handleCardClick}
-      className="group relative bg-white/90 dark:bg-slate-800/90 backdrop-blur-lg rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 cursor-pointer overflow-hidden border border-white/50 dark:border-slate-700/50 hover:border-indigo-400/60 dark:hover:border-indigo-500/60 transform hover:-translate-y-2 hover:scale-[1.02]"
-    >
-      {/* Sport Badge - effet moderne */}
-      <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${getSportGradient(match.sport)} opacity-80`}></div>
-      
-      {/* Effet de brillance moderne */}
-      <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
-      
-      {/* Header - design moderne */}
-      <div className="p-5 pb-3">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-3">
-            <div className={`w-9 h-9 bg-gradient-to-br ${getSportGradient(match.sport)} rounded-xl flex items-center justify-center shadow-lg ring-2 ring-white/20`}>
-              <span className="text-base">{getSportEmoji(match.sport)}</span>
-            </div>
-            <div>
-              <span className="text-sm font-semibold text-gray-900 dark:text-white tracking-wide">
-                {match.competition}
-              </span>
-              <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
-                <Clock className="w-3 h-3" />
-                <span className="font-medium">
-                  {new Date(match.date).toLocaleDateString('fr-FR', {
-                    day: 'numeric',
-                    month: 'short'
-                  })}
-                </span>
-              </div>
-            </div>
-          </div>
-          
-          {/* 🆕 STATS MODERNES AVEC BADGES AMÉLIORÉS POUR LE TRI */}
-          <div className="flex items-center space-x-2">
-            <div className="flex items-center space-x-1 bg-yellow-50 dark:bg-yellow-900/20 px-2 py-1 rounded-lg">
-              <Star className="w-3.5 h-3.5 text-yellow-500 fill-current" />
-              <span className="text-sm font-bold text-yellow-700 dark:text-yellow-400">
-                {match.totalRatings > 0 ? match.avgRating.toFixed(1) : '—'}
-              </span>
-            </div>
-            <div className="flex items-center space-x-1 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-lg">
-              <MessageCircle className="w-3.5 h-3.5 text-blue-500" />
-              <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
-                {match.totalRatings}
-              </span>
-            </div>
-            {/* 🆕 BADGE POPULARITÉ SI > 5 NOTES */}
-            {match.totalRatings >= 5 && (
-              <div className="flex items-center space-x-1 bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded-lg">
-                <Flame className="w-3.5 h-3.5 text-red-500" />
-                <span className="text-xs font-bold text-red-600 dark:text-red-400">HOT</span>
-              </div>
-            )}
-          </div>
-        </div>
+    <>
+      {/* 🆕 CARTE AMÉLIORÉE AVEC STATS EN HAUT À DROITE */}
+      <div 
+  onClick={handleCardClick}
+  className="group relative bg-white/90 dark:bg-slate-800/90 backdrop-blur-md rounded-xl shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer overflow-hidden border border-gray-200/50 dark:border-slate-700/50 hover:border-indigo-300 dark:hover:border-indigo-400 transform hover:-translate-y-[2px] hover:scale-[1.01] p-2"
+>
 
-        {/* Score moderne avec glassmorphism */}
-        <div className="mb-4">
-          {match.sport === 'f1' ? (
-            <div className="text-center bg-gradient-to-r from-red-50/80 to-orange-50/80 dark:from-red-900/30 dark:to-orange-900/30 backdrop-blur-sm rounded-xl p-4 border border-red-200/50 dark:border-red-800/50">
-              <div className="text-base font-bold text-red-600 dark:text-red-400 mb-2">
-                🏁 {match.homeTeam}
-              </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">
-                📍 {match.awayTeam}
-              </div>
-            </div>
-          ) : match.sport === 'mma' ? (
-            <div className="bg-gradient-to-r from-red-50/80 to-pink-50/80 dark:from-red-900/30 dark:to-pink-900/30 backdrop-blur-sm rounded-xl p-4 border border-red-200/50 dark:border-red-800/50">
-              <div className="text-center">
-                <div className="text-xl font-bold text-red-600 dark:text-red-400 mb-2">
-                  🥊 Combat MMA
-                </div>
-                <div className="text-lg font-semibold text-gray-900 dark:text-white">
-                  {match.homeTeam} vs {match.awayTeam}
-                </div>
-                <div className="text-sm text-amber-600 dark:text-amber-400 mt-2">
-                  {match.details?.winner ? (
-                    <span className="text-green-600 dark:text-green-400 font-semibold">
-                      🏆 {match.details.winner} victoire
-                      {match.details.method && ` (${match.details.method})`}
-                    </span>
-                  ) : match.details?.processed?.result?.winner ? (
-                    <span className="text-green-600 dark:text-green-400 font-semibold">
-                      🏆 {match.details.processed.result.winner} victoire
-                      {match.details.processed.result.method && ` (${match.details.processed.result.method})`}
-                    </span>
-                  ) : (
-                    <span className="text-amber-600 dark:text-amber-400">
-                      Résultat non disponible
-                    </span>
-                  )}
-                </div>
-                {match.venue && (
-                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    📍 {match.venue}
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="bg-gradient-to-r from-gray-50/80 to-blue-50/80 dark:from-slate-700/60 dark:to-blue-900/30 backdrop-blur-sm rounded-xl p-4 border border-gray-200/50 dark:border-slate-600/50">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2 flex-1 min-w-0">
-                  <TeamLogo teamName={match.homeTeam} size="sm" />
-                  <span className="font-bold text-gray-900 dark:text-white truncate text-sm">
-                    {match.homeTeam}
-                  </span>
-                </div>
-                
-                <div className="mx-4 text-center">
-                  <div className="text-xl font-black text-gray-900 dark:text-white tracking-wider">
-                    {formatScore(match.homeScore, match.awayScore, match.sport, match.details)}
-                  </div>
-                </div>
-                
-                <div className="flex items-center space-x-2 flex-1 justify-end min-w-0">
-                  <span className="font-bold text-gray-900 dark:text-white truncate text-sm text-right">
-                    {match.awayTeam}
-                  </span>
-                  <TeamLogo teamName={match.awayTeam} size="sm" />
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+        {/* Sport Badge */}
+        <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${getSportGradient(match.sport)}`}></div>
+        
+        {/* Footer des statistiques */}
+<div className="flex justify-between items-center px-3 py-1.5 border-t border-white/10 bg-white/5 dark:bg-slate-800/40 rounded-b-2xl text-[11px] mt-2">
+  {/* Ma note à gauche */}
+  {userRating ? (
+    <div className="flex items-center gap-1 bg-emerald-600 text-white px-2 py-0.5 rounded-full shadow-sm">
+      <span className="text-[9px] font-semibold uppercase tracking-wide">Ma note</span>
+      <span className="text-[11px] font-bold">{userRating.rating}</span>
+    </div>
+  ) : (
+    <div /> // Pour garder l'alignement
+  )}
+
+  {/* Likes & Commentaires à droite */}
+  <div className="flex items-center gap-3 text-gray-600 dark:text-gray-300">
+    <div className="flex items-center gap-1">
+      <Star className="w-3 h-3 text-yellow-500 fill-current" />
+      <span className="font-semibold">{likesCount}</span>
+    </div>
+    {commentsCount > 0 && (
+      <div className="flex items-center gap-1">
+        <MessageCircle className="w-3 h-3 text-blue-500" />
+        <span className="font-semibold">{commentsCount}</span>
       </div>
+    )}
+  </div>
+</div>
 
-      {/* Rating Section - design moderne */}
-      <div className="px-5 pb-5">
-        {!match.canRate ? (
-          <div className="text-center py-3 bg-gradient-to-r from-gray-100/80 to-gray-200/80 dark:from-slate-700/60 dark:to-slate-800/60 backdrop-blur-sm rounded-xl border border-gray-300/50 dark:border-slate-600/50">
-            <Clock className="w-5 h-5 text-gray-400 mx-auto mb-2" />
-            <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-              Événement pas encore disponible
-            </div>
-          </div>
-        ) : userRating ? (
-          <div className={`bg-gradient-to-r ${getSportGradient(match.sport)} rounded-xl p-4 text-white shadow-lg ring-1 ring-white/20`}>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-semibold">✅ Votre note</span>
-              <div className="flex space-x-1">
-                {Array.from({ length: 5 }, (_, i) => (
-                  <Star
-                    key={i}
-                    className={`w-4 h-4 ${
-                      i < userRating.rating ? 'text-yellow-300 fill-current' : 'text-white/40'
-                    }`}
-                  />
-                ))}
+
+        {/* Header compact */}
+        <div className="p-4 pb-3">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center space-x-3">
+              <div className={`w-8 h-8 bg-gradient-to-br ${getSportGradient(match.sport)} rounded-xl flex items-center justify-center shadow-sm`}>
+                <span className="text-sm">{getSportEmoji(match.sport)}</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-bold text-gray-900 dark:text-white tracking-wide truncate">
+                  {match.competition}
+                </h3>
+                <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
+                  <Clock className="w-3 h-3" />
+                  <span>
+                    {new Date(match.date).toLocaleDateString('fr-FR', {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric'
+                    })}
+                  </span>
+                </div>
               </div>
             </div>
-            {userRating.comment && (
-              <p className="text-xs text-white/90 italic truncate bg-white/10 rounded-lg p-2">
-                "{userRating.comment}"
-              </p>
+            
+            {/* Note moyenne animée en cercle avec couleur dynamique */}
+<div className="w-8 h-8 relative">
+  <svg
+    className="w-full h-full transform -rotate-90 transition-all duration-1000 ease-out"
+    viewBox="0 0 36 36"
+  >
+    {/* Cercle de fond */}
+    <path
+      className="text-gray-300 dark:text-slate-600"
+      stroke="currentColor"
+      strokeWidth="4"
+      fill="none"
+      d="M18 2.0845
+         a 15.9155 15.9155 0 0 1 0 31.831
+         a 15.9155 15.9155 0 0 1 0 -31.831"
+    />
+    {/* Cercle dynamique */}
+    {match.totalRatings > 0 && (
+      <path
+        className={`
+          ${match.avgRating >= 4 ? 'text-green-500'
+          : match.avgRating >= 2.5 ? 'text-yellow-400'
+          : 'text-red-500'}
+        `}
+        stroke="currentColor"
+        strokeWidth="4"
+        fill="none"
+        strokeLinecap="round"
+        strokeDasharray={`${(match.avgRating / 5) * 100}, 100`}
+        d="M18 2.0845
+           a 15.9155 15.9155 0 0 1 0 31.831
+           a 15.9155 15.9155 0 0 1 0 -31.831"
+        style={{
+          transition: 'stroke-dasharray 1s ease-out'
+        }}
+      />
+    )}
+  </svg>
+  {/* Texte au centre */}
+  <div className="absolute inset-0 flex items-center justify-center">
+    <span className={`
+      text-[10px] font-bold
+      ${match.avgRating >= 4 ? 'text-green-600 dark:text-green-400'
+      : match.avgRating >= 2.5 ? 'text-yellow-600 dark:text-yellow-400'
+      : 'text-red-600 dark:text-red-400'}
+    `}>
+      {match.totalRatings > 0 ? match.avgRating.toFixed(1) : '—'}
+    </span>
+  </div>
+</div>
+
+          </div>
+
+          {/* Score amélioré */}
+          <div className="mb-3">
+            {match.sport === 'f1' ? (
+              <div className="text-center bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 backdrop-blur-sm rounded-xl p-3 border border-red-200/50 dark:border-red-800/50">
+                <div className="text-base font-bold text-red-600 dark:text-red-400 mb-1">
+                  🏁 {match.homeTeam}
+                </div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">
+                  📍 {match.awayTeam}
+                </div>
+              </div>
+            ) : match.sport === 'mma' ? (
+              <div className="bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20 backdrop-blur-sm rounded-xl p-3 border border-red-200/50 dark:border-red-800/50">
+                <div className="text-center">
+                  <div className="text-base font-bold text-red-600 dark:text-red-400 mb-1">
+                    🥊 {match.homeTeam} vs {match.awayTeam}
+                  </div>
+                  <div className="text-sm text-amber-600 dark:text-amber-400">
+                    {match.details?.winner ? (
+                      <span className="text-green-600 dark:text-green-400 font-semibold">
+                        🏆 {match.details.winner} victoire
+                      </span>
+                    ) : (
+                      <span>Combat MMA</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-gradient-to-r from-gray-50 to-blue-50 dark:from-slate-700/60 dark:to-blue-900/20 backdrop-blur-sm rounded-xl p-3 border border-gray-200/50 dark:border-slate-600/50">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2 flex-1 min-w-0">
+                    <TeamLogo teamName={match.homeTeam} size="sm" />
+                    <span className="font-bold text-gray-900 dark:text-white truncate text-sm">
+                      {match.homeTeam}
+                    </span>
+                  </div>
+                  
+                  <div className="mx-3 text-center">
+                    <div className="text-lg font-black text-gray-900 dark:text-white">
+                      {formatScore(match.homeScore, match.awayScore, match.sport, match.details)}
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2 flex-1 justify-end min-w-0">
+                    <span className="font-bold text-gray-900 dark:text-white truncate text-sm text-right">
+                      {match.awayTeam}
+                    </span>
+                    <TeamLogo teamName={match.awayTeam} size="sm" />
+                  </div>
+                </div>
+              </div>
             )}
           </div>
-        ) : (
-          <div onClick={(e) => e.stopPropagation()}>
-            {!showRatingForm ? (
-              <button
-                onClick={handleRatingClick}
-                className={`w-full bg-gradient-to-r ${getSportGradient(match.sport)} text-white py-3 px-4 rounded-xl font-semibold transition-all duration-300 active:scale-95 flex items-center justify-center space-x-2 text-sm shadow-lg hover:shadow-xl ring-1 ring-white/20 hover:ring-white/40`}
-              >
-                <Star className="w-4 h-4" />
-                <span>Noter cet événement</span>
-              </button>
-            ) : (
-              <div className="space-y-4 bg-gradient-to-br from-gray-50/90 to-white/90 dark:from-slate-700/70 dark:to-slate-800/70 backdrop-blur-sm rounded-xl p-4 border border-gray-200/50 dark:border-slate-600/50 shadow-inner">
-                <div>
-                  <p className="text-xs font-semibold mb-3 text-gray-900 dark:text-white">Votre note :</p>
-                  <div className="flex justify-center space-x-2">
-                    {Array.from({ length: 5 }, (_, i) => (
-                      <Star
-                        key={i}
-                        className={`w-7 h-7 cursor-pointer transition-all duration-300 ${
-                          i < selectedRating ? 'text-yellow-400 fill-current scale-110 drop-shadow-lg' : 'text-gray-300 hover:text-yellow-300'
-                        } hover:scale-125 active:scale-110`}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setSelectedRating(i + 1)
-                        }}
-                      />
-                    ))}
-                  </div>
-                  {selectedRating > 0 && (
-                    <p className="text-center text-xs text-gray-600 dark:text-gray-400 mt-2 font-medium">
+        </div>
+
+        {/* 🆕 BOUTON DE NOTATION EN BAS À DROITE */}
+        
+
+        {/* Indicateur de clic amélioré */}
+        <div className="absolute bottom-3 left-3 opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:scale-110">
+          <div className="w-6 h-6 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 backdrop-blur-md rounded-full flex items-center justify-center ring-1 ring-indigo-300/30">
+            <Eye className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
+          </div>
+        </div>
+
+        {/* Effet de survol */}
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-all duration-300 rounded-2xl"></div>
+      </div>
+      {/* Modal notation améliorée */}
+      {showRatingModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowRatingModal(false)}>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-gray-200 dark:border-slate-700" onClick={(e) => e.stopPropagation()}>
+            <div className="text-center mb-6">
+              <div className={`w-12 h-12 bg-gradient-to-br ${getSportGradient(match.sport)} rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg`}>
+                <span className="text-lg">{getSportEmoji(match.sport)}</span>
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+                Noter ce match
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">
+                {match.homeTeam} vs {match.awayTeam}
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                {match.competition}
+              </p>
+            </div>
+
+            <div className="space-y-5">
+              <div>
+                <p className="text-sm font-semibold mb-4 text-gray-900 dark:text-white text-center">
+                  Votre note :
+                </p>
+                <div className="flex justify-center space-x-2">
+                  {Array.from({ length: 5 }, (_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setSelectedRating(i + 1)}
+                      className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 ${
+                        i < selectedRating 
+                          ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white scale-110 shadow-lg' 
+                          : 'bg-gray-100 dark:bg-slate-700 text-gray-400 hover:text-yellow-400 hover:scale-105'
+                      }`}
+                    >
+                      <Star className={`w-5 h-5 ${i < selectedRating ? 'fill-current' : ''}`} />
+                    </button>
+                  ))}
+                </div>
+                {selectedRating > 0 && (
+                  <div className="text-center mt-3">
+                    <div className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
+                      selectedRating <= 2 ? 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400' :
+                      selectedRating === 3 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400' :
+                      'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400'
+                    }`}>
                       {selectedRating === 1 && "⭐ Très décevant"}
                       {selectedRating === 2 && "⭐⭐ Décevant"}
                       {selectedRating === 3 && "⭐⭐⭐ Correct"}
                       {selectedRating === 4 && "⭐⭐⭐⭐ Très bon"}
                       {selectedRating === 5 && "⭐⭐⭐⭐⭐ Exceptionnel"}
-                    </p>
-                  )}
-                </div>
-                
-                <div>
-                  <label className="block text-xs font-semibold mb-2 text-gray-900 dark:text-white">
-                    💭 Commentaire (optionnel)
-                  </label>
-                  <textarea
-                    value={comment}
-                    onChange={(e) => setComment(e.target.value)}
-                    className="w-full p-3 text-sm border-2 border-gray-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all resize-none bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-                    rows={2}
-                    placeholder={`Votre avis sur ce match ${getSportEmoji(match.sport)} ?`}
-                    maxLength={220}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 text-right font-medium">
-                    {comment.length}/220 caractères
+                    </div>
                   </div>
-                </div>
-                
-                <div className="flex space-x-3">
-                  <button
-                    onClick={handleRate}
-                    disabled={selectedRating === 0 || isRating}
-                    className={`flex-1 py-3 px-4 rounded-xl text-sm font-semibold transition-all duration-300 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed bg-gradient-to-r ${getSportGradient(match.sport)} text-white shadow-lg hover:shadow-xl ring-1 ring-white/20`}
-                  >
-                    {isRating ? (
-                      <div className="flex items-center justify-center">
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                        Notation...
-                      </div>
-                    ) : (
-                      `✅ Noter ${selectedRating > 0 ? selectedRating + '/5' : ''}`
-                    )}
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setShowRatingForm(false)
-                      setSelectedRating(0)
-                      setComment('')
-                    }}
-                    className="px-4 py-3 bg-gradient-to-r from-gray-200 to-gray-300 dark:from-slate-600 dark:to-slate-700 text-gray-700 dark:text-gray-300 rounded-xl hover:from-gray-300 hover:to-gray-400 dark:hover:from-slate-500 dark:hover:to-slate-600 transition-all duration-300 active:scale-95 text-sm font-medium shadow-md"
-                  >
-                    ✕
-                  </button>
+                )}
+              </div>
+              
+              <div>
+                <label className="block text-sm font-semibold mb-3 text-gray-900 dark:text-white">
+                  💭 Commentaire (optionnel)
+                </label>
+                <textarea
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  className="w-full p-3 text-sm border border-gray-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all resize-none bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                  rows={3}
+                  placeholder={`Votre avis sur ce match ${getSportEmoji(match.sport)} ? (Optionnel)`}
+                  maxLength={220}
+                />
+                <div className="flex justify-between items-center mt-2">
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    Partagez votre ressenti
+                  </span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    {comment.length}/220
+                  </span>
                 </div>
               </div>
-            )}
+              
+              <div className="flex space-x-3 pt-2">
+                <button
+                  onClick={handleRate}
+                  disabled={selectedRating === 0 || isRating}
+                  className={`flex-1 py-3 px-4 rounded-xl text-sm font-semibold transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 bg-gradient-to-r ${getSportGradient(match.sport)} text-white shadow-lg hover:shadow-xl`}
+                >
+                  {isRating ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Notation...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Star className="w-4 h-4" />
+                      <span>Noter {selectedRating > 0 ? selectedRating + '/5' : ''}</span>
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowRatingModal(false)
+                    setSelectedRating(0)
+                    setComment('')
+                  }}
+                  className="px-4 py-3 bg-gray-100 dark:bg-slate-600 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-200 dark:hover:bg-slate-500 transition-all duration-200 active:scale-95 text-sm font-medium"
+                >
+                  Annuler
+                </button>
+              </div>
+            </div>
           </div>
-        )}
-      </div>
-
-      {/* Glassmorphism overlay moderne */}
-      <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/0 via-purple-500/0 to-pink-500/0 group-hover:from-indigo-500/10 group-hover:via-purple-500/5 group-hover:to-pink-500/10 transition-all duration-500 pointer-events-none rounded-2xl"></div>
-      
-      {/* Click Indicator moderne */}
-      <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-all duration-500 transform group-hover:scale-110">
-        <div className="w-8 h-8 bg-gradient-to-br from-white/30 to-white/10 backdrop-blur-md rounded-full flex items-center justify-center ring-1 ring-white/20">
-          <ChevronRight className="w-4 h-4 text-gray-700 dark:text-gray-200" />
         </div>
-      </div>
-    </div>
+      )}
+    </>
   )
 }
+
+ 

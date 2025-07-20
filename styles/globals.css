@@ -243,7 +243,7 @@ textarea::placeholder {
 /* 📱 FALLBACK pour les devices sans safe-area */
 @media screen and (max-width: 768px) {
   .pt-safe-area-inset-top {
-    padding-top: 1.5rem; /* 24px minimum même sans encoche */
+    padding-top: 2rem; /* 24px minimum même sans encoche */
   }
 }
 
@@ -769,3 +769,4 @@ a {
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(135deg, #f59e0b, #d97706);
 }
+

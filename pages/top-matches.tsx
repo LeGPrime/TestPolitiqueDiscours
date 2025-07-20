@@ -891,6 +891,7 @@ function BallonOrContent({
     if (rating >= 8) return 'EXCELLENT'
     if (rating >= 7.5) return 'TRÈS BON'
     if (rating >= 7) return 'BON'
+    if (rating >= 4) return 'MAUVAIS'
     return 'CORRECT'
   }
 

@@ -1,4 +1,4 @@
-// pages/api/matches.ts - AJOUT DU TRI PAR POPULARITÉ
+// pages/api/matches.ts - AVEC PAGINATION POUR MOBILE
 import { NextApiRequest, NextApiResponse } from 'next'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '../../lib/auth'
@@ -17,13 +17,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         type = 'recent', 
         sport = 'all', 
         days = '365',
-        limit = '50',
+        limit = '10', // 🆕 DEFAULT À 10 POUR MOBILE
+        page = '1',   // 🆕 NOUVEAU PARAMÈTRE PAGE
         search,
         competition,
-        sortBy = 'date' // 🆕 NOUVEAU PARAMÈTRE DE TRI
+        sortBy = 'date'
       } = req.query
 
-      console.log(`🔍 API Matches - Filtres reçus:`, { type, sport, days, limit, search, competition, sortBy })
+      // 🆕 CALCUL PAGINATION
+      const limitNum = parseInt(limit as string)
+      const pageNum = parseInt(page as string)
+      const skip = (pageNum - 1) * limitNum
+
+      console.log(`🔍 API Matches - Filtres reçus:`, { 
+        type, sport, days, limit: limitNum, page: pageNum, skip, search, competition, sortBy 
+      })
 
       // Construction du filtre sport
       let sportFilter = {}
@@ -94,15 +102,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       let orderBy: any = { date: 'desc' } // Par défaut : par date
       
       if (sortBy === 'popularity') {
-        // Tri par nombre de notes (totalRatings) puis par note moyenne
         orderBy = [
           { totalRatings: 'desc' },
           { avgRating: 'desc' },
-          { date: 'desc' } // En cas d'égalité, plus récent d'abord
+          { date: 'desc' }
         ]
         console.log(`📊 Tri par popularité activé`)
       } else if (sortBy === 'rating') {
-        // Tri par note moyenne puis par nombre de notes
         orderBy = [
           { avgRating: 'desc' },
           { totalRatings: 'desc' },
@@ -114,7 +120,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         console.log(`📅 Tri par date activé`)
       }
 
-      // Requête principale avec le nouveau tri
+      // 🆕 REQUÊTE PRINCIPALE AVEC PAGINATION
       const matches = await prisma.match.findMany({
         where: baseFilters,
         include: {
@@ -127,19 +133,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           }
         },
         orderBy,
-        take: parseInt(limit as string)
+        skip: skip,        // 🆕 SKIP POUR PAGINATION
+        take: limitNum     // 🆕 TAKE POUR LIMIT
       })
 
-      console.log(`✅ ${matches.length} matchs trouvés avec tri: ${sortBy}`)
+      console.log(`✅ ${matches.length} matchs trouvés (page ${pageNum}, skip ${skip}) avec tri: ${sortBy}`)
 
-      // Debug: Afficher les top 5 matchs selon le tri choisi
-      if (sortBy === 'popularity') {
-        const top5 = matches.slice(0, 5).map(m => ({
+      // 🆕 COMPTER LE TOTAL POUR SAVOIR S'IL Y A PLUS DE RÉSULTATS
+      const totalMatches = await prisma.match.count({
+        where: baseFilters
+      })
+
+      const hasMore = skip + matches.length < totalMatches
+      console.log(`📊 Total: ${totalMatches}, Récupérés: ${matches.length}, HasMore: ${hasMore}`)
+
+      // Debug: Afficher les top matchs selon le tri choisi
+      if (sortBy === 'popularity' && matches.length > 0) {
+        const top3 = matches.slice(0, 3).map(m => ({
           teams: `${m.homeTeam} vs ${m.awayTeam}`,
           totalRatings: m.totalRatings,
           avgRating: m.avgRating.toFixed(1)
         }))
-        console.log(`🏆 Top 5 par popularité:`, top5)
+        console.log(`🏆 Top 3 page ${pageNum} par popularité:`, top3)
       }
 
       // Conversion des matchs
@@ -164,43 +179,56 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         details: match.details
       }))
 
-      // Statistiques
-      const bySportStats = await prisma.match.groupBy({
-        by: ['sport'],
-        where: { status: 'FINISHED' },
-        _count: { sport: true }
-      })
+      // 🆕 STATS SEULEMENT POUR LA PREMIÈRE PAGE (OPTIMISATION)
+      let stats = null
+      if (pageNum === 1) {
+        const bySportStats = await prisma.match.groupBy({
+          by: ['sport'],
+          where: { status: 'FINISHED' },
+          _count: { sport: true }
+        })
 
-      const byCompetitionStats = await prisma.match.groupBy({
-        by: ['competition', 'sport'],
-        where: { status: 'FINISHED' },
-        _count: { competition: true }
-      })
+        const byCompetitionStats = await prisma.match.groupBy({
+          by: ['competition', 'sport'],
+          where: { status: 'FINISHED' },
+          _count: { competition: true }
+        })
 
-      // Convertir les stats des sports
-      const convertedSportStats = bySportStats.map(stat => ({
-        sport: getSportFromEnum(stat.sport),
-        count: stat._count.sport
-      }))
-
-      const limitedCompetitionStats = byCompetitionStats
-        .slice(0, 50)
-        .map(stat => ({
-          competition: stat.competition,
+        // Convertir les stats des sports
+        const convertedSportStats = bySportStats.map(stat => ({
           sport: getSportFromEnum(stat.sport),
-          count: stat._count.competition
+          count: stat._count.sport
         }))
 
-      const stats = {
-        total: formattedMatches.length,
-        bySport: convertedSportStats,
-        byCompetition: limitedCompetitionStats
+        const limitedCompetitionStats = byCompetitionStats
+          .slice(0, 50)
+          .map(stat => ({
+            competition: stat.competition,
+            sport: getSportFromEnum(stat.sport),
+            count: stat._count.competition
+          }))
+
+        stats = {
+          total: totalMatches,
+          bySport: convertedSportStats,
+          byCompetition: limitedCompetitionStats
+        }
       }
 
+      // 🆕 RÉPONSE AVEC PAGINATION
       res.status(200).json({
         matches: formattedMatches,
-        stats,
-        sortBy: sortBy // 🆕 Renvoyer le tri utilisé
+        pagination: {
+          currentPage: pageNum,
+          totalPages: Math.ceil(totalMatches / limitNum),
+          totalItems: totalMatches,
+          itemsPerPage: limitNum,
+          hasMore: hasMore,
+          hasNext: hasMore,
+          hasPrevious: pageNum > 1
+        },
+        stats: stats, // Null pour les pages > 1
+        sortBy: sortBy
       })
 
     } catch (error) {
