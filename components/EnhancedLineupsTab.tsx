@@ -389,7 +389,7 @@ export default function EnhancedLineupsTab({
         <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg p-4 md:p-6 border border-gray-100">
           <h4 className="text-lg md:text-xl font-bold text-gray-900 mb-4 flex items-center space-x-2">
             <Trophy className="w-5 h-5 text-yellow-500" />
-            <span>Vos notations</span>
+            <span>Les notes de la communauté</span>
           </h4>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
             <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-3 md:p-4 text-center border border-blue-200">

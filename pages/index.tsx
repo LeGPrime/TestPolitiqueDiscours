@@ -430,7 +430,7 @@ export default function Home() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-indigo-900">
       <Navbar activeTab="home" />
 
-<main className="max-w-7xl mx-auto px-4 py-4 md:py-8 pb-28">
+      <main className="max-w-7xl mx-auto px-4 pt-2 pb-28 md:py-8">
         {/* Hero Section */}
         <div className="mb-6 md:mb-8">
           <div className="text-center mb-4 md:mb-6">
@@ -482,30 +482,30 @@ export default function Home() {
             {/* Sports Filter - 3 par ligne sur mobile */}
             <div className="mb-4 md:mb-6">
               <div className="grid grid-cols-3 sm:grid-cols-4 md:flex md:flex-wrap gap-2 md:gap-3 md:justify-center">
-  {sports.map((sport) => (
-    <button
-      key={sport.id}
-      onClick={() => setSportFilter(sport.id as any)}
-      className={`flex flex-col items-center justify-center h-16 w-full rounded-xl md:flex-row md:px-4 md:py-2 md:h-auto md:w-auto md:rounded-full transition-all duration-200 active:scale-95 text-[11px] md:text-sm ${
-        sportFilter === sport.id
-          ? `bg-gradient-to-r ${sport.color} text-white shadow`
-          : 'bg-white/60 dark:bg-slate-800/60 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-slate-600'
-      }`}
-    >
-      <span className="text-lg">{sport.emoji}</span>
-      <span className="font-medium mt-0.5 md:mt-0 md:ml-2">{sport.name}</span>
-      <span className="text-[10px] mt-0.5 md:mt-0 md:ml-2 bg-white/10 md:bg-transparent px-1.5 rounded-full">
-        {sport.id === 'all'
-          ? stats?.total
-          : stats?.bySport.find((s: any) => s.sport === sport.id)?.count || 0}
-      </span>
-    </button>
-  ))}
-</div>
+                {sports.map((sport) => (
+                  <button
+                    key={sport.id}
+                    onClick={() => setSportFilter(sport.id as any)}
+                    className={`flex flex-col items-center justify-center h-16 w-full rounded-xl md:flex-row md:px-4 md:py-2 md:h-auto md:w-auto md:rounded-full transition-all duration-200 active:scale-95 text-[11px] md:text-sm ${
+                      sportFilter === sport.id
+                        ? `bg-gradient-to-r ${sport.color} text-white shadow`
+                        : 'bg-white/60 dark:bg-slate-800/60 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-slate-600'
+                    }`}
+                  >
+                    <span className="text-lg">{sport.emoji}</span>
+                    <span className="font-medium mt-0.5 md:mt-0 md:ml-2">{sport.name}</span>
+                    <span className="text-[10px] mt-0.5 md:mt-0 md:ml-2 bg-white/10 md:bg-transparent px-1.5 rounded-full">
+                      {sport.id === 'all'
+                        ? stats?.total
+                        : stats?.bySport.find((s: any) => s.sport === sport.id)?.count || 0}
+                    </span>
+                  </button>
+                ))}
+              </div>
             </div>
 
-            {/* Filtres à dérouler côte à côte - MOBILE FIXED */}
-            <div className="mb-4 md:mb-6">
+            {/* Filtres à dérouler côte à côte - FIXED Z-INDEX */}
+            <div className="mb-4 md:mb-6 relative z-20">
               <div className="flex flex-row gap-2 md:gap-4 items-center justify-center">
                 {/* Dropdown de tri */}
                 <div className="relative flex-1 md:flex-none">
@@ -514,7 +514,7 @@ export default function Home() {
                       setShowSortDropdown(!showSortDropdown)
                       setShowFilters(false)
                     }}
-                    className="flex items-center justify-between w-full bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-xl px-3 py-2.5 border border-gray-200 dark:border-slate-600 hover:bg-white/80 dark:hover:bg-slate-700/80 transition-all active:scale-95 md:min-w-[180px]"
+                    className="flex items-center justify-between w-full bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-xl px-3 py-2.5 border border-gray-200 dark:border-slate-600 hover:bg-white/80 dark:hover:bg-slate-700/80 transition-all active:scale-95 md:min-w-[180px] relative z-30"
                   >
                     <div className="flex items-center space-x-2">
                       {React.createElement(getCurrentSortIcon(), { className: "w-4 h-4 text-gray-600 dark:text-gray-400" })}
@@ -565,7 +565,7 @@ export default function Home() {
                       setShowFilters(!showFilters)
                       setShowSortDropdown(false)
                     }}
-                    className="flex items-center justify-between w-full bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-xl px-3 py-2.5 border border-gray-200 dark:border-slate-600 hover:bg-white/80 dark:hover:bg-slate-700/80 transition-all active:scale-95 md:min-w-[140px]"
+                    className="flex items-center justify-between w-full bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-xl px-3 py-2.5 border border-gray-200 dark:border-slate-600 hover:bg-white/80 dark:hover:bg-slate-700/80 transition-all active:scale-95 md:min-w-[140px] relative z-30"
                   >
                     <div className="flex items-center space-x-2">
                       <Filter className="w-4 h-4 text-gray-600 dark:text-gray-400" />
@@ -593,14 +593,12 @@ export default function Home() {
                   <span>Effacer filtres</span>
                 </button>
               )}
-              
-              
             </div>
           </div>
 
           {/* Filtres avancés collapsibles */}
           {showFilters && (
-            <div className="max-w-4xl mx-auto mt-4 md:mt-6 p-4 md:p-6 bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-slate-600">
+            <div className="max-w-4xl mx-auto mt-4 md:mt-6 p-4 md:p-6 bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-slate-600 relative z-30">
               <div className="grid md:grid-cols-2 gap-4 md:gap-6">
                 <div>
                   <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2 flex items-center space-x-2">
@@ -619,7 +617,7 @@ export default function Home() {
                     <button
                       onClick={() => setFilter('today')}
                       className={`flex-1 py-1.5 px-3 text-xs md:text-sm font-medium rounded-md transition-all ${
-                        filter === 'today' ? 'bg-white dark:bg-slate-600 text-gray-900 dark:text-white shadow-sm' : 'text-gray-600 dark:text-gray-400'
+                        filter === 'today' ? 'bg-white dark:bg-slate-600 text-gray-900 dark:text-white shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
                       }`}
                     >
                       Aujourd'hui
@@ -735,7 +733,7 @@ export default function Home() {
         )}
       </main>
 
-      {/* Fermer les dropdowns au clic extérieur */}
+      {/* Fermer les dropdowns au clic extérieur - SANS FLOU */}
       {(showSortDropdown || showFilters) && (
         <div 
           className="fixed inset-0 z-10" 
@@ -749,7 +747,7 @@ export default function Home() {
   )
 }
 
-// Composant CompactMatchCard - VERSION AMÉLIORÉE
+// Composant CompactMatchCard - VERSION ULTRA AFFINÉE
 function CompactMatchCard({ match, onRate, currentUserId }: {
   match: Match
   onRate: (matchId: string, rating: number, comment?: string) => void
@@ -763,7 +761,7 @@ function CompactMatchCard({ match, onRate, currentUserId }: {
 
   const userRating = match.ratings.find(r => r.user.id === currentUserId)
   const commentsCount = match.ratings.filter(r => r.comment && r.comment.trim() !== '').length
-  const likesCount = match.totalRatings // Nombre total de notes = likes
+  const likesCount = match.totalRatings
 
   const handleRate = async (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -785,11 +783,6 @@ function CompactMatchCard({ match, onRate, currentUserId }: {
   }
 
   const handleRatingClick = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    setShowRatingModal(true)
-  }
-
-  const handleQuickRatingClick = (e: React.MouseEvent) => {
     e.stopPropagation()
     setShowRatingModal(true)
   }
@@ -816,138 +809,99 @@ function CompactMatchCard({ match, onRate, currentUserId }: {
 
   return (
     <>
-      {/* 🆕 CARTE AMÉLIORÉE AVEC STATS EN HAUT À DROITE */}
+      {/* 🔥 CARTE ULTRA COMPACTE */}
       <div 
-  onClick={handleCardClick}
-  className="group relative bg-white/90 dark:bg-slate-800/90 backdrop-blur-md rounded-xl shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer overflow-hidden border border-gray-200/50 dark:border-slate-700/50 hover:border-indigo-300 dark:hover:border-indigo-400 transform hover:-translate-y-[2px] hover:scale-[1.01] p-2"
->
-
-        {/* Sport Badge */}
-        <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${getSportGradient(match.sport)}`}></div>
+        onClick={handleCardClick}
+        className="group relative bg-white/90 dark:bg-slate-800/90 backdrop-blur-md rounded-lg shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer overflow-hidden border border-gray-200/50 dark:border-slate-700/50 hover:border-indigo-300 dark:hover:border-indigo-400 transform hover:-translate-y-1 hover:scale-[1.02]"
+      >
+        {/* Sport Badge - plus fin */}
+        <div className={`absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r ${getSportGradient(match.sport)}`}></div>
         
-        {/* Footer des statistiques */}
-<div className="flex justify-between items-center px-3 py-1.5 border-t border-white/10 bg-white/5 dark:bg-slate-800/40 rounded-b-2xl text-[11px] mt-2">
-  {/* Ma note à gauche */}
-  {userRating ? (
-    <div className="flex items-center gap-1 bg-emerald-600 text-white px-2 py-0.5 rounded-full shadow-sm">
-      <span className="text-[9px] font-semibold uppercase tracking-wide">Ma note</span>
-      <span className="text-[11px] font-bold">{userRating.rating}</span>
-    </div>
-  ) : (
-    <div /> // Pour garder l'alignement
-  )}
-
-  {/* Likes & Commentaires à droite */}
-  <div className="flex items-center gap-3 text-gray-600 dark:text-gray-300">
-    <div className="flex items-center gap-1">
-      <Star className="w-3 h-3 text-yellow-500 fill-current" />
-      <span className="font-semibold">{likesCount}</span>
-    </div>
-    {commentsCount > 0 && (
-      <div className="flex items-center gap-1">
-        <MessageCircle className="w-3 h-3 text-blue-500" />
-        <span className="font-semibold">{commentsCount}</span>
-      </div>
-    )}
-  </div>
-</div>
-
-
-        {/* Header compact */}
-        <div className="p-4 pb-3">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center space-x-3">
-              <div className={`w-8 h-8 bg-gradient-to-br ${getSportGradient(match.sport)} rounded-xl flex items-center justify-center shadow-sm`}>
-                <span className="text-sm">{getSportEmoji(match.sport)}</span>
+        {/* Content principal ultra-compact */}
+        <div className="p-3">
+          {/* Header ultra-compact */}
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center space-x-2 flex-1 min-w-0">
+              <div className={`w-6 h-6 bg-gradient-to-br ${getSportGradient(match.sport)} rounded-lg flex items-center justify-center shadow-sm`}>
+                <span className="text-xs">{getSportEmoji(match.sport)}</span>
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="text-sm font-bold text-gray-900 dark:text-white tracking-wide truncate">
+                <h3 className="text-xs font-bold text-gray-900 dark:text-white tracking-wide truncate leading-tight">
                   {match.competition}
                 </h3>
-                <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
-                  <Clock className="w-3 h-3" />
+                <div className="flex items-center space-x-1 text-[10px] text-gray-500 dark:text-gray-400">
+                  <Clock className="w-2.5 h-2.5" />
                   <span>
                     {new Date(match.date).toLocaleDateString('fr-FR', {
                       day: 'numeric',
-                      month: 'short',
-                      year: 'numeric'
+                      month: 'short'
                     })}
                   </span>
                 </div>
               </div>
             </div>
             
-            {/* Note moyenne animée en cercle avec couleur dynamique */}
-<div className="w-8 h-8 relative">
-  <svg
-    className="w-full h-full transform -rotate-90 transition-all duration-1000 ease-out"
-    viewBox="0 0 36 36"
-  >
-    {/* Cercle de fond */}
-    <path
-      className="text-gray-300 dark:text-slate-600"
-      stroke="currentColor"
-      strokeWidth="4"
-      fill="none"
-      d="M18 2.0845
-         a 15.9155 15.9155 0 0 1 0 31.831
-         a 15.9155 15.9155 0 0 1 0 -31.831"
-    />
-    {/* Cercle dynamique */}
-    {match.totalRatings > 0 && (
-      <path
-        className={`
-          ${match.avgRating >= 4 ? 'text-green-500'
-          : match.avgRating >= 2.5 ? 'text-yellow-400'
-          : 'text-red-500'}
-        `}
-        stroke="currentColor"
-        strokeWidth="4"
-        fill="none"
-        strokeLinecap="round"
-        strokeDasharray={`${(match.avgRating / 5) * 100}, 100`}
-        d="M18 2.0845
-           a 15.9155 15.9155 0 0 1 0 31.831
-           a 15.9155 15.9155 0 0 1 0 -31.831"
-        style={{
-          transition: 'stroke-dasharray 1s ease-out'
-        }}
-      />
-    )}
-  </svg>
-  {/* Texte au centre */}
-  <div className="absolute inset-0 flex items-center justify-center">
-    <span className={`
-      text-[10px] font-bold
-      ${match.avgRating >= 4 ? 'text-green-600 dark:text-green-400'
-      : match.avgRating >= 2.5 ? 'text-yellow-600 dark:text-yellow-400'
-      : 'text-red-600 dark:text-red-400'}
-    `}>
-      {match.totalRatings > 0 ? match.avgRating.toFixed(1) : '—'}
-    </span>
-  </div>
-</div>
-
+            {/* Note moyenne - plus petite */}
+            <div className="w-6 h-6 relative">
+              <svg
+                className="w-full h-full transform -rotate-90 transition-all duration-1000 ease-out"
+                viewBox="0 0 36 36"
+              >
+                <path
+                  className="text-gray-300 dark:text-slate-600"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  fill="none"
+                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                />
+                {match.totalRatings > 0 && (
+                  <path
+                    className={`
+                      ${match.avgRating >= 4 ? 'text-green-500'
+                      : match.avgRating >= 2.5 ? 'text-yellow-400'
+                      : 'text-red-500'}
+                    `}
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    fill="none"
+                    strokeLinecap="round"
+                    strokeDasharray={`${(match.avgRating / 5) * 100}, 100`}
+                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                    style={{ transition: 'stroke-dasharray 1s ease-out' }}
+                  />
+                )}
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className={`
+                  text-[9px] font-bold
+                  ${match.avgRating >= 4 ? 'text-green-600 dark:text-green-400'
+                  : match.avgRating >= 2.5 ? 'text-yellow-600 dark:text-yellow-400'
+                  : 'text-red-600 dark:text-red-400'}
+                `}>
+                  {match.totalRatings > 0 ? match.avgRating.toFixed(1) : '—'}
+                </span>
+              </div>
+            </div>
           </div>
 
-          {/* Score amélioré */}
-          <div className="mb-3">
+          {/* Score ultra-compact */}
+          <div className="mb-2">
             {match.sport === 'f1' ? (
-              <div className="text-center bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 backdrop-blur-sm rounded-xl p-3 border border-red-200/50 dark:border-red-800/50">
-                <div className="text-base font-bold text-red-600 dark:text-red-400 mb-1">
+              <div className="text-center bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 backdrop-blur-sm rounded-lg p-2 border border-red-200/50 dark:border-red-800/50">
+                <div className="text-sm font-bold text-red-600 dark:text-red-400">
                   🏁 {match.homeTeam}
                 </div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">
+                <div className="text-xs text-gray-600 dark:text-gray-400 truncate">
                   📍 {match.awayTeam}
                 </div>
               </div>
             ) : match.sport === 'mma' ? (
-              <div className="bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20 backdrop-blur-sm rounded-xl p-3 border border-red-200/50 dark:border-red-800/50">
+              <div className="bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20 backdrop-blur-sm rounded-lg p-2 border border-red-200/50 dark:border-red-800/50">
                 <div className="text-center">
-                  <div className="text-base font-bold text-red-600 dark:text-red-400 mb-1">
+                  <div className="text-sm font-bold text-red-600 dark:text-red-400 truncate">
                     🥊 {match.homeTeam} vs {match.awayTeam}
                   </div>
-                  <div className="text-sm text-amber-600 dark:text-amber-400">
+                  <div className="text-xs text-amber-600 dark:text-amber-400">
                     {match.details?.winner ? (
                       <span className="text-green-600 dark:text-green-400 font-semibold">
                         🏆 {match.details.winner} victoire
@@ -959,26 +913,26 @@ function CompactMatchCard({ match, onRate, currentUserId }: {
                 </div>
               </div>
             ) : (
-              <div className="bg-gradient-to-r from-gray-50 to-blue-50 dark:from-slate-700/60 dark:to-blue-900/20 backdrop-blur-sm rounded-xl p-3 border border-gray-200/50 dark:border-slate-600/50">
+              <div className="bg-gradient-to-r from-gray-50 to-blue-50 dark:from-slate-700/60 dark:to-blue-900/20 backdrop-blur-sm rounded-lg p-2 border border-gray-200/50 dark:border-slate-600/50">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2 flex-1 min-w-0">
-                    <TeamLogo teamName={match.homeTeam} size="sm" />
-                    <span className="font-bold text-gray-900 dark:text-white truncate text-sm">
+                  <div className="flex items-center space-x-1.5 flex-1 min-w-0">
+                    <TeamLogo teamName={match.homeTeam} size="xs" />
+                    <span className="font-bold text-gray-900 dark:text-white truncate text-xs">
                       {match.homeTeam}
                     </span>
                   </div>
                   
-                  <div className="mx-3 text-center">
-                    <div className="text-lg font-black text-gray-900 dark:text-white">
+                  <div className="mx-2 text-center">
+                    <div className="text-sm font-black text-gray-900 dark:text-white">
                       {formatScore(match.homeScore, match.awayScore, match.sport, match.details)}
                     </div>
                   </div>
                   
-                  <div className="flex items-center space-x-2 flex-1 justify-end min-w-0">
-                    <span className="font-bold text-gray-900 dark:text-white truncate text-sm text-right">
+                  <div className="flex items-center space-x-1.5 flex-1 justify-end min-w-0">
+                    <span className="font-bold text-gray-900 dark:text-white truncate text-xs text-right">
                       {match.awayTeam}
                     </span>
-                    <TeamLogo teamName={match.awayTeam} size="sm" />
+                    <TeamLogo teamName={match.awayTeam} size="xs" />
                   </div>
                 </div>
               </div>
@@ -986,19 +940,44 @@ function CompactMatchCard({ match, onRate, currentUserId }: {
           </div>
         </div>
 
-        {/* 🆕 BOUTON DE NOTATION EN BAS À DROITE */}
-        
+        {/* Footer ultra-compact */}
+        <div className="flex justify-between items-center px-3 py-1.5 border-t border-white/10 bg-white/5 dark:bg-slate-800/40 text-[10px]">
+          {/* Ma note à gauche */}
+          {userRating ? (
+            <div className="flex items-center gap-1 bg-emerald-600 text-white px-1.5 py-0.5 rounded-full shadow-sm">
+              <span className="text-[8px] font-semibold uppercase tracking-wide">Ma note</span>
+              <span className="text-[10px] font-bold">{userRating.rating}</span>
+            </div>
+          ) : (
+            <div /> // Pour garder l'alignement
+          )}
 
-        {/* Indicateur de clic amélioré */}
-        <div className="absolute bottom-3 left-3 opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:scale-110">
-          <div className="w-6 h-6 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 backdrop-blur-md rounded-full flex items-center justify-center ring-1 ring-indigo-300/30">
-            <Eye className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
+          {/* Likes & Commentaires à droite */}
+          <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
+            <div className="flex items-center gap-0.5">
+              <Star className="w-2.5 h-2.5 text-yellow-500 fill-current" />
+              <span className="font-semibold">{likesCount}</span>
+            </div>
+            {commentsCount > 0 && (
+              <div className="flex items-center gap-0.5">
+                <MessageCircle className="w-2.5 h-2.5 text-blue-500" />
+                <span className="font-semibold">{commentsCount}</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Indicateur de clic - plus petit */}
+        <div className="absolute bottom-2 left-2 opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:scale-110">
+          <div className="w-5 h-5 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 backdrop-blur-md rounded-full flex items-center justify-center ring-1 ring-indigo-300/30">
+            <Eye className="w-2.5 h-2.5 text-indigo-600 dark:text-indigo-400" />
           </div>
         </div>
 
         {/* Effet de survol */}
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-all duration-300 rounded-2xl"></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-all duration-300 rounded-lg"></div>
       </div>
+
       {/* Modal notation améliorée */}
       {showRatingModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowRatingModal(false)}>
@@ -1113,5 +1092,3 @@ function CompactMatchCard({ match, onRate, currentUserId }: {
     </>
   )
 }
-
- 
