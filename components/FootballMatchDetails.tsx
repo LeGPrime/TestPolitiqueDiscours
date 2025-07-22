@@ -155,119 +155,7 @@ export default function FootballMatchDetails({
 
   return (
     <div className="space-y-4 md:space-y-6">
-      {/* 📱 RÉSUMÉ RAPIDE COLLAPSIBLE - Responsive selon écran */}
-      {(goals.length > 0 || redCards.length > 0 || cards.length > 2) && (
-        <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-100">
-          <button
-            onClick={() => setShowQuickSummary(!showQuickSummary)}
-            className="w-full p-4 md:p-6 flex items-center justify-between text-left hover:bg-gray-50/50 transition-colors rounded-2xl touch-target"
-          >
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center">
-                <Target className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h4 className="font-bold text-gray-900 text-lg">⚽ Résumé du match</h4>
-                <p className="text-sm text-gray-600">
-                  {goals.length} but{goals.length > 1 ? 's' : ''} • {cards.length} carton{cards.length > 1 ? 's' : ''} • {substitutions.length} changement{substitutions.length > 1 ? 's' : ''}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <span className="text-sm text-gray-600 font-medium hidden sm:block">
-                {showQuickSummary ? 'Masquer' : 'Afficher'}
-              </span>
-              <div className={`transition-transform duration-300 ${showQuickSummary ? 'rotate-180' : ''}`}>
-                <ChevronDown className="w-5 h-5 text-gray-400" />
-              </div>
-            </div>
-          </button>
-
-          {showQuickSummary && (
-            <div className="px-4 pb-4 md:px-6 md:pb-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Buteurs */}
-                {goals.length > 0 && (
-                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-4 border border-green-200">
-                    <div className="flex items-center space-x-2 mb-3">
-                      <Target className="w-5 h-5 text-green-600" />
-                      <h5 className="font-semibold text-green-800">⚽ Buteurs ({goals.length})</h5>
-                    </div>
-                    <div className="space-y-2 max-h-32 overflow-y-auto">
-                      {goals.map((goal, index) => (
-                        <div key={index} className="flex items-center justify-between">
-                          <div className="flex items-center space-x-2 min-w-0 flex-1">
-                            <span className="w-7 h-7 bg-green-600 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">
-                              {goal.minute}'
-                            </span>
-                            <div className="min-w-0 flex-1">
-                              <span className="font-medium text-gray-900 block truncate">{goal.player}</span>
-                              <div className="flex items-center space-x-2 text-xs">
-                                <span className="text-gray-600">({goal.team})</span>
-                                {goal.assist && (
-                                  <span className="text-blue-600 truncate">
-                                    👟 {goal.assist}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Cartons & Incidents */}
-                {(redCards.length > 0 || cards.length > 2) && (
-                  <div className="bg-gradient-to-r from-red-50 to-pink-50 rounded-xl p-4 border border-red-200">
-                    <div className="flex items-center space-x-2 mb-3">
-                      <AlertTriangle className="w-5 h-5 text-red-600" />
-                      <h5 className="font-semibold text-red-800">
-                        🟨🟥 Cartons ({cards.length})
-                        {redCards.length > 0 && ` • ${redCards.length} rouge${redCards.length > 1 ? 's' : ''}`}
-                      </h5>
-                    </div>
-                    <div className="space-y-2 max-h-32 overflow-y-auto">
-                      {cards.slice(0, 6).map((card, index) => (
-                        <div key={index} className="flex items-center space-x-2">
-                          <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 ${
-                            card.detail?.includes('Red') || card.detail?.includes('rouge') 
-                              ? 'bg-red-600' 
-                              : 'bg-yellow-600'
-                          }`}>
-                            {card.minute}'
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <span className="font-medium text-gray-900 block truncate">{card.player}</span>
-                            <div className="flex items-center space-x-2 text-xs">
-                              <span className="text-gray-600">({card.team})</span>
-                              {card.detail && (
-                                <span className={`truncate ${
-                                  card.detail?.includes('Red') || card.detail?.includes('rouge')
-                                    ? 'text-red-600' 
-                                    : 'text-yellow-600'
-                                }`}>
-                                  {card.detail}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                      {cards.length > 6 && (
-                        <div className="text-xs text-gray-500 text-center py-1">
-                          ... et {cards.length - 6} autre{cards.length - 6 > 1 ? 's' : ''} carton{cards.length - 6 > 1 ? 's' : ''}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+      
 
       {/* 📱 TABS NAVIGATION - Mobile Optimized avec Homme du Match */}
       <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg overflow-hidden border border-gray-100">
@@ -291,22 +179,7 @@ export default function FootballMatchDetails({
                 color: 'yellow',
                 description: 'Voter pour le meilleur'
               },
-              { 
-                id: 'stats', 
-                label: 'Statistiques', 
-                icon: BarChart3, 
-                shortLabel: 'Stats',
-                color: 'purple',
-                description: 'Données du match'
-              },
-              { 
-                id: 'timeline', 
-                label: 'Timeline', 
-                icon: Activity, 
-                shortLabel: 'Events',
-                color: 'green',
-                description: 'Événements'
-              }
+              
             ].map((tab) => {
               const Icon = tab.icon
               const isActive = activeTab === tab.id

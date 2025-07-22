@@ -111,12 +111,12 @@ export default function Navbar({ activeTab }: NavbarProps) {
         <div className="max-w-7xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
-              <div className="w-10 h-10">
+              <div className="w-14 h-14">
                 <Image
-                  src="/global.png"
+                  src="/LOGOC3.png"
                   alt="Sporating"
-                  width={40}
-                  height={40}
+                  width={112}
+                  height={112}
                   className="w-full h-full object-contain"
                 />
               </div>
@@ -144,18 +144,18 @@ export default function Navbar({ activeTab }: NavbarProps) {
 
   return (
     <>
-      {/* 🖥️ DESKTOP HEADER - Inchangé */}
+      {/* 🖥️ DESKTOP HEADER - Logo agrandi */}
       <header className="hidden md:block bg-white dark:bg-slate-800 shadow-sm border-b border-gray-200 dark:border-slate-700 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             {/* Logo */}
             <Link href="/" className="flex items-center space-x-3 hover:opacity-80 transition-opacity group">
-              <div className="w-10 h-10 group-hover:scale-105 transition-transform">
+              <div className="w-14 h-14 group-hover:scale-105 transition-transform">
                 <Image
-                  src="/global.png"
+                  src="/LOGOC3.png"
                   alt="Sporating"
-                  width={40}
-                  height={40}
+                  width={56}
+                  height={56}
                   className="w-full h-full object-contain"
                 />
               </div>
@@ -239,7 +239,7 @@ export default function Navbar({ activeTab }: NavbarProps) {
                   }`}
                   title={item.description}
                 >
-                  <Icon className={`w-4 h-4 ${
+                  <Icon className={`w-5 h-5 ${
                     item.active 
                       ? isHallOfFame ? 'text-yellow-600 dark:text-yellow-400' : 'text-blue-600 dark:text-blue-400'
                       : 'group-hover:scale-110 transition-transform'
@@ -257,37 +257,37 @@ export default function Navbar({ activeTab }: NavbarProps) {
         </div>
       </header>
 
-      {/* 📱 MOBILE HEADER - Design centré épuré */}
+      {/* 📱 MOBILE HEADER - Logo centré et navbar compacte */}
       <header className="md:hidden bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg shadow-sm border-b border-gray-200 dark:border-slate-700 sticky top-0 z-50">
         <div className="pt-safe-area-inset-top">
-          <div className="flex items-center justify-between px-4 py-4">
-            {/* Texte Sporating à gauche */}
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white">Sporating.</h1>
+          <div className="flex items-center px-4 py-3 relative">
+            {/* Texte Sporating à gauche (position absolue) */}
+            <h1 className="absolute left-4 text-lg font-bold text-gray-900 dark:text-white">Sporating</h1>
             
-            {/* Logo centré */}
-            <div className="flex-1 flex justify-center items-center -ml-12">
+            {/* Logo parfaitement centré par rapport à l'écran entier */}
+            <div className="flex-1 flex justify-center">
               <Link href="/" className="touch-manipulation">
                 <div className="w-16 h-16 group-active:scale-95 transition-transform">
                   <Image
-                    src="/global.png"
+                    src="/LOGOC3.png"
                     alt="Sporating"
-                    width={48}
-                    height={68}
+                    width={64}
+                    height={64}
                     className="w-full h-full object-contain"
                   />
                 </div>
               </Link>
             </div>
             
-            {/* Notifications à droite */}
-            <div className="touch-manipulation">
+            {/* Notifications à droite (position absolue) */}
+            <div className="absolute right-4 touch-manipulation">
               <NotificationCenter userId={session?.user?.id || session?.user?.email || 'user'} />
             </div>
           </div>
         </div>
       </header>
 
-      {/* 📱 MOBILE BOTTOM NAVIGATION - 5 onglets avec Profil */}
+      {/* 📱 MOBILE BOTTOM NAVIGATION - Icônes agrandies */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg border-t border-gray-200 dark:border-slate-700 z-50">
         <div className="pb-safe-area-inset-bottom">
           <div className="flex items-center justify-around px-1 py-2">
@@ -309,24 +309,24 @@ export default function Navbar({ activeTab }: NavbarProps) {
                         : 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20'
                       : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                   }`}
-                  style={{ minHeight: '56px', minWidth: '56px' }}
+                  style={{ minHeight: '64px', minWidth: '64px' }}
                 >
-                  {/* Icon avec avatar pour profil */}
+                  {/* Icon avec avatar pour profil - Agrandi */}
                   <div className={`relative transition-transform duration-200 ${tab.active ? 'scale-110' : 'group-active:scale-95'}`}>
                     {isProfile ? (
                       <AvatarDisplay
-  useSessionImage={true} // 🆕 Utiliser automatiquement l'image de session
-  name={session.user?.name || session.user?.email || 'User'}
-  size="sm"
-  showBorder={true}
-/>
+                        useSessionImage={true}
+                        name={session.user?.name || session.user?.email || 'User'}
+                        size="md"
+                        showBorder={true}
+                      />
                     ) : (
-                      <Icon className="w-5 h-5" />
+                      <Icon className="w-6 h-6" />
                     )}
                     
                     {/* Badge actif */}
                     {tab.active && (
-                      <div className={`absolute -top-1 -right-1 w-2 h-2 rounded-full ${
+                      <div className={`absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full ${
                         isHallOfFame ? 'bg-yellow-500' : 
                         isProfile ? 'bg-purple-500' : 'bg-blue-500'
                       }`}></div>
@@ -354,7 +354,7 @@ export default function Navbar({ activeTab }: NavbarProps) {
         </div>
       </nav>
 
-      {/* 📱 SPACER */}
+      {/* 📱 SPACER - Ajusté pour navbar plus compacte */}
       <div className="md:hidden h-20"></div>
     </>
   )
