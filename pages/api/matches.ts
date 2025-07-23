@@ -42,7 +42,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           'basketball': 'BASKETBALL',
           'mma': 'MMA',
           'rugby': 'RUGBY',
-          'f1': 'F1'
+          'f1': 'F1',
+          'tennis': 'TENNIS'
         }
         
         const mappedSport = sportMapping[sport as string]
@@ -251,7 +252,8 @@ function getSportFromEnum(sportEnum: string): string {
     'BASKETBALL': 'basketball', 
     'MMA': 'mma',
     'RUGBY': 'rugby',
-    'F1': 'f1'
+    'F1': 'f1',
+    'TENNIS': 'tennis'
   }
   
   return sportMap[sportEnum] || sportEnum.toLowerCase()

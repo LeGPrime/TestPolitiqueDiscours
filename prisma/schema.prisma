@@ -1,3 +1,5 @@
+// prisma/schema.prisma - VERSION COMPLÈTE avec suggestions vidéo
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -45,6 +47,8 @@ model User {
   createdAt           DateTime           @default(now())
   location            String?            @db.VarChar(255)
   favorite_club       String?            @db.VarChar(255)
+  
+  // Relations existantes
   accounts            Account[]
   sessions            Session[]
   receivedFriendships Friendship[]       @relation("UserReceivedFriendships")
@@ -59,7 +63,12 @@ model User {
   user_profiles       user_profiles?
   matchLists          MatchList[]
   matchListLikes      MatchListLike[]
-  manOfMatchVotes     ManOfMatchVote[]   // 🆕 VOTES HOMME DU MATCH
+  manOfMatchVotes     ManOfMatchVote[]
+  
+  // 🆕 NOUVELLES RELATIONS - Suggestions vidéo
+  videoSuggestions    VideoSuggestion[]
+  videoVotes          VideoVote[]
+  videoReports        VideoReport[]
 
   @@map("users")
 }
@@ -93,11 +102,16 @@ model Match {
   avgRating       Float            @default(0)
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
+  
+  // Relations existantes
   events          MatchEvent[]
   playerRatings   PlayerRating[]
   ratings         Rating[]
   listItems       MatchListItem[]
-  manOfMatchVotes ManOfMatchVote[] // 🆕 VOTES HOMME DU MATCH
+  manOfMatchVotes ManOfMatchVote[]
+  
+  // 🆕 NOUVELLE RELATION - Suggestions vidéo
+  videoSuggestions VideoSuggestion[]
 
   @@map("matches")
 }
@@ -207,7 +221,7 @@ model Player {
   sport           Sport            @default(FOOTBALL)
   createdAt       DateTime         @default(now())
   ratings         PlayerRating[]
-  manOfMatchVotes ManOfMatchVote[] // 🆕 VOTES HOMME DU MATCH
+  manOfMatchVotes ManOfMatchVote[]
 
   @@unique([name, team, sport])
   @@map("players")
@@ -230,13 +244,12 @@ model PlayerRating {
   @@map("player_ratings")
 }
 
-// 🆕 NOUVEAU MODÈLE - VOTES HOMME DU MATCH
 model ManOfMatchVote {
   id        String   @id @default(cuid())
   userId    String
   playerId  String
   matchId   String
-  comment   String?  // Commentaire optionnel sur le choix
+  comment   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
@@ -244,7 +257,7 @@ model ManOfMatchVote {
   player    Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
   match     Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, matchId]) // Un utilisateur ne peut voter qu'une fois par match
+  @@unique([userId, matchId])
   @@map("man_of_match_votes")
 }
 
@@ -304,15 +317,14 @@ model user_profiles {
   @@index([user_id], map: "idx_user_profiles_user_id")
 }
 
-// MODÈLES POUR LES LISTES DE MATCHS
 model MatchList {
   id          String           @id @default(cuid())
   name        String
   description String?
   userId      String
   isPublic    Boolean          @default(true)
-  color       String?          // Couleur thématique (blue, red, green, etc.)
-  emoji       String?          // Emoji pour personnaliser
+  color       String?
+  emoji       String?
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
   
@@ -320,7 +332,7 @@ model MatchList {
   matches     MatchListItem[]
   likes       MatchListLike[]
 
-  @@unique([userId, name]) // Un utilisateur ne peut pas avoir 2 listes avec le même nom
+  @@unique([userId, name])
   @@map("match_lists")
 }
 
@@ -328,14 +340,14 @@ model MatchListItem {
   id        String   @id @default(cuid())
   listId    String
   matchId   String
-  position  Int      @default(0) // Pour l'ordre dans la liste
-  note      String?  // Note personnelle sur ce match dans cette liste
+  position  Int      @default(0)
+  note      String?
   addedAt   DateTime @default(now())
   
   list      MatchList @relation(fields: [listId], references: [id], onDelete: Cascade)
   match     Match     @relation(fields: [matchId], references: [id], onDelete: Cascade)
 
-  @@unique([listId, matchId]) // Un match ne peut être qu'une fois dans une liste
+  @@unique([listId, matchId])
   @@map("match_list_items")
 }
 
@@ -352,6 +364,83 @@ model MatchListLike {
   @@map("match_list_likes")
 }
 
+// 🆕 NOUVEAUX MODÈLES - SUGGESTIONS VIDÉO COMMUNAUTAIRES
+
+model VideoSuggestion {
+  id          String   @id @default(cuid())
+  matchId     String
+  url         String   // Lien vers la vidéo
+  title       String   // Titre de la vidéo
+  description String?  // Description optionnelle
+  platform    String   // youtube, dailymotion, twitch, other
+  
+  // Relations
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  match       Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  
+  // Métadonnées
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Modération
+  isVerified  Boolean  @default(false) // Approuvé par un admin
+  isBlocked   Boolean  @default(false) // Bloqué (spam/inapproprié)
+  
+  // Relations votes et signalements
+  votes       VideoVote[]
+  reports     VideoReport[]
+  
+  @@unique([matchId, url]) // Empêcher les doublons d'URL par match
+  @@index([matchId], map: "idx_video_suggestions_match_id")
+  @@index([createdAt], map: "idx_video_suggestions_created_at")
+  @@index([isVerified], map: "idx_video_suggestions_verified")
+  @@index([isBlocked], map: "idx_video_suggestions_blocked")
+  @@map("video_suggestions")
+}
+
+model VideoVote {
+  id           String          @id @default(cuid())
+  userId       String
+  suggestionId String
+  voteType     String          // 'up' ou 'down'
+  createdAt    DateTime        @default(now())
+  
+  // Relations
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  suggestion   VideoSuggestion @relation(fields: [suggestionId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, suggestionId]) // Un user ne peut voter qu'une fois par suggestion
+  @@index([suggestionId], map: "idx_video_votes_suggestion_id")
+  @@index([voteType], map: "idx_video_votes_type")
+  @@map("video_votes")
+}
+
+model VideoReport {
+  id           String          @id @default(cuid())
+  userId       String
+  suggestionId String
+  reason       String          // 'spam', 'inappropriate', 'broken_link', 'duplicate', 'other'
+  comment      String?         // Commentaire optionnel
+  createdAt    DateTime        @default(now())
+  
+  // Modération
+  isResolved   Boolean         @default(false)
+  resolvedAt   DateTime?
+  resolvedBy   String?         // ID de l'admin qui a résolu
+  
+  // Relations
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  suggestion   VideoSuggestion @relation(fields: [suggestionId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, suggestionId]) // Un user ne peut signaler qu'une fois par suggestion
+  @@index([isResolved], map: "idx_video_reports_resolved")
+  @@index([reason], map: "idx_video_reports_reason")
+  @@map("video_reports")
+}
+
+// ENUMS
+
 enum FriendshipStatus {
   PENDING
   ACCEPTED
@@ -364,4 +453,6 @@ enum Sport {
   MMA
   RUGBY
   F1
+  TENNIS 
+
 }

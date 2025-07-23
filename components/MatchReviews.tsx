@@ -1,8 +1,10 @@
-// components/MatchReviews.tsx - VERSION AMÉLIORÉE MODE SOMBRE
+// components/MatchReviews.tsx - VERSION AVEC MODAL DE PROFIL
 import { useState, useEffect } from 'react'
-import { Heart, MessageCircle, Star, ThumbsUp, Clock, Users, Eye, MoreVertical, Flag } from 'lucide-react'
+import { Heart, MessageCircle, Star, ThumbsUp, Clock, Users, Eye, EyeOff, Car,
+  ChevronDown, ChevronUp, Info, MoreVertical, Flag } from 'lucide-react'
 import Link from 'next/link'
 import axios from 'axios'
+import UserProfileModal from './UserProfileModal'
 
 interface Review {
   id: string
@@ -56,6 +58,10 @@ export default function MatchReviews({
   const [showSpoilers, setShowSpoilers] = useState(false)
   const [replyingTo, setReplyingTo] = useState<string | null>(null)
   const [replyContent, setReplyContent] = useState('')
+  
+  // États pour le modal de profil
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
+  const [showProfileModal, setShowProfileModal] = useState(false)
 
   useEffect(() => {
     fetchReviews()
@@ -70,6 +76,17 @@ export default function MatchReviews({
       console.error('Erreur chargement reviews:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleUserClick = (userId: string) => {
+    if (userId === currentUserId) {
+      // Si c'est notre propre profil, aller directement sur la page
+      window.location.href = '/profile'
+    } else {
+      // Sinon, ouvrir le modal compact
+      setSelectedUserId(userId)
+      setShowProfileModal(true)
     }
   }
 
@@ -164,127 +181,140 @@ export default function MatchReviews({
   }
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg overflow-hidden border border-gray-200 dark:border-slate-700">
-      {/* Header - MODE SOMBRE */}
-      <div className="bg-gradient-to-r from-blue-500 to-indigo-600 dark:from-blue-600 dark:to-indigo-700 text-white p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xl font-bold flex items-center space-x-2">
-            <MessageCircle className="w-6 h-6" />
-            <span>Reviews & Commentaires</span>
-          </h3>
-          <div className="flex items-center space-x-2 text-sm">
-            <Users className="w-4 h-4" />
-            <span>{reviews.length} avis</span>
-          </div>
-        </div>
-
-        {/* Controls - MODE SOMBRE */}
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center space-x-2">
-            <span className="text-sm font-medium">Trier par:</span>
-            <div className="flex space-x-1">
-              <button
-                onClick={() => setSortBy('popular')}
-                className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${getSortButtonClass('popular')}`}
-              >
-                👍 Populaires
-              </button>
-              <button
-                onClick={() => setSortBy('recent')}
-                className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${getSortButtonClass('recent')}`}
-              >
-                🕒 Récents
-              </button>
-              <button
-                onClick={() => setSortBy('rating')}
-                className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${getSortButtonClass('rating')}`}
-              >
-                ⭐ Note
-              </button>
+    <>
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg overflow-hidden border border-gray-200 dark:border-slate-700">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-blue-500 to-indigo-600 dark:from-blue-600 dark:to-indigo-700 text-white p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xl font-bold flex items-center space-x-2">
+              <MessageCircle className="w-6 h-6" />
+              <span>Reviews & Commentaires</span>
+            </h3>
+            <div className="flex items-center space-x-2 text-sm">
+              <Users className="w-4 h-4" />
+              <span>{reviews.length} avis</span>
             </div>
           </div>
 
-          <button
-            onClick={() => setShowSpoilers(!showSpoilers)}
-            className={`flex items-center space-x-1 px-3 py-1 rounded-full text-xs font-medium transition-all ${
-              showSpoilers 
-                ? 'bg-red-500 dark:bg-red-600 text-white' 
-                : 'bg-white/20 dark:bg-slate-700/50 text-white hover:bg-white/30 dark:hover:bg-slate-600/50'
-            }`}
-          >
-            <Eye className="w-3 h-3" />
-            <span>{showSpoilers ? 'Masquer spoilers' : 'Afficher spoilers'}</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Call to action si pas encore noté - MODE SOMBRE */}
-      {!userHasRated && currentUserId && (
-        <div className="bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 border-l-4 border-yellow-400 dark:border-yellow-500 p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h4 className="font-semibold text-yellow-800 dark:text-yellow-300">Partagez votre avis !</h4>
-              <p className="text-yellow-700 dark:text-yellow-400 text-sm">Notez ce match pour rejoindre la conversation</p>
+          {/* Controls */}
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center space-x-2">
+              <span className="text-sm font-medium">Trier par:</span>
+              <div className="flex space-x-1">
+                <button
+                  onClick={() => setSortBy('popular')}
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${getSortButtonClass('popular')}`}
+                >
+                  👍 Populaires
+                </button>
+                <button
+                  onClick={() => setSortBy('recent')}
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${getSortButtonClass('recent')}`}
+                >
+                  🕒 Récents
+                </button>
+                <button
+                  onClick={() => setSortBy('rating')}
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${getSortButtonClass('rating')}`}
+                >
+                  ⭐ Note
+                </button>
+              </div>
             </div>
-            <button className="bg-yellow-500 dark:bg-yellow-600 hover:bg-yellow-600 dark:hover:bg-yellow-700 text-white px-4 py-2 rounded-lg font-medium transition-all">
-              ⭐ Noter
+
+            <button
+              onClick={() => setShowSpoilers(!showSpoilers)}
+              className={`flex items-center space-x-1 px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                showSpoilers 
+                  ? 'bg-red-500 dark:bg-red-600 text-white' 
+                  : 'bg-white/20 dark:bg-slate-700/50 text-white hover:bg-white/30 dark:hover:bg-slate-600/50'
+              }`}
+            >
+              <Eye className="w-3 h-3" />
+              <span>{showSpoilers ? 'Masquer spoilers' : 'Afficher spoilers'}</span>
             </button>
           </div>
         </div>
-      )}
 
-      {/* Reviews List - MODE SOMBRE */}
-      <div className="divide-y divide-gray-100 dark:divide-slate-700">
-        {reviews.length === 0 ? (
-          <div className="p-8 text-center text-gray-500 dark:text-gray-400">
-            <MessageCircle className="w-12 h-12 mx-auto mb-4 text-gray-300 dark:text-gray-600" />
-            <h4 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">Aucun commentaire pour le moment</h4>
-            <p className="text-sm">Soyez le premier à partager votre avis sur ce match !</p>
+        {/* Call to action si pas encore noté */}
+        {!userHasRated && currentUserId && (
+          <div className="bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 border-l-4 border-yellow-400 dark:border-yellow-500 p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="font-semibold text-yellow-800 dark:text-yellow-300">Partagez votre avis !</h4>
+                <p className="text-yellow-700 dark:text-yellow-400 text-sm">Notez ce match pour rejoindre la conversation</p>
+              </div>
+              <button className="bg-yellow-500 dark:bg-yellow-600 hover:bg-yellow-600 dark:hover:bg-yellow-700 text-white px-4 py-2 rounded-lg font-medium transition-all">
+                ⭐ Noter
+              </button>
+            </div>
           </div>
-        ) : (
-          reviews.map((review) => (
-            <ReviewCard
-              key={review.id}
-              review={review}
-              currentUserId={currentUserId}
-              showSpoilers={showSpoilers}
-              onLike={() => handleLike(review.id)}
-              onReply={() => setReplyingTo(review.id)}
-              isReplying={replyingTo === review.id}
-              replyContent={replyContent}
-              setReplyContent={setReplyContent}
-              onSubmitReply={() => handleReply(review.id)}
-              onCancelReply={() => {
-                setReplyingTo(null)
-                setReplyContent('')
-              }}
-            />
-          ))
+        )}
+
+        {/* Reviews List */}
+        <div className="divide-y divide-gray-100 dark:divide-slate-700">
+          {reviews.length === 0 ? (
+            <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+              <MessageCircle className="w-12 h-12 mx-auto mb-4 text-gray-300 dark:text-gray-600" />
+              <h4 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">Aucun commentaire pour le moment</h4>
+              <p className="text-sm">Soyez le premier à partager votre avis sur ce match !</p>
+            </div>
+          ) : (
+            reviews.map((review) => (
+              <ReviewCard
+                key={review.id}
+                review={review}
+                currentUserId={currentUserId}
+                showSpoilers={showSpoilers}
+                onLike={() => handleLike(review.id)}
+                onReply={() => setReplyingTo(review.id)}
+                isReplying={replyingTo === review.id}
+                replyContent={replyContent}
+                setReplyContent={setReplyContent}
+                onSubmitReply={() => handleReply(review.id)}
+                onCancelReply={() => {
+                  setReplyingTo(null)
+                  setReplyContent('')
+                }}
+                onUserClick={handleUserClick}
+              />
+            ))
+          )}
+        </div>
+
+        {/* Footer stats */}
+        {reviews.length > 0 && (
+          <div className="bg-gray-50 dark:bg-slate-700 px-6 py-4">
+            <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
+              <div className="flex items-center space-x-4">
+                <span>💬 {reviews.length} commentaires</span>
+                <span>❤️ {reviews.reduce((acc, r) => acc + r.likes, 0)} likes</span>
+              </div>
+              <Link 
+                href={`/match/${matchId}/reviews`}
+                className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
+              >
+                Voir tous les avis →
+              </Link>
+            </div>
+          </div>
         )}
       </div>
 
-      {/* Footer stats - MODE SOMBRE */}
-      {reviews.length > 0 && (
-        <div className="bg-gray-50 dark:bg-slate-700 px-6 py-4">
-          <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
-            <div className="flex items-center space-x-4">
-              <span>💬 {reviews.length} commentaires</span>
-              <span>❤️ {reviews.reduce((acc, r) => acc + r.likes, 0)} likes</span>
-            </div>
-            <Link 
-              href={`/match/${matchId}/reviews`}
-              className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
-            >
-              Voir tous les avis →
-            </Link>
-          </div>
-        </div>
-      )}
-    </div>
+      {/* Modal de profil */}
+      <UserProfileModal
+        isOpen={showProfileModal}
+        onClose={() => {
+          setShowProfileModal(false)
+          setSelectedUserId(null)
+        }}
+        userId={selectedUserId || ''}
+      />
+    </>
   )
 }
 
-// Composant pour une review individuelle - MODE SOMBRE AMÉLIORÉ
+// Composant pour une review individuelle avec clic sur profil
 function ReviewCard({ 
   review, 
   currentUserId, 
@@ -295,7 +325,8 @@ function ReviewCard({
   replyContent, 
   setReplyContent, 
   onSubmitReply, 
-  onCancelReply 
+  onCancelReply,
+  onUserClick
 }: any) {
   const [showFullComment, setShowFullComment] = useState(false)
   const [showReplies, setShowReplies] = useState(false)
@@ -323,27 +354,37 @@ function ReviewCard({
 
   return (
     <div className="p-6">
-      {/* User info & rating - MODE SOMBRE */}
+      {/* User info & rating */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center space-x-3">
-          <Link href={`/user/${review.user.username || review.user.id}`}>
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 dark:from-blue-600 dark:to-indigo-700 rounded-full flex items-center justify-center text-white font-bold cursor-pointer hover:scale-105 transition-transform">
+          {/* Avatar cliquable */}
+          <button 
+            onClick={() => onUserClick(review.user.id)}
+            className="group relative"
+          >
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 dark:from-blue-600 dark:to-indigo-700 rounded-full flex items-center justify-center text-white font-bold cursor-pointer hover:scale-105 transition-transform group-hover:ring-2 group-hover:ring-blue-500 group-hover:ring-offset-2">
               {review.user.image ? (
                 <img src={review.user.image} alt="" className="w-full h-full rounded-full" />
               ) : (
                 review.user.name?.[0]?.toUpperCase() || '?'
               )}
             </div>
-          </Link>
+            
+            {/* Tooltip hover */}
+            <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+              Voir le profil
+            </div>
+          </button>
           
           <div>
             <div className="flex items-center space-x-2">
-              <Link 
-                href={`/user/${review.user.username || review.user.id}`}
+              {/* Nom cliquable */}
+              <button 
+                onClick={() => onUserClick(review.user.id)}
                 className="font-semibold text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
               >
                 {review.user.name}
-              </Link>
+              </button>
               {review.user.totalReviews && review.user.totalReviews > 10 && (
                 <div className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 px-2 py-0.5 rounded-full text-xs font-medium">
                   {review.user.totalReviews > 100 ? '💎' : '⭐'} Expert
@@ -363,7 +404,7 @@ function ReviewCard({
           </div>
         </div>
 
-        {/* Rating - MODE SOMBRE */}
+        {/* Rating */}
         <div className="text-right">
           <div className={`text-2xl font-bold ${getRatingColor(review.rating)}`}>
             {review.rating.toFixed(1)}
@@ -381,7 +422,7 @@ function ReviewCard({
         </div>
       </div>
 
-      {/* Comment - MODE SOMBRE */}
+      {/* Comment */}
       <div className={`mb-4 relative ${shouldBlurSpoiler ? 'filter blur-sm' : ''}`}>
         <p className={`text-gray-700 dark:text-gray-300 leading-relaxed ${
           !showFullComment && review.comment.length > 300 ? 'line-clamp-4' : ''
@@ -407,7 +448,7 @@ function ReviewCard({
         )}
       </div>
 
-      {/* Actions - MODE SOMBRE */}
+      {/* Actions */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <button
@@ -447,7 +488,7 @@ function ReviewCard({
         </button>
       </div>
 
-      {/* Reply form - MODE SOMBRE */}
+      {/* Reply form */}
       {isReplying && (
         <div className="mt-4 pl-13 border-l-2 border-blue-200 dark:border-blue-700">
           <textarea
@@ -475,21 +516,36 @@ function ReviewCard({
         </div>
       )}
 
-      {/* Replies - MODE SOMBRE */}
+      {/* Replies avec avatars cliquables */}
       {showReplies && review.replies && review.replies.map((reply: any) => (
         <div key={reply.id} className="mt-4 pl-13 border-l-2 border-gray-100 dark:border-slate-700">
           <div className="flex items-start space-x-3">
-            <div className="w-8 h-8 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
-              {reply.user.image ? (
-                <img src={reply.user.image} alt="" className="w-full h-full rounded-full" />
-              ) : (
-                reply.user.name?.[0]?.toUpperCase() || '?'
-              )}
-            </div>
+            <button 
+              onClick={() => onUserClick(reply.user.id)}
+              className="group relative"
+            >
+              <div className="w-8 h-8 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center text-white text-sm font-bold cursor-pointer hover:scale-105 transition-transform group-hover:ring-2 group-hover:ring-blue-500 group-hover:ring-offset-2">
+                {reply.user.image ? (
+                  <img src={reply.user.image} alt="" className="w-full h-full rounded-full" />
+                ) : (
+                  reply.user.name?.[0]?.toUpperCase() || '?'
+                )}
+              </div>
+              
+              {/* Tooltip hover */}
+              <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+                Voir le profil
+              </div>
+            </button>
             
             <div className="flex-1">
               <div className="flex items-center space-x-2 mb-1">
-                <span className="font-medium text-gray-900 dark:text-white text-sm">{reply.user.name}</span>
+                <button
+                  onClick={() => onUserClick(reply.user.id)}
+                  className="font-medium text-gray-900 dark:text-white text-sm hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                >
+                  {reply.user.name}
+                </button>
                 <span className="text-gray-500 dark:text-gray-400 text-xs">{getTimeAgo(reply.createdAt)}</span>
               </div>
               

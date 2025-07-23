@@ -1,4 +1,4 @@
-// pages/top-reviews.tsx - VERSION MOBILE ERGONOMIQUE COMPLÈTE
+// pages/top-reviews.tsx - VERSION AVEC MODAL DE PROFIL
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import axios from 'axios'
 import Navbar from '../components/Navbar'
+import UserProfileModal from '../components/UserProfileModal'
 
 interface TopReview {
   id: string
@@ -51,6 +52,10 @@ export default function TopReviewsPage() {
   const [sportFilter, setSportFilter] = useState<string>('all')
   const [stats, setStats] = useState<any>(null)
   const [showMore, setShowMore] = useState(false)
+  
+  // États pour le modal de profil
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
+  const [showProfileModal, setShowProfileModal] = useState(false)
 
   useEffect(() => {
     fetchTopReviews()
@@ -76,6 +81,17 @@ export default function TopReviewsPage() {
       setError('Erreur de connexion')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleUserClick = (userId: string) => {
+    if (userId === session?.user?.id) {
+      // Si c'est notre propre profil, aller directement sur la page
+      window.location.href = '/profile'
+    } else {
+      // Sinon, ouvrir le modal compact
+      setSelectedUserId(userId)
+      setShowProfileModal(true)
     }
   }
 
@@ -206,7 +222,12 @@ export default function TopReviewsPage() {
                       {topThree[1] && (
                         <div className="flex flex-col items-center">
                           <div className="mb-4">
-                            <DesktopPodiumCard review={topThree[1]} rank={2} onLike={() => handleLike(topThree[1].id)} />
+                            <DesktopPodiumCard 
+                              review={topThree[1]} 
+                              rank={2} 
+                              onLike={() => handleLike(topThree[1].id)}
+                              onUserClick={() => handleUserClick(topThree[1].user.id)}
+                            />
                           </div>
                           <div className="w-64 h-32 bg-gradient-to-t from-gray-500 to-gray-300 rounded-t-2xl flex items-start justify-center pt-6 shadow-xl border-4 border-gray-400">
                             <div className="text-white font-black text-2xl drop-shadow-lg">🥈 2ème</div>
@@ -219,7 +240,12 @@ export default function TopReviewsPage() {
                       {topThree[0] && (
                         <div className="flex flex-col items-center">
                           <div className="mb-4">
-                            <DesktopPodiumCard review={topThree[0]} rank={1} onLike={() => handleLike(topThree[0].id)} />
+                            <DesktopPodiumCard 
+                              review={topThree[0]} 
+                              rank={1} 
+                              onLike={() => handleLike(topThree[0].id)}
+                              onUserClick={() => handleUserClick(topThree[0].user.id)}
+                            />
                           </div>
                           <div className="w-64 h-40 bg-gradient-to-t from-yellow-600 to-yellow-300 rounded-t-2xl flex items-start justify-center pt-6 shadow-2xl border-4 border-yellow-500">
                             <div className="text-white font-black text-3xl drop-shadow-lg">🥇 1er</div>
@@ -232,7 +258,12 @@ export default function TopReviewsPage() {
                       {topThree[2] && (
                         <div className="flex flex-col items-center">
                           <div className="mb-4">
-                            <DesktopPodiumCard review={topThree[2]} rank={3} onLike={() => handleLike(topThree[2].id)} />
+                            <DesktopPodiumCard 
+                              review={topThree[2]} 
+                              rank={3} 
+                              onLike={() => handleLike(topThree[2].id)}
+                              onUserClick={() => handleUserClick(topThree[2].user.id)}
+                            />
                           </div>
                           <div className="w-64 h-24 bg-gradient-to-t from-orange-600 to-orange-300 rounded-t-2xl flex items-start justify-center pt-6 shadow-xl border-4 border-orange-500">
                             <div className="text-white font-black text-xl drop-shadow-lg">🥉 3ème</div>
@@ -302,6 +333,7 @@ export default function TopReviewsPage() {
                           review={review}
                           rank={index + 1}
                           onLike={() => handleLike(review.id)}
+                          onUserClick={() => handleUserClick(review.user.id)}
                         />
                       ))}
                     </div>
@@ -323,6 +355,7 @@ export default function TopReviewsPage() {
                         review={review}
                         rank={index + 4}
                         onLike={() => handleLike(review.id)}
+                        onUserClick={() => handleUserClick(review.user.id)}
                       />
                     ))}
                   </div>
@@ -369,12 +402,22 @@ export default function TopReviewsPage() {
         {/* Spacer pour mobile */}
         <div className="h-20 md:hidden"></div>
       </div>
+
+      {/* Modal de profil */}
+      <UserProfileModal
+        isOpen={showProfileModal}
+        onClose={() => {
+          setShowProfileModal(false)
+          setSelectedUserId(null)
+        }}
+        userId={selectedUserId || ''}
+      />
     </>
   )
 }
 
-// 🆕 NOUVELLE CARTE MOBILE ULTRA COMPACTE POUR LE TOP 3
-function MobilePodiumCard({ review, rank, onLike }: { review: TopReview, rank: number, onLike: () => void }) {
+// 🆕 NOUVELLE CARTE MOBILE ULTRA COMPACTE POUR LE TOP 3 AVEC CLIC PROFIL
+function MobilePodiumCard({ review, rank, onLike, onUserClick }: { review: TopReview, rank: number, onLike: () => void, onUserClick: () => void }) {
   const getSportEmoji = (sport: string) => {
     const emojis = { 'football': '⚽', 'basketball': '🏀', 'mma': '🥊', 'rugby': '🏉', 'f1': '🏎️' }
     return emojis[sport?.toLowerCase() as keyof typeof emojis] || '🏆'
@@ -406,20 +449,36 @@ function MobilePodiumCard({ review, rank, onLike }: { review: TopReview, rank: n
           <span className="text-xl">{rankEmojis[rank as keyof typeof rankEmojis]}</span>
         </div>
         
-        {/* User info compact */}
+        {/* User info compact - CLIQUABLE */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
-              {review.user.image ? (
-                <img src={review.user.image} alt="" className="w-full h-full rounded-full" />
-              ) : (
-                review.user.name?.[0]?.toUpperCase() || 'U'
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="font-bold text-gray-900 dark:text-white text-sm truncate">
-                {review.user.name}
+            {/* Avatar cliquable */}
+            <button 
+              onClick={onUserClick}
+              className="group relative"
+            >
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-bold hover:scale-105 transition-transform group-hover:ring-2 group-hover:ring-blue-500 group-hover:ring-offset-2">
+                {review.user.image ? (
+                  <img src={review.user.image} alt="" className="w-full h-full rounded-full" />
+                ) : (
+                  review.user.name?.[0]?.toUpperCase() || 'U'
+                )}
               </div>
+              
+              {/* Tooltip hover */}
+              <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+                Voir le profil
+              </div>
+            </button>
+
+            <div className="flex-1 min-w-0">
+              {/* Nom cliquable */}
+              <button
+                onClick={onUserClick}
+                className="font-bold text-gray-900 dark:text-white text-sm truncate block hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+              >
+                {review.user.name}
+              </button>
               <div className="text-xs text-gray-500 dark:text-gray-400">
                 {review.user.totalReviews} reviews
               </div>
@@ -499,8 +558,8 @@ function MobilePodiumCard({ review, rank, onLike }: { review: TopReview, rank: n
   )
 }
 
-// Carte desktop pour le podium (inchangée)
-function DesktopPodiumCard({ review, rank, onLike }: { review: TopReview, rank: number, onLike: () => void }) {
+// Carte desktop pour le podium avec clic profil
+function DesktopPodiumCard({ review, rank, onLike, onUserClick }: { review: TopReview, rank: number, onLike: () => void, onUserClick: () => void }) {
   const getSportEmoji = (sport: string) => {
     const emojis = { 'football': '⚽', 'basketball': '🏀', 'mma': '🥊', 'rugby': '🏉', 'f1': '🏎️' }
     return emojis[sport?.toLowerCase() as keyof typeof emojis] || '🏆'
@@ -546,16 +605,28 @@ function DesktopPodiumCard({ review, rank, onLike }: { review: TopReview, rank: 
       </div>
 
       <div className="p-4 space-y-4">
-        {/* User */}
+        {/* User - CLIQUABLE */}
         <div className="flex items-center space-x-3 p-2 bg-gray-50 dark:bg-slate-700/50 rounded-xl">
           <div className="relative">
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold ring-2 ring-white dark:ring-slate-700">
-              {review.user.image ? (
-                <img src={review.user.image} alt="" className="w-full h-full rounded-full" />
-              ) : (
-                review.user.name?.[0]?.toUpperCase() || 'U'
-              )}
-            </div>
+            {/* Avatar cliquable */}
+            <button 
+              onClick={onUserClick}
+              className="group relative"
+            >
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold ring-2 ring-white dark:ring-slate-700 hover:scale-105 transition-transform group-hover:ring-2 group-hover:ring-blue-500 group-hover:ring-offset-2">
+                {review.user.image ? (
+                  <img src={review.user.image} alt="" className="w-full h-full rounded-full" />
+                ) : (
+                  review.user.name?.[0]?.toUpperCase() || 'U'
+                )}
+              </div>
+              
+              {/* Tooltip hover */}
+              <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+                Voir le profil
+              </div>
+            </button>
+
             {review.user.totalReviews > 10 && (
               <div className="absolute -top-1 -right-1 w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center">
                 <Star className="w-3 h-3 text-white fill-current" />
@@ -564,9 +635,13 @@ function DesktopPodiumCard({ review, rank, onLike }: { review: TopReview, rank: 
           </div>
           
           <div className="flex-1 min-w-0">
-            <div className="font-bold text-gray-900 dark:text-white text-sm">
+            {/* Nom cliquable */}
+            <button
+              onClick={onUserClick}
+              className="font-bold text-gray-900 dark:text-white text-sm block hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+            >
               {review.user.name}
-            </div>
+            </button>
             <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center space-x-2">
               <span>{review.user.totalReviews} reviews</span>
               <span>•</span>
@@ -657,8 +732,8 @@ function DesktopPodiumCard({ review, rank, onLike }: { review: TopReview, rank: 
   )
 }
 
-// Composant pour les cartes compactes du classement
-function CompactReviewCard({ review, rank, onLike }: { review: TopReview, rank: number, onLike: () => void }) {
+// Composant pour les cartes compactes du classement avec clic profil
+function CompactReviewCard({ review, rank, onLike, onUserClick }: { review: TopReview, rank: number, onLike: () => void, onUserClick: () => void }) {
   const getSportEmoji = (sport: string) => {
     const emojis = { 'football': '⚽', 'basketball': '🏀', 'mma': '🥊', 'rugby': '🏉', 'f1': '🏎️' }
     return emojis[sport?.toLowerCase() as keyof typeof emojis] || '🏆'
@@ -686,19 +761,35 @@ function CompactReviewCard({ review, rank, onLike }: { review: TopReview, rank: 
             <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full"></div>
           </div>
           
-          {/* User info */}
+          {/* User info - CLIQUABLE */}
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-bold ring-2 ring-blue-200">
-              {review.user.image ? (
-                <img src={review.user.image} alt="" className="w-full h-full rounded-full" />
-              ) : (
-                review.user.name?.[0]?.toUpperCase() || 'U'
-              )}
-            </div>
-            <div>
-              <div className="font-bold text-gray-900 dark:text-white text-sm">
-                {review.user.name}
+            {/* Avatar cliquable */}
+            <button 
+              onClick={onUserClick}
+              className="group relative"
+            >
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-bold ring-2 ring-blue-200 hover:scale-105 transition-transform group-hover:ring-2 group-hover:ring-blue-500 group-hover:ring-offset-2">
+                {review.user.image ? (
+                  <img src={review.user.image} alt="" className="w-full h-full rounded-full" />
+                ) : (
+                  review.user.name?.[0]?.toUpperCase() || 'U'
+                )}
               </div>
+              
+              {/* Tooltip hover */}
+              <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+                Voir le profil
+              </div>
+            </button>
+
+            <div>
+              {/* Nom cliquable */}
+              <button
+                onClick={onUserClick}
+                className="font-bold text-gray-900 dark:text-white text-sm hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+              >
+                {review.user.name}
+              </button>
               <div className="text-xs text-gray-500 dark:text-gray-400">
                 {review.user.totalReviews} reviews
               </div>

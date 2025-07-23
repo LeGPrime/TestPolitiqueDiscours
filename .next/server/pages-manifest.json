@@ -2,17 +2,9 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
-  "/api/notifications": "pages/api/notifications.js",
-  "/friends": "pages/friends.js",
-  "/api/auth/[...nextauth]": "pages/api/auth/[...nextauth].js",
-  "/top-reviews": "pages/top-reviews.js",
-  "/api/top-reviews": "pages/api/top-reviews.js",
+  "/search": "pages/search.js",
   "/api/matches": "pages/api/matches.js",
-  "/": "pages/index.js",
-  "/api/match-community-stats": "pages/api/match-community-stats.js",
+  "/api/notifications": "pages/api/notifications.js",
   "/api/filter-stats": "pages/api/filter-stats.js",
-  "/api/player-ratings": "pages/api/player-ratings.js",
-  "/api/match-reviews": "pages/api/match-reviews.js",
-  "/match/[id]": "pages/match/[id].js",
-  "/api/match-details/[id]": "pages/api/match-details/[id].js"
+  "/": "pages/index.js"
 }

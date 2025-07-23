@@ -13,7 +13,7 @@ import React from 'react'
 interface Match {
   id: string
   apiId?: number
-  sport: 'football' | 'basketball' | 'mma' | 'rugby' | 'f1'
+  sport: 'football' | 'basketball' | 'mma' | 'rugby' | 'f1' | 'tennis'  // 🆕 Ajouter tennis
   homeTeam: string
   awayTeam: string
   homeScore?: number | string
@@ -89,6 +89,12 @@ const getTeamColors = (teamName: string) => {
     'Olympique Lyonnais': { primary: 'from-blue-600 to-white', secondary: 'text-blue-700' },
     'Lakers': { primary: 'from-purple-600 to-yellow-400', secondary: 'text-white' },
     'Warriors': { primary: 'from-blue-600 to-yellow-400', secondary: 'text-white' },
+    // 🆕 Couleurs pour les joueurs de tennis célèbres
+    'Novak Djokovic': { primary: 'from-blue-600 to-blue-800', secondary: 'text-white' },
+    'Rafael Nadal': { primary: 'from-orange-500 to-red-600', secondary: 'text-white' },
+    'Roger Federer': { primary: 'from-red-600 to-red-800', secondary: 'text-white' },
+    'Carlos Alcaraz': { primary: 'from-red-500 to-orange-500', secondary: 'text-white' },
+    'Jannik Sinner': { primary: 'from-green-500 to-blue-500', secondary: 'text-white' },
   }
   
   return teamColors[teamName] || { 
@@ -103,7 +109,8 @@ const getSportEmoji = (sport: string) => {
     basketball: '🏀',
     mma: '🥊',
     rugby: '🏉',
-    f1: '🏎️'
+    f1: '🏎️',
+    tennis: '🎾'  // 🆕 Ajouter tennis
   }
   return emojis[sport as keyof typeof emojis] || '🏆'
 }
@@ -114,7 +121,8 @@ const getSportGradient = (sport: string) => {
     basketball: 'from-orange-500 to-red-600',
     mma: 'from-red-500 to-pink-600',
     rugby: 'from-purple-500 to-indigo-600',
-    f1: 'from-blue-500 to-cyan-600'
+    f1: 'from-blue-500 to-cyan-600',
+    tennis: 'from-blue-500 to-green-500'  // 🆕 Gradient pour tennis
   }
   return gradients[sport as keyof typeof gradients] || 'from-gray-500 to-gray-600'
 }
@@ -147,7 +155,7 @@ export default function Home() {
   const [page, setPage] = useState(1)
   const [refreshing, setRefreshing] = useState(false)
   const [filter, setFilter] = useState<'recent' | 'today'>('recent')
-  const [sportFilter, setSportFilter] = useState<'all' | 'football' | 'basketball' | 'mma' | 'rugby' | 'f1'>('all')
+  const [sportFilter, setSportFilter] = useState<'all' | 'football' | 'basketball' | 'mma' | 'rugby' | 'f1' | 'tennis'>('all')  // 🆕 Ajouter tennis
   const [competitionFilter, setCompetitionFilter] = useState<string>('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [stats, setStats] = useState<FilterStats | null>(null)
@@ -314,6 +322,7 @@ export default function Home() {
     { id: 'all', name: 'Tous', emoji: '🏆', color: 'from-gray-500 to-gray-600' },
     { id: 'football', name: 'Football', emoji: '⚽', color: 'from-green-500 to-emerald-600' },
     { id: 'basketball', name: 'Basketball', emoji: '🏀', color: 'from-orange-500 to-red-600' },
+    { id: 'tennis', name: 'Tennis', emoji: '🎾', color: 'from-blue-500 to-green-500' }, // 🆕 Nouveau sport
     { id: 'mma', name: 'MMA', emoji: '🥊', color: 'from-red-500 to-pink-600' },
     { id: 'rugby', name: 'Rugby', emoji: '🏉', color: 'from-purple-500 to-indigo-600' },
     { id: 'f1', name: 'F1', emoji: '🏎️', color: 'from-blue-500 to-cyan-600' }
@@ -653,7 +662,7 @@ export default function Home() {
           <div className="text-center py-12 md:py-16">
             <div className="loading-spinner w-8 h-8 md:w-10 md:h-10 mx-auto mb-4 text-indigo-600"></div>
             <p className="text-lg md:text-xl text-gray-600 dark:text-gray-400 mb-2">Chargement des événements...</p>
-            <p className="text-gray-500 dark:text-gray-500">⚽🏀🥊🏉🏎️</p>
+            <p className="text-gray-500 dark:text-gray-500">⚽🏀🥊🏉🏎️🎾</p>
           </div>
         ) : matches.length === 0 ? (
           <div className="text-center py-12 md:py-16">
@@ -747,7 +756,44 @@ export default function Home() {
   )
 }
 
-// Composant CompactMatchCard - VERSION ULTRA AFFINÉE
+// 🔧 Fonction améliorée pour le formatage des scores avec support tennis - CORRIGÉ
+const formatScore = (homeScore: any, awayScore: any, sport: string, details?: any) => {
+  if (sport === 'tennis') {
+    // Affichage spécial pour le tennis
+    if (details?.scores?.player1 && details?.scores?.player2) {
+      const p1Sets = details.scores.player1.sets || 0
+      const p2Sets = details.scores.player2.sets || 0
+      return `${p1Sets} - ${p2Sets} sets`
+    }
+    
+    // Fallback avec scores normaux pour tennis
+    if (homeScore !== null && awayScore !== null) {
+      return `${homeScore} - ${awayScore} sets`
+    }
+    
+    return 'Match Tennis'
+  }
+  
+  if (sport === 'mma') {
+    const winner = details?.winner || details?.processed?.result?.winner || details?.api_data?.winner
+    const method = details?.method || details?.processed?.result?.method || details?.api_data?.method
+    
+    if (winner) {
+      return `${winner} victoire` + (method ? ` (${method})` : '')
+    }
+    
+    if (homeScore === null && awayScore === null) {
+      return 'Combat MMA'
+    }
+    
+    return `${homeScore ?? '?'} vs ${awayScore ?? '?'}`
+  }
+  
+  if (sport === 'f1') return `P${homeScore}`
+  return `${homeScore ?? '?'} - ${awayScore ?? '?'}`
+}
+
+// Composant CompactMatchCard - VERSION ULTRA AFFINÉE avec support tennis
 function CompactMatchCard({ match, onRate, currentUserId }: {
   match: Match
   onRate: (matchId: string, rating: number, comment?: string) => void
@@ -785,26 +831,6 @@ function CompactMatchCard({ match, onRate, currentUserId }: {
   const handleRatingClick = (e: React.MouseEvent) => {
     e.stopPropagation()
     setShowRatingModal(true)
-  }
-
-  const formatScore = (homeScore: any, awayScore: any, sport: string, details?: any) => {
-    if (sport === 'mma') {
-      const winner = details?.winner || details?.processed?.result?.winner || details?.api_data?.winner
-      const method = details?.method || details?.processed?.result?.method || details?.api_data?.method
-      
-      if (winner) {
-        return `${winner} victoire` + (method ? ` (${method})` : '')
-      }
-      
-      if (homeScore === null && awayScore === null) {
-        return 'Combat MMA'
-      }
-      
-      return `${homeScore ?? '?'} vs ${awayScore ?? '?'}`
-    }
-    
-    if (sport === 'f1') return `P${homeScore}`
-    return `${homeScore ?? '?'} - ${awayScore ?? '?'}`
   }
 
   return (
@@ -884,7 +910,7 @@ function CompactMatchCard({ match, onRate, currentUserId }: {
             </div>
           </div>
 
-          {/* Score ultra-compact */}
+          {/* Score ultra-compact avec support tennis */}
           <div className="mb-2">
             {match.sport === 'f1' ? (
               <div className="text-center bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 backdrop-blur-sm rounded-lg p-2 border border-red-200/50 dark:border-red-800/50">
@@ -912,7 +938,55 @@ function CompactMatchCard({ match, onRate, currentUserId }: {
                   </div>
                 </div>
               </div>
+            ) : match.sport === 'tennis' ? (
+              // 🆕 Affichage spécial pour le tennis - CORRIGÉ
+              <div className="bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-900/20 dark:to-green-900/20 backdrop-blur-sm rounded-lg p-2 border border-blue-200/50 dark:border-blue-800/50">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-1.5 flex-1 min-w-0">
+                    <div className="w-5 h-5 bg-gradient-to-br from-blue-500 to-green-500 rounded-full flex items-center justify-center shadow-sm">
+                      <span className="text-xs text-white font-bold">
+                        {match.details?.scores?.player1?.sets || match.homeScore || '0'}
+                      </span>
+                    </div>
+                    <span className="font-bold text-blue-600 dark:text-blue-400 truncate text-xs">
+                      {match.homeTeam}
+                    </span>
+                  </div>
+                  
+                  <div className="mx-2 text-center">
+                    <div className="text-xs font-bold text-gray-600 dark:text-gray-400">
+                      🎾 {match.details?.surface || 'Hard'}
+                    </div>
+                    <div className="text-[10px] text-gray-500 dark:text-gray-500">
+                      {match.details?.tournament?.level || 'ATP'}
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-1.5 flex-1 justify-end min-w-0">
+                    <span className="font-bold text-blue-600 dark:text-blue-400 truncate text-xs text-right">
+                      {match.awayTeam}
+                    </span>
+                    <div className="w-5 h-5 bg-gradient-to-br from-blue-500 to-green-500 rounded-full flex items-center justify-center shadow-sm">
+                      <span className="text-xs text-white font-bold">
+                        {match.details?.scores?.player2?.sets || match.awayScore || '0'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Scores détaillés si disponibles */}
+                {match.details?.scores?.player1?.games && match.details?.scores?.player2?.games && match.details.scores.player1.games.length > 0 && (
+                  <div className="mt-1 text-center">
+                    <div className="text-[10px] text-gray-600 dark:text-gray-400">
+                      {match.details.scores.player1.games.map((game: number, i: number) => 
+                        `(${game}-${match.details.scores.player2.games[i] || 0})`
+                      ).join(' ')}
+                    </div>
+                  </div>
+                )}
+              </div>
             ) : (
+              // Affichage normal pour les autres sports
               <div className="bg-gradient-to-r from-gray-50 to-blue-50 dark:from-slate-700/60 dark:to-blue-900/20 backdrop-blur-sm rounded-lg p-2 border border-gray-200/50 dark:border-slate-600/50">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-1.5 flex-1 min-w-0">
