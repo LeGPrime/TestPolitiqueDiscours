@@ -130,7 +130,7 @@ const VideoSuggestionsSection: React.FC<VideoSuggestionsSectionProps> = ({
       return;
     }
 
-    const reason = prompt('Raison du signalement:\n- spam\n- inappropriate\n- broken_link\n- duplicate\n- other');
+    const reason = prompt('Raison du signalement:\n- Spam\n- Inapproprié\n- Lien cassé\n- Doublon\n- Autre');
     if (!reason) return;
 
     try {
