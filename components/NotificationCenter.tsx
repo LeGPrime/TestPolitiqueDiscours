@@ -1,14 +1,18 @@
-// components/NotificationCenter.tsx - Système de notifications avec portal
+// components/NotificationCenter.tsx - Système de notifications avec rivalités
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { Bell, X, Check, Users, Star, Trophy, Calendar, Eye, TrendingUp, UserPlus, ExternalLink } from 'lucide-react'
+import { 
+  Bell, X, Check, Users, Star, Trophy, Calendar, Eye, TrendingUp, UserPlus, 
+  ExternalLink, Target, Flame, Crown, Swords
+} from 'lucide-react'
 import Link from 'next/link'
 import axios from 'axios'
 import { toast } from 'react-hot-toast'
 
 interface Notification {
   id: string
-  type: 'friend_request' | 'friend_activity' | 'trending_match' | 'team_match'
+  type: 'friend_request' | 'friend_activity' | 'trending_match' | 'team_match' | 
+        'rivalry_request' | 'rivalry_accepted' | 'match_added' | 'win_streak' | 'milestone'
   title: string
   message: string
   date: Date
@@ -175,6 +179,14 @@ export default function NotificationCenter({ userId }: NotificationCenterProps) 
       case 'friend_activity': return <Users className="w-5 h-5 text-green-500" />
       case 'trending_match': return <TrendingUp className="w-5 h-5 text-red-500" />
       case 'team_match': return <Calendar className="w-5 h-5 text-purple-500" />
+      
+      // 🆕 Nouveaux types pour les rivalités
+      case 'rivalry_request': return <Swords className="w-5 h-5 text-orange-500" />
+      case 'rivalry_accepted': return <Trophy className="w-5 h-5 text-yellow-500" />
+      case 'match_added': return <Target className="w-5 h-5 text-green-600" />
+      case 'win_streak': return <Flame className="w-5 h-5 text-red-600" />
+      case 'milestone': return <Crown className="w-5 h-5 text-purple-600" />
+      
       default: return <Bell className="w-5 h-5 text-gray-500" />
     }
   }
@@ -199,6 +211,14 @@ export default function NotificationCenter({ userId }: NotificationCenterProps) 
       case 'friend_activity': return 'border-l-green-500'
       case 'trending_match': return 'border-l-red-500'
       case 'team_match': return 'border-l-purple-500'
+      
+      // 🆕 Couleurs pour les rivalités
+      case 'rivalry_request': return 'border-l-orange-500'
+      case 'rivalry_accepted': return 'border-l-yellow-500'
+      case 'match_added': return 'border-l-green-600'
+      case 'win_streak': return 'border-l-red-600'
+      case 'milestone': return 'border-l-purple-600'
+      
       default: return 'border-l-gray-500'
     }
   }
@@ -386,13 +406,3 @@ export default function NotificationCenter({ userId }: NotificationCenterProps) 
     </div>
   )
 }
-
-// CSS additionnels pour line-clamp (à ajouter dans globals.css si pas déjà présent)
-const additionalCSS = `
-.line-clamp-2 {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-`

@@ -260,7 +260,7 @@ export default function Navbar({ activeTab }: NavbarProps) {
       {/* 📱 MOBILE HEADER - Logo centré et navbar compacte */}
       <header className="md:hidden bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg shadow-sm border-b border-gray-200 dark:border-slate-700 sticky top-0 z-50">
         <div className="pt-safe-area-inset-top">
-          <div className="flex items-center px-4 py-3 relative">
+          <div className="flex items-center px-4 py-2 relative">
             {/* Texte Sporating à gauche (position absolue) */}
             <h1 className="absolute left-4 text-lg font-bold text-gray-900 dark:text-white">Sporating</h1>
             

@@ -27,25 +27,20 @@
       "static/chunks/main.js",
       "static/chunks/pages/_error.js"
     ],
-    "/friends": [
-      "static/chunks/webpack.js",
-      "static/chunks/main.js",
-      "static/chunks/pages/friends.js"
-    ],
     "/match/[id]": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
       "static/chunks/pages/match/[id].js"
     ],
-    "/notifications": [
+    "/personal-matches": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
-      "static/chunks/pages/notifications.js"
+      "static/chunks/pages/personal-matches.js"
     ],
-    "/secret-login": [
+    "/profile": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
-      "static/chunks/pages/secret-login.js"
+      "static/chunks/pages/profile.js"
     ]
   },
   "ampFirstPages": []

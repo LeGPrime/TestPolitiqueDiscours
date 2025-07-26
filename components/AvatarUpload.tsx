@@ -255,15 +255,7 @@ export default function AvatarUpload({ currentImage, userName, onImageChange, si
         </div>
 
         {/* Bouton de suppression si avatar personnalisé */}
-        {(preview || currentPresetAvatar || (currentImage && currentImage.startsWith('data:'))) && (
-          <button
-            onClick={removeAvatar}
-            className="absolute -top-2 -right-2 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg"
-            title="Supprimer l'avatar"
-          >
-            <X className="w-3 h-3" />
-          </button>
-        )}
+        
       </div>
 
       {/* Bouton principal */}

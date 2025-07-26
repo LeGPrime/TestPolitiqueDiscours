@@ -13,7 +13,7 @@ import React from 'react'
 interface Match {
   id: string
   apiId?: number
-  sport: 'football' | 'basketball' | 'mma' | 'rugby' | 'f1' | 'tennis' | 'table-tennis' | 'esport' | 'chess' | 'boxing' | 'cycling'
+  sport: 'football' | 'basketball' | 'mma' | 'rugby' | 'f1' | 'tennis' | 'table-tennis' | 'esport' | 'chess' | 'boxing' | 'cycling' | 'golf' | 'motogp'
   homeTeam: string
   awayTeam: string
   homeScore?: number | string
@@ -114,7 +114,9 @@ const getSportEmoji = (sport: string) => {
     esport: '🎮',
     chess: '♟️',
     boxing: '🥊',
-    cycling: '🚴'
+    cycling: '🚴',
+    golf: '⛳',
+    motogp: '🏍️'
   }
   return emojis[sport as keyof typeof emojis] || '🏆'
 }
@@ -131,7 +133,9 @@ const getSportGradient = (sport: string) => {
     esport: 'from-purple-600 to-pink-500',
     chess: 'from-slate-600 to-gray-700',
     boxing: 'from-red-600 to-orange-600',
-    cycling: 'from-green-600 to-yellow-500'
+    cycling: 'from-green-600 to-yellow-500',
+    golf: 'from-green-500 to-teal-500',
+    motogp: 'from-orange-500 to-red-500'
   }
   return gradients[sport as keyof typeof gradients] || 'from-gray-500 to-gray-600'
 }
@@ -164,7 +168,7 @@ export default function Home() {
   const [page, setPage] = useState(1)
   const [refreshing, setRefreshing] = useState(false)
   const [filter, setFilter] = useState<'recent' | 'today'>('recent')
-  const [sportFilter, setSportFilter] = useState<'all' | 'football' | 'basketball' | 'mma' | 'rugby' | 'f1' | 'tennis' | 'table-tennis' | 'esport' | 'chess' | 'boxing' | 'cycling'>('all')
+  const [sportFilter, setSportFilter] = useState<'all' | 'football' | 'basketball' | 'mma' | 'rugby' | 'f1' | 'tennis' | 'table-tennis' | 'esport' | 'chess' | 'boxing' | 'cycling' | 'golf' | 'motogp'>('all')
   const [competitionFilter, setCompetitionFilter] = useState<string>('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [stats, setStats] = useState<FilterStats | null>(null)
@@ -196,24 +200,28 @@ export default function Home() {
 
   // 🎯 Sports dans "Autre" (mobile: MMA + autres, desktop: tous les autres)
   const otherSportsMobile = [
-    { id: 'mma', name: 'MMA', emoji: '🥊', color: 'from-red-500 to-pink-600' },
-    { id: 'rugby', name: 'Rugby', emoji: '🏉', color: 'from-purple-500 to-indigo-600' },
-    { id: 'table-tennis', name: 'Tennis de table', emoji: '🏓', color: 'from-cyan-500 to-blue-500' },
-    { id: 'esport', name: 'E-sport', emoji: '🎮', color: 'from-purple-600 to-pink-500' },
-    { id: 'chess', name: 'Échecs', emoji: '♟️', color: 'from-slate-600 to-gray-700' },
-    { id: 'boxing', name: 'Boxe', emoji: '🥊', color: 'from-red-600 to-orange-600' },
-    { id: 'cycling', name: 'Cyclisme', emoji: '🚴', color: 'from-green-600 to-yellow-500' }
+    { id: 'mma', name: 'MMA', emoji: '🥊', color: 'from-red-500 to-pink-600', available: true },
+    { id: 'rugby', name: 'Rugby', emoji: '🏉', color: 'from-purple-500 to-indigo-600', available: true },
+    { id: 'table-tennis', name: 'Tennis de table', emoji: '🏓', color: 'from-cyan-500 to-blue-500', available: false },
+    { id: 'esport', name: 'E-sport', emoji: '🎮', color: 'from-purple-600 to-pink-500', available: false },
+    { id: 'chess', name: 'Échecs', emoji: '♟️', color: 'from-slate-600 to-gray-700', available: false },
+    { id: 'boxing', name: 'Boxe', emoji: '🥊', color: 'from-red-600 to-orange-600', available: false },
+    { id: 'cycling', name: 'Cyclisme', emoji: '🚴', color: 'from-green-600 to-yellow-500', available: false },
+    { id: 'golf', name: 'Golf', emoji: '⛳', color: 'from-green-500 to-teal-500', available: false },
+    { id: 'motogp', name: 'Moto GP', emoji: '🏍️', color: 'from-orange-500 to-red-500', available: false }
   ]
 
   const otherSportsDesktop = [
-    { id: 'mma', name: 'MMA', emoji: '🥊', color: 'from-red-500 to-pink-600' },
-    { id: 'f1', name: 'F1', emoji: '🏎️', color: 'from-blue-500 to-cyan-600' },
-    { id: 'rugby', name: 'Rugby', emoji: '🏉', color: 'from-purple-500 to-indigo-600' },
-    { id: 'table-tennis', name: 'Tennis de table', emoji: '🏓', color: 'from-cyan-500 to-blue-500' },
-    { id: 'esport', name: 'E-sport', emoji: '🎮', color: 'from-purple-600 to-pink-500' },
-    { id: 'chess', name: 'Échecs', emoji: '♟️', color: 'from-slate-600 to-gray-700' },
-    { id: 'boxing', name: 'Boxe', emoji: '🥊', color: 'from-red-600 to-orange-600' },
-    { id: 'cycling', name: 'Cyclisme', emoji: '🚴', color: 'from-green-600 to-yellow-500' }
+    { id: 'mma', name: 'MMA', emoji: '🥊', color: 'from-red-500 to-pink-600', available: true },
+    { id: 'f1', name: 'F1', emoji: '🏎️', color: 'from-blue-500 to-cyan-600', available: true },
+    { id: 'rugby', name: 'Rugby', emoji: '🏉', color: 'from-purple-500 to-indigo-600', available: true },
+    { id: 'table-tennis', name: 'Tennis de table', emoji: '🏓', color: 'from-cyan-500 to-blue-500', available: false },
+    { id: 'esport', name: 'E-sport', emoji: '🎮', color: 'from-purple-600 to-pink-500', available: false },
+    { id: 'chess', name: 'Échecs', emoji: '♟️', color: 'from-slate-600 to-gray-700', available: false },
+    { id: 'boxing', name: 'Boxe', emoji: '🥊', color: 'from-red-600 to-orange-600', available: false },
+    { id: 'cycling', name: 'Cyclisme', emoji: '🚴', color: 'from-green-600 to-yellow-500', available: false },
+    { id: 'golf', name: 'Golf', emoji: '⛳', color: 'from-green-500 to-teal-500', available: false },
+    { id: 'motogp', name: 'Moto GP', emoji: '🏍️', color: 'from-orange-500 to-red-500', available: false }
   ]
 
   // Gestion des redirections onboarding
@@ -557,7 +565,7 @@ export default function Home() {
                   <button
                     onClick={() => setShowOtherSports(!showOtherSports)}
                     className={`flex items-center justify-center px-4 py-3 rounded-full transition-all duration-200 active:scale-95 text-sm ${
-                      otherSportsDesktop.some(s => s.id === sportFilter)
+                      otherSportsDesktop.filter(s => s.available).some(s => s.id === sportFilter)
                         ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg'
                         : 'bg-white/60 dark:bg-slate-800/60 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-slate-600 hover:bg-white/80 dark:hover:bg-slate-700/80'
                     }`}
@@ -565,7 +573,7 @@ export default function Home() {
                     <span className="text-lg mr-2">⚡</span>
                     <span className="font-medium">Autre</span>
                     <span className="text-xs ml-2 bg-white/20 px-1.5 py-0.5 rounded-full">
-                      {otherSportsDesktop.reduce((sum, sport) => 
+                      {otherSportsDesktop.filter(s => s.available).reduce((sum, sport) => 
                         sum + (stats?.bySport.find((s: any) => s.sport === sport.id)?.count || 0), 0
                       )}
                     </span>
@@ -580,20 +588,31 @@ export default function Home() {
                       <button
                         key={sport.id}
                         onClick={() => {
-                          setSportFilter(sport.id as any)
-                          setShowOtherSports(false)
+                          if (sport.available) {
+                            setSportFilter(sport.id as any)
+                            setShowOtherSports(false)
+                          }
                         }}
-                        className={`flex items-center justify-center px-4 py-3 rounded-full transition-all duration-200 active:scale-95 text-sm ${
-                          sportFilter === sport.id
-                            ? `bg-gradient-to-r ${sport.color} text-white shadow-lg`
-                            : 'bg-white/60 dark:bg-slate-800/60 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-slate-600 hover:bg-white/80 dark:hover:bg-slate-700/80'
+                        disabled={!sport.available}
+                        className={`flex items-center justify-center px-4 py-3 rounded-full transition-all duration-200 text-sm relative ${
+                          !sport.available
+                            ? 'bg-gray-100 dark:bg-slate-700/50 text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-60'
+                            : sportFilter === sport.id
+                              ? `bg-gradient-to-r ${sport.color} text-white shadow-lg active:scale-95`
+                              : 'bg-white/60 dark:bg-slate-800/60 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-slate-600 hover:bg-white/80 dark:hover:bg-slate-700/80 active:scale-95'
                         }`}
                       >
-                        <span className="text-lg mr-2">{sport.emoji}</span>
+                        <span className={`text-lg mr-2 ${!sport.available ? 'grayscale' : ''}`}>{sport.emoji}</span>
                         <span className="font-medium">{sport.name}</span>
-                        <span className="text-xs ml-2 bg-white/20 px-1.5 py-0.5 rounded-full">
-                          {stats?.bySport.find((s: any) => s.sport === sport.id)?.count || 0}
-                        </span>
+                        {sport.available ? (
+                          <span className="text-xs ml-2 bg-white/20 px-1.5 py-0.5 rounded-full">
+                            {stats?.bySport.find((s: any) => s.sport === sport.id)?.count || 0}
+                          </span>
+                        ) : (
+                          <span className="text-xs ml-2 bg-gray-400/20 text-gray-500 px-1.5 py-0.5 rounded-full font-medium">
+                            Soon
+                          </span>
+                        )}
                       </button>
                     ))}
                   </div>
@@ -628,7 +647,7 @@ export default function Home() {
                   <button
                     onClick={() => setShowOtherSports(!showOtherSports)}
                     className={`flex flex-col items-center justify-center h-16 w-full rounded-xl transition-all duration-200 active:scale-95 text-[11px] ${
-                      otherSportsMobile.some(s => s.id === sportFilter)
+                      otherSportsMobile.filter(s => s.available).some(s => s.id === sportFilter)
                         ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow'
                         : 'bg-white/60 dark:bg-slate-800/60 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-slate-600'
                     }`}
@@ -636,7 +655,7 @@ export default function Home() {
                     <span className="text-lg">⚡</span>
                     <span className="font-medium mt-0.5">Autre</span>
                     <span className="text-[10px] mt-0.5 bg-white/10 px-1.5 rounded-full">
-                      {otherSportsMobile.reduce((sum, sport) => 
+                      {otherSportsMobile.filter(s => s.available).reduce((sum, sport) => 
                         sum + (stats?.bySport.find((s: any) => s.sport === sport.id)?.count || 0), 0
                       )}
                     </span>
@@ -650,20 +669,31 @@ export default function Home() {
                       <button
                         key={sport.id}
                         onClick={() => {
-                          setSportFilter(sport.id as any)
-                          setShowOtherSports(false)
+                          if (sport.available) {
+                            setSportFilter(sport.id as any)
+                            setShowOtherSports(false)
+                          }
                         }}
-                        className={`flex flex-col items-center justify-center h-16 w-full rounded-xl transition-all duration-200 active:scale-95 text-[11px] ${
-                          sportFilter === sport.id
-                            ? `bg-gradient-to-r ${sport.color} text-white shadow`
-                            : 'bg-white/60 dark:bg-slate-800/60 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-slate-600'
+                        disabled={!sport.available}
+                        className={`flex flex-col items-center justify-center h-16 w-full rounded-xl transition-all duration-200 text-[11px] relative ${
+                          !sport.available
+                            ? 'bg-gray-100 dark:bg-slate-700/50 text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-60'
+                            : sportFilter === sport.id
+                              ? `bg-gradient-to-r ${sport.color} text-white shadow active:scale-95`
+                              : 'bg-white/60 dark:bg-slate-800/60 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-slate-600 active:scale-95'
                         }`}
                       >
-                        <span className="text-lg">{sport.emoji}</span>
+                        <span className={`text-lg ${!sport.available ? 'grayscale' : ''}`}>{sport.emoji}</span>
                         <span className="font-medium mt-0.5 text-center leading-tight">{sport.name}</span>
-                        <span className="text-[10px] mt-0.5 bg-white/10 px-1.5 rounded-full">
-                          {stats?.bySport.find((s: any) => s.sport === sport.id)?.count || 0}
-                        </span>
+                        {sport.available ? (
+                          <span className="text-[10px] mt-0.5 bg-white/10 px-1.5 rounded-full">
+                            {stats?.bySport.find((s: any) => s.sport === sport.id)?.count || 0}
+                          </span>
+                        ) : (
+                          <span className="text-[9px] mt-0.5 bg-gray-400/20 text-gray-500 px-1 rounded-full font-medium">
+                            Soon
+                          </span>
+                        )}
                       </button>
                     ))}
                   </div>

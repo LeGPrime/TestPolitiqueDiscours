@@ -224,7 +224,7 @@ textarea::placeholder {
 
   /* 📱 SAFE AREA SUPPORT POUR iOS - Version plus conservative */
   .pt-safe-area-inset-top {
-    padding-top: max(1.5rem, env(safe-area-inset-top));
+    padding-top: max(0.5rem, env(safe-area-inset-top));
   }
   
   .pb-safe-area-inset-bottom {
@@ -768,4 +768,18 @@ a {
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+
+/* 📱 CLASSE POUR ÉLIMINER TOUT ESPACE SUPERFLU */
+.no-mobile-gap {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+@media screen and (max-width: 768px) {
+  .no-mobile-gap {
+    margin-top: 0 !important;
+    padding-top: 0.25rem !important; /* Minimal spacing */
+  }
 }
