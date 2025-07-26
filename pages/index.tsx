@@ -691,7 +691,7 @@ export default function Home() {
                           </span>
                         ) : (
                           <span className="text-[9px] mt-0.5 bg-gray-400/20 text-gray-500 px-1 rounded-full font-medium">
-                            Soon
+                            Bientôt
                           </span>
                         )}
                       </button>

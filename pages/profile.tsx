@@ -568,36 +568,47 @@ export default function ModernProfilePage() {
 
           <div className="relative">
             {/* Header avec actions en mobile */}
-            {isOwnProfile && (
-              <div className="flex items-center justify-end p-4 space-x-2">
-                {/* Bouton Settings compact */}
-                <button
-                  onClick={() => setShowSettings(true)}
-                  className="p-2.5 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-xl text-gray-600 dark:text-gray-300 transition-all duration-300 shadow-md hover:shadow-lg"
-                  title="Paramètres"
-                >
-                  <Settings className="w-4 h-4" />
-                </button>
+{isOwnProfile && (
+  <div className="flex items-center justify-between p-4 space-x-2">
+    {/* 🆕 BOUTON RIVALITÉS PERSONNELLES */}
+    <Link
+      href="/personal-matches"
+      className="p-2.5 bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50 rounded-xl text-red-600 dark:text-red-400 transition-all duration-300 shadow-md hover:shadow-lg"
+      title="Rivalités personnelles"
+    >
+      ⚔️
+    </Link>
 
-                {/* Bouton Amis compact */}
-                <Link
-                  href="/friends"
-                  className="p-2.5 bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 rounded-xl text-green-600 dark:text-green-400 transition-all duration-300 shadow-md hover:shadow-lg"
-                  title="Amis"
-                >
-                  <Users className="w-4 h-4" />
-                </Link>
+    <div className="flex items-center space-x-2">
+      {/* Bouton Settings compact */}
+      <button
+        onClick={() => setShowSettings(true)}
+        className="p-2.5 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-xl text-gray-600 dark:text-gray-300 transition-all duration-300 shadow-md hover:shadow-lg"
+        title="Paramètres"
+      >
+        <Settings className="w-4 h-4" />
+      </button>
 
-                {/* Bouton Éditer compact */}
-                <button 
-                  onClick={() => setShowEnhancedEditor(true)}
-                  className="p-2.5 bg-purple-100 dark:bg-purple-900/30 hover:bg-purple-200 dark:hover:bg-purple-900/50 rounded-xl text-purple-600 dark:text-purple-400 transition-all duration-300 shadow-md hover:shadow-lg"
-                  title="Modifier"
-                >
-                  <Edit3 className="w-4 h-4" />
-                </button>
-              </div>
-            )}
+      {/* Bouton Amis compact */}
+      <Link
+        href="/friends"
+        className="p-2.5 bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 rounded-xl text-green-600 dark:text-green-400 transition-all duration-300 shadow-md hover:shadow-lg"
+        title="Amis"
+      >
+        <Users className="w-4 h-4" />
+      </Link>
+
+      {/* Bouton Éditer compact */}
+      <button 
+        onClick={() => setShowEnhancedEditor(true)}
+        className="p-2.5 bg-purple-100 dark:bg-purple-900/30 hover:bg-purple-200 dark:hover:bg-purple-900/50 rounded-xl text-purple-600 dark:text-purple-400 transition-all duration-300 shadow-md hover:shadow-lg"
+        title="Modifier"
+      >
+        <Edit3 className="w-4 h-4" />
+      </button>
+    </div>
+  </div>
+)}
 
             <div className="px-6 pb-6">
               {/* Avatar et infos principales - Design mobile optimisé */}

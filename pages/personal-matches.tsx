@@ -1,15 +1,16 @@
-// pages/personal-matches.tsx - Page des matchs personnels et rivalités
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/router'
 import Link from 'next/link'
 import {
   Trophy, Users, Plus, Star, Calendar, MapPin, 
   Target, Zap, Crown, Medal, TrendingUp, Clock,
   Search, Filter, Eye, MoreHorizontal, ChevronRight,
   UserPlus, Check, X, MessageCircle, Award, Flame,
-  Settings, Edit3, BarChart3, Activity, Globe
+  Settings, Edit3, BarChart3, Activity, Globe, Send
 } from 'lucide-react'
 import axios from 'axios'
+import { toast } from 'react-hot-toast'
 import Navbar from '../components/Navbar'
 
 // ==========================================
@@ -61,6 +62,7 @@ interface RivalryRequest {
   friend: Friend
   message?: string
   createdAt: string
+  isSent?: boolean
 }
 
 // ==========================================
@@ -120,13 +122,18 @@ const SPORTS = [
 // ==========================================
 export default function PersonalMatchesPage() {
   const { data: session } = useSession()
+  const router = useRouter()
+  
+  // Lire les paramètres URL pour ouvrir le bon onglet
+  const { tab } = router.query
   const [activeTab, setActiveTab] = useState<'dashboard' | 'rivalries' | 'requests' | 'stats'>('dashboard')
   const [loading, setLoading] = useState(true)
   
   // États pour les données
   const [friends, setFriends] = useState<Friend[]>([])
   const [rivalries, setRivalries] = useState<Rivalry[]>([])
-  const [requests, setRequests] = useState<RivalryRequest[]>([])
+  const [receivedRequests, setReceivedRequests] = useState<RivalryRequest[]>([])
+  const [sentRequests, setSentRequests] = useState<RivalryRequest[]>([])
   
   // États pour les modals
   const [showCreateRivalry, setShowCreateRivalry] = useState(false)
@@ -162,18 +169,24 @@ export default function PersonalMatchesPage() {
       setFriends(friendsResponse.data.friends || [])
       console.log(`✅ ${friendsResponse.data.friends?.length || 0} amis chargés`)
       
-      // Récupérer toutes les rivalités
+      // Récupérer toutes les rivalités actives
       const rivalriesResponse = await axios.get('/api/personal-rivalries')
       setRivalries(rivalriesResponse.data.rivalries || [])
       console.log(`✅ ${rivalriesResponse.data.rivalries?.length || 0} rivalités chargées`)
       
       // Récupérer les demandes reçues
-      const requestsResponse = await axios.get('/api/personal-rivalries?type=requests')
-      setRequests(requestsResponse.data.rivalries || [])
-      console.log(`✅ ${requestsResponse.data.rivalries?.length || 0} demandes chargées`)
+      const receivedRequestsResponse = await axios.get('/api/personal-rivalries?type=requests')
+      setReceivedRequests(receivedRequestsResponse.data.rivalries || [])
+      console.log(`✅ ${receivedRequestsResponse.data.rivalries?.length || 0} demandes reçues`)
+      
+      // Récupérer les demandes envoyées
+      const sentRequestsResponse = await axios.get('/api/personal-rivalries?type=sent')
+      setSentRequests(sentRequestsResponse.data.rivalries || [])
+      console.log(`✅ ${sentRequestsResponse.data.rivalries?.length || 0} demandes envoyées`)
       
     } catch (error) {
       console.error('❌ Erreur chargement données:', error)
+      toast.error('Erreur lors du chargement des données')
     } finally {
       setLoading(false)
     }
@@ -182,13 +195,12 @@ export default function PersonalMatchesPage() {
   const handleCreateRivalry = async () => {
     try {
       if (!createRivalryForm.friendId || !createRivalryForm.sport) {
-        alert('Veuillez sélectionner un ami et un sport')
+        toast.error('Veuillez sélectionner un ami et un sport')
         return
       }
 
       console.log('🚀 Envoi création rivalité:', createRivalryForm)
 
-      // Appel API pour créer la rivalité
       const response = await axios.post('/api/personal-rivalries', {
         friendId: createRivalryForm.friendId,
         sport: createRivalryForm.sport,
@@ -197,10 +209,10 @@ export default function PersonalMatchesPage() {
       
       console.log('✅ Réponse API:', response.data)
       
+      toast.success('Demande de rivalité envoyée ! 🏆')
+      
       // Actualiser les données
       await fetchData()
-      
-      alert('Demande de rivalité envoyée ! 🏆')
       
       setShowCreateRivalry(false)
       setCreateRivalryForm({ friendId: '', sport: '', message: '' })
@@ -208,22 +220,66 @@ export default function PersonalMatchesPage() {
     } catch (error: any) {
       console.error('❌ Erreur création rivalité:', error)
       const errorMessage = error.response?.data?.message || 'Erreur lors de la création de la rivalité'
-      alert(errorMessage)
+      toast.error(errorMessage)
+    }
+  }
+
+  const handleAcceptRequest = async (requestId: string) => {
+    try {
+      await axios.put('/api/personal-rivalries', {
+        rivalryId: requestId,
+        action: 'accept'
+      })
+      
+      toast.success('Rivalité acceptée ! 🎉')
+      await fetchData()
+      
+    } catch (error) {
+      console.error('❌ Erreur acceptation:', error)
+      toast.error('Erreur lors de l\'acceptation')
+    }
+  }
+
+  const handleDeclineRequest = async (requestId: string) => {
+    try {
+      await axios.put('/api/personal-rivalries', {
+        rivalryId: requestId,
+        action: 'decline'
+      })
+      
+      toast.success('Demande refusée')
+      await fetchData()
+      
+    } catch (error) {
+      console.error('❌ Erreur refus:', error)
+      toast.error('Erreur lors du refus')
     }
   }
 
   const handleAddMatch = async () => {
     try {
       if (!addMatchForm.myScore || !addMatchForm.friendScore) {
-        alert('Veuillez renseigner les scores')
+        toast.error('Veuillez renseigner les scores')
         return
       }
 
-      // TODO: Appel API pour ajouter le match
-      console.log('Ajout match:', addMatchForm, 'Rivalité:', selectedRivalry?.id)
+      console.log('🚀 Ajout match réel:', addMatchForm, 'Rivalité:', selectedRivalry?.id)
+
+      // Appel API réel pour ajouter le match
+      const response = await axios.post('/api/personal-matches', {
+        rivalryId: selectedRivalry?.id,
+        myScore: addMatchForm.myScore,
+        friendScore: addMatchForm.friendScore,
+        date: addMatchForm.date,
+        location: addMatchForm.location,
+        comment: addMatchForm.comment
+      })
       
-      // Simulation d'ajout
-      alert('Match ajouté ! 🎯')
+      console.log('✅ Match ajouté:', response.data)
+      toast.success('Match ajouté avec succès ! 🎯')
+      
+      // Actualiser les données pour voir les nouvelles stats
+      await fetchData()
       
       setShowAddMatch(false)
       setSelectedRivalry(null)
@@ -235,9 +291,10 @@ export default function PersonalMatchesPage() {
         comment: ''
       })
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Erreur ajout match:', error)
-      alert('Erreur lors de l\'ajout du match')
+      const errorMessage = error.response?.data?.message || 'Erreur lors de l\'ajout du match'
+      toast.error(errorMessage)
     }
   }
 
@@ -249,6 +306,16 @@ export default function PersonalMatchesPage() {
       fetchData()
     }
   }, [session])
+
+  // Gestion des paramètres URL pour ouvrir le bon onglet
+  useEffect(() => {
+    if (tab && typeof tab === 'string') {
+      const validTabs = ['dashboard', 'rivalries', 'requests', 'stats']
+      if (validTabs.includes(tab)) {
+        setActiveTab(tab as any)
+      }
+    }
+  }, [tab])
 
   // ==========================================
   // RENDU DES GUARDS
@@ -280,6 +347,8 @@ export default function PersonalMatchesPage() {
       </div>
     )
   }
+
+  const totalRequests = receivedRequests.length + sentRequests.length
 
   // ==========================================
   // RENDU PRINCIPAL
@@ -321,7 +390,7 @@ export default function PersonalMatchesPage() {
               <div className="text-blue-100 text-sm">Victoires</div>
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center">
-              <div className="text-2xl font-bold">{requests.length}</div>
+              <div className="text-2xl font-bold">{totalRequests}</div>
               <div className="text-blue-100 text-sm">Demandes</div>
             </div>
           </div>
@@ -337,7 +406,7 @@ export default function PersonalMatchesPage() {
               {[
                 { id: 'dashboard', label: 'Tableau de bord', icon: Trophy, color: 'from-blue-500 to-purple-600' },
                 { id: 'rivalries', label: 'Mes rivalités', icon: Users, color: 'from-green-500 to-emerald-600', count: rivalries.length },
-                { id: 'requests', label: 'Demandes', icon: UserPlus, color: 'from-yellow-500 to-orange-600', count: requests.length, badge: requests.length > 0 },
+                { id: 'requests', label: 'Demandes', icon: UserPlus, color: 'from-yellow-500 to-orange-600', count: totalRequests, badge: receivedRequests.length > 0 },
                 { id: 'stats', label: 'Statistiques', icon: BarChart3, color: 'from-purple-500 to-indigo-600' }
               ].map((tab) => {
                 const Icon = tab.icon
@@ -433,16 +502,64 @@ export default function PersonalMatchesPage() {
                     )}
                   </div>
                 ) : (
-                  // Liste des rivalités actives (pour plus tard)
+                  // Aperçu des rivalités actives
                   <div>
                     <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Rivalités actives</h3>
-                    {/* TODO: Affichage des rivalités */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {rivalries.slice(0, 6).map((rivalry) => (
+                        <div key={rivalry.id} className="bg-white dark:bg-slate-700 rounded-2xl p-6 border border-gray-200 dark:border-slate-600 hover:shadow-lg transition-shadow">
+                          <div className="flex items-center space-x-3 mb-4">
+                            <div className="text-2xl">
+                              {SPORTS.find(s => s.id === rivalry.sport)?.emoji}
+                            </div>
+                            <div>
+                              <div className="font-semibold text-gray-900 dark:text-white">
+                                {SPORTS.find(s => s.id === rivalry.sport)?.name}
+                              </div>
+                              <div className="text-sm text-gray-600 dark:text-gray-400">
+                                vs {rivalry.friend.name}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="flex justify-between text-center">
+                            <div>
+                              <div className="text-2xl font-bold text-green-600">{rivalry.myStats.wins}</div>
+                              <div className="text-xs text-gray-500">Victoires</div>
+                            </div>
+                            <div>
+                              <div className="text-2xl font-bold text-gray-900 dark:text-white">{rivalry.myStats.totalMatches}</div>
+                              <div className="text-xs text-gray-500">Matchs</div>
+                            </div>
+                            <div>
+                              <div className="text-2xl font-bold text-red-600">{rivalry.myStats.losses}</div>
+                              <div className="text-xs text-gray-500">Défaites</div>
+                            </div>
+                          </div>
+                          
+                          {rivalry.myStats.currentStreak > 0 && (
+                            <div className="mt-4 text-center">
+                              <span className={`inline-flex items-center space-x-1 px-3 py-1 rounded-full text-sm font-medium ${
+                                rivalry.myStats.streakType === 'wins' 
+                                  ? 'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-200'
+                                  : 'bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-200'
+                              }`}>
+                                <Flame className="w-4 h-4" />
+                                <span>
+                                  {rivalry.myStats.currentStreak} {rivalry.myStats.streakType === 'wins' ? 'victoires' : 'défaites'} d'affilée
+                                </span>
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
             )}
 
-            {/* RIVALRIES TAB */}
+            {/* RIVALRIES TAB - COMPLET */}
             {activeTab === 'rivalries' && (
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
@@ -465,9 +582,146 @@ export default function PersonalMatchesPage() {
                     <p className="text-gray-600 dark:text-gray-400">Créez votre première rivalité sportive !</p>
                   </div>
                 ) : (
-                  // TODO: Liste des rivalités
-                  <div className="text-center py-12 text-gray-500">
-                    Rivalités à venir...
+                  // Liste détaillée des rivalités
+                  <div className="space-y-4">
+                    {rivalries.map((rivalry) => (
+                      <div key={rivalry.id} className="bg-white dark:bg-slate-700 rounded-2xl p-6 border border-gray-200 dark:border-slate-600">
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center space-x-4">
+                            <div className="text-3xl">
+                              {SPORTS.find(s => s.id === rivalry.sport)?.emoji}
+                            </div>
+                            <div>
+                              <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
+                                {SPORTS.find(s => s.id === rivalry.sport)?.name}
+                              </h4>
+                              <p className="text-gray-600 dark:text-gray-400">vs {rivalry.friend.name}</p>
+                              <p className="text-xs text-gray-500">
+                                Depuis le {new Date(rivalry.createdAt).toLocaleDateString('fr-FR')}
+                              </p>
+                            </div>
+                          </div>
+                          
+                          <button
+                            onClick={() => {
+                              setSelectedRivalry(rivalry)
+                              setShowAddMatch(true)
+                            }}
+                            className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors"
+                          >
+                            <Plus className="w-4 h-4" />
+                            <span>Ajouter match</span>
+                          </button>
+                        </div>
+                        
+                        {/* Stats */}
+                        <div className="grid grid-cols-3 gap-4 mb-4">
+                          <div className="text-center">
+                            <div className="text-2xl font-bold text-green-600">{rivalry.myStats.wins}</div>
+                            <div className="text-sm text-gray-500">Mes victoires</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-2xl font-bold text-gray-900 dark:text-white">{rivalry.myStats.totalMatches}</div>
+                            <div className="text-sm text-gray-500">Total matchs</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-2xl font-bold text-red-600">{rivalry.myStats.losses}</div>
+                            <div className="text-sm text-gray-500">Mes défaites</div>
+                          </div>
+                        </div>
+
+                        {/* Pourcentage de victoire */}
+                        <div className="mb-4">
+                          <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 mb-1">
+                            <span>Taux de victoire</span>
+                            <span>
+                              {rivalry.myStats.totalMatches > 0 
+                                ? Math.round((rivalry.myStats.wins / rivalry.myStats.totalMatches) * 100)
+                                : 0}%
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 dark:bg-slate-600 rounded-full h-2">
+                            <div 
+                              className="bg-gradient-to-r from-green-500 to-emerald-500 h-2 rounded-full transition-all duration-300"
+                              style={{ 
+                                width: `${rivalry.myStats.totalMatches > 0 
+                                  ? (rivalry.myStats.wins / rivalry.myStats.totalMatches) * 100 
+                                  : 0}%` 
+                              }}
+                            ></div>
+                          </div>
+                        </div>
+                        
+                        {/* Série actuelle */}
+                        {rivalry.myStats.currentStreak > 0 && (
+                          <div className="text-center mb-4">
+                            <span className={`inline-flex items-center space-x-2 px-4 py-2 rounded-full text-sm font-medium ${
+                              rivalry.myStats.streakType === 'wins' 
+                                ? 'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-200'
+                                : 'bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-200'
+                            }`}>
+                              <Flame className="w-4 h-4" />
+                              <span>
+                                Série de {rivalry.myStats.currentStreak} {rivalry.myStats.streakType === 'wins' ? 'victoires' : 'défaites'}
+                              </span>
+                            </span>
+                          </div>
+                        )}
+                        
+                        {/* Derniers matchs */}
+                        {rivalry.recentMatches.length > 0 ? (
+                          <div>
+                            <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                              Derniers matchs ({rivalry.recentMatches.length})
+                            </h5>
+                            <div className="space-y-2">
+                              {rivalry.recentMatches.slice(0, 3).map((match) => (
+                                <div key={match.id} className="flex items-center justify-between bg-gray-50 dark:bg-slate-600 rounded-lg p-3">
+                                  <div className="flex items-center space-x-3">
+                                    <div className={`w-3 h-3 rounded-full ${
+                                      match.winner === 'me' ? 'bg-green-500' : 
+                                      match.winner === 'friend' ? 'bg-red-500' : 'bg-gray-500'
+                                    }`}></div>
+                                    <div>
+                                      <span className="text-sm font-medium text-gray-900 dark:text-white">
+                                        {match.myScore} - {match.friendScore}
+                                      </span>
+                                      {match.location && (
+                                        <span className="text-xs text-gray-500 ml-2">à {match.location}</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    <span className="text-xs text-gray-500">
+                                      {new Date(match.date).toLocaleDateString('fr-FR')}
+                                    </span>
+                                    {match.comment && (
+                                      <div className="text-xs text-gray-400 max-w-xs truncate">
+                                        "{match.comment}"
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                              
+                              {rivalry.recentMatches.length > 3 && (
+                                <div className="text-center pt-2">
+                                  <span className="text-sm text-gray-500">
+                                    +{rivalry.recentMatches.length - 3} autre(s) match(s)
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-center py-4 bg-gray-50 dark:bg-slate-600 rounded-lg">
+                            <Target className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                            <p className="text-sm text-gray-500">Aucun match encore</p>
+                            <p className="text-xs text-gray-400">Ajoutez votre premier match !</p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
@@ -475,21 +729,133 @@ export default function PersonalMatchesPage() {
 
             {/* REQUESTS TAB */}
             {activeTab === 'requests' && (
-              <div className="space-y-6">
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Demandes de rivalité ({requests.length})</h3>
+              <div className="space-y-8">
+                {/* Demandes reçues */}
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+                    Demandes reçues ({receivedRequests.length})
+                    {receivedRequests.length > 0 && (
+                      <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-200">
+                        Nouveau
+                      </span>
+                    )}
+                  </h3>
 
-                {requests.length === 0 ? (
-                  <div className="text-center py-12 bg-gray-50 dark:bg-slate-700 rounded-2xl">
-                    <UserPlus className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Aucune demande</h3>
-                    <p className="text-gray-600 dark:text-gray-400">Vous n'avez pas de demandes de rivalité en attente</p>
-                  </div>
-                ) : (
-                  // TODO: Liste des demandes
-                  <div className="text-center py-12 text-gray-500">
-                    Demandes à venir...
-                  </div>
-                )}
+                  {receivedRequests.length === 0 ? (
+                    <div className="text-center py-8 bg-gray-50 dark:bg-slate-700 rounded-2xl">
+                      <MessageCircle className="w-10 h-10 text-gray-400 mx-auto mb-3" />
+                      <p className="text-gray-600 dark:text-gray-400">Aucune demande de rivalité reçue</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {receivedRequests.map((request) => (
+                        <div key={request.id} className="bg-white dark:bg-slate-700 rounded-2xl p-6 border-l-4 border-blue-500">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-4">
+                              <div className="text-2xl">
+                                {SPORTS.find(s => s.id === request.sport)?.emoji}
+                              </div>
+                              <div>
+                                <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
+                                  Défi en {SPORTS.find(s => s.id === request.sport)?.name}
+                                </h4>
+                                <p className="text-gray-600 dark:text-gray-400">
+                                  de <span className="font-medium">{request.friend.name}</span>
+                                </p>
+                                {request.message && (
+                                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 italic">
+                                    "{request.message}"
+                                  </p>
+                                )}
+                                <p className="text-xs text-gray-400 mt-1">
+                                  {new Date(request.createdAt).toLocaleDateString('fr-FR', {
+                                    day: 'numeric',
+                                    month: 'long',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}
+                                </p>
+                              </div>
+                            </div>
+                            
+                            <div className="flex space-x-3">
+                              <button
+                                onClick={() => handleAcceptRequest(request.id)}
+                                className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors"
+                              >
+                                <Check className="w-4 h-4" />
+                                <span>Accepter</span>
+                              </button>
+                              <button
+                                onClick={() => handleDeclineRequest(request.id)}
+                                className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors"
+                              >
+                                <X className="w-4 h-4" />
+                                <span>Refuser</span>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Demandes envoyées */}
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+                    Demandes envoyées ({sentRequests.length})
+                  </h3>
+
+                  {sentRequests.length === 0 ? (
+                    <div className="text-center py-8 bg-gray-50 dark:bg-slate-700 rounded-2xl">
+                      <Send className="w-10 h-10 text-gray-400 mx-auto mb-3" />
+                      <p className="text-gray-600 dark:text-gray-400">Aucune demande envoyée en attente</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {sentRequests.map((request) => (
+                        <div key={request.id} className="bg-white dark:bg-slate-700 rounded-2xl p-6 border-l-4 border-yellow-500">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-4">
+                              <div className="text-2xl">
+                                {SPORTS.find(s => s.id === request.sport)?.emoji}
+                              </div>
+                              <div>
+                                <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
+                                  Défi en {SPORTS.find(s => s.id === request.sport)?.name}
+                                </h4>
+                                <p className="text-gray-600 dark:text-gray-400">
+                                  envoyé à <span className="font-medium">{request.friend.name}</span>
+                                </p>
+                                {request.message && (
+                                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 italic">
+                                    "{request.message}"
+                                  </p>
+                                )}
+                                <p className="text-xs text-gray-400 mt-1">
+                                  {new Date(request.createdAt).toLocaleDateString('fr-FR', {
+                                    day: 'numeric',
+                                    month: 'long',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}
+                                </p>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center space-x-3">
+                              <span className="inline-flex items-center space-x-1 px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200">
+                                <Clock className="w-4 h-4" />
+                                <span>En attente</span>
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
@@ -505,9 +871,89 @@ export default function PersonalMatchesPage() {
                     <p className="text-gray-600 dark:text-gray-400">Créez des rivalités pour voir vos statistiques</p>
                   </div>
                 ) : (
-                  // TODO: Statistiques détaillées
-                  <div className="text-center py-12 text-gray-500">
-                    Statistiques à venir...
+                  // Statistiques détaillées
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {/* Stats générales */}
+                    <div className="bg-white dark:bg-slate-700 rounded-2xl p-6">
+                      <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Vue d'ensemble</h4>
+                      <div className="space-y-3">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600 dark:text-gray-400">Total matchs</span>
+                          <span className="font-bold text-gray-900 dark:text-white">
+                            {rivalries.reduce((total, r) => total + r.myStats.totalMatches, 0)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600 dark:text-gray-400">Victoires</span>
+                          <span className="font-bold text-green-600">
+                            {rivalries.reduce((total, r) => total + r.myStats.wins, 0)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600 dark:text-gray-400">Défaites</span>
+                          <span className="font-bold text-red-600">
+                            {rivalries.reduce((total, r) => total + r.myStats.losses, 0)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600 dark:text-gray-400">Taux de victoire</span>
+                          <span className="font-bold text-blue-600">
+                            {rivalries.reduce((total, r) => total + r.myStats.totalMatches, 0) > 0
+                              ? Math.round((rivalries.reduce((total, r) => total + r.myStats.wins, 0) / rivalries.reduce((total, r) => total + r.myStats.totalMatches, 0)) * 100)
+                              : 0}%
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Sports pratiqués */}
+                    <div className="bg-white dark:bg-slate-700 rounded-2xl p-6">
+                      <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Sports pratiqués</h4>
+                      <div className="space-y-3">
+                        {Array.from(new Set(rivalries.map(r => r.sport))).map(sport => {
+                          const sportRivalries = rivalries.filter(r => r.sport === sport)
+                          const totalMatches = sportRivalries.reduce((total, r) => total + r.myStats.totalMatches, 0)
+                          const wins = sportRivalries.reduce((total, r) => total + r.myStats.wins, 0)
+                          const sportInfo = SPORTS.find(s => s.id === sport)
+                          
+                          return (
+                            <div key={sport} className="flex items-center justify-between">
+                              <div className="flex items-center space-x-2">
+                                <span className="text-lg">{sportInfo?.emoji}</span>
+                                <span className="text-sm text-gray-600 dark:text-gray-400">{sportInfo?.name}</span>
+                              </div>
+                              <span className="text-sm font-medium text-gray-900 dark:text-white">
+                                {wins}/{totalMatches}
+                              </span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Rivalités les plus actives */}
+                    <div className="bg-white dark:bg-slate-700 rounded-2xl p-6">
+                      <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Plus actives</h4>
+                      <div className="space-y-3">
+                        {rivalries
+                          .sort((a, b) => b.myStats.totalMatches - a.myStats.totalMatches)
+                          .slice(0, 5)
+                          .map(rivalry => (
+                            <div key={rivalry.id} className="flex items-center justify-between">
+                              <div className="flex items-center space-x-2">
+                                <span className="text-lg">{SPORTS.find(s => s.id === rivalry.sport)?.emoji}</span>
+                                <span className="text-sm text-gray-600 dark:text-gray-400 truncate">
+                                  vs {rivalry.friend.name}
+                                </span>
+                              </div>
+                              <span className="text-sm font-medium text-gray-900 dark:text-white">
+                                {rivalry.myStats.totalMatches} matchs
+                              </span>
+                            </div>
+                          ))
+                        }
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
@@ -651,8 +1097,8 @@ export default function PersonalMatchesPage() {
       {/* MODAL - Ajouter un match */}
       {showAddMatch && selectedRivalry && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-hidden">
-            <div className="bg-gradient-to-r from-green-600 to-emerald-600 px-6 py-4 flex items-center justify-between">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="bg-gradient-to-r from-green-600 to-emerald-600 px-6 py-4 flex items-center justify-between flex-shrink-0">
               <h2 className="text-xl font-bold text-white flex items-center space-x-3">
                 <Plus className="w-6 h-6" />
                 <span>Ajouter un match</span>
@@ -668,7 +1114,7 @@ export default function PersonalMatchesPage() {
               </button>
             </div>
 
-            <div className="p-6 space-y-6">
+            <div className="p-6 space-y-6 overflow-y-auto flex-1">
               {/* Info de la rivalité */}
               <div className="bg-gray-50 dark:bg-slate-700 rounded-xl p-4">
                 <div className="flex items-center space-x-3">
@@ -770,7 +1216,7 @@ export default function PersonalMatchesPage() {
               </div>
 
               {/* Boutons d'action */}
-              <div className="flex space-x-3">
+              <div className="flex space-x-3 pt-4 border-t border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 sticky bottom-0">
                 <button
                   onClick={() => {
                     setShowAddMatch(false)

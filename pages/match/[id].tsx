@@ -15,6 +15,7 @@ import BasketballMatchDetails from '../../components/BasketballMatchDetails'
 import F1MatchDetails from '../../components/F1MatchDetails'
 import RugbyMatchDetails from '../../components/RugbyMatchDetails'
 import MMAMatchDetails from '../../components/MMAMatchDetails'
+import TennisMatchDetails from '../../components/TennisMatchDetails' // 🆕 NOUVEAU COMPOSANT
 import MatchReviews from '../../components/MatchReviews'
 import AddToListButton from '../../components/AddToListButton'
 
@@ -24,7 +25,7 @@ import AddToListButton from '../../components/AddToListButton'
 
 interface MatchData {
   id: string
-  sport: 'FOOTBALL' | 'BASKETBALL' | 'MMA' | 'RUGBY' | 'F1'
+  sport: 'FOOTBALL' | 'BASKETBALL' | 'MMA' | 'RUGBY' | 'F1' | 'TENNIS' // 🆕 TENNIS ajouté
   homeTeam: string
   awayTeam: string
   homeScore: number | null
@@ -123,7 +124,8 @@ const getSportEmoji = (sport: string) => {
     'BASKETBALL': '🏀',
     'MMA': '🥊',
     'RUGBY': '🏉',
-    'F1': '🏎️'
+    'F1': '🏎️',
+    'TENNIS': '🎾' // 🆕 TENNIS
   }
   return emojis[sport as keyof typeof emojis] || '🏆'
 }
@@ -134,7 +136,8 @@ const getSportColor = (sport: string) => {
     'BASKETBALL': 'from-orange-500 to-red-600',
     'MMA': 'from-red-500 to-pink-600',
     'RUGBY': 'from-green-500 to-green-600',
-    'F1': 'from-red-500 to-orange-600'
+    'F1': 'from-red-500 to-orange-600',
+    'TENNIS': 'from-yellow-500 to-green-600' // 🆕 TENNIS
   }
   return colors[sport as keyof typeof colors] || 'from-indigo-500 to-purple-600'
 }
@@ -145,7 +148,8 @@ const getSportLabel = (sport: string) => {
     'BASKETBALL': 'Match de Basketball', 
     'MMA': 'Combat MMA',
     'RUGBY': 'Match de Rugby',
-    'F1': 'Grand Prix F1'
+    'F1': 'Grand Prix F1',
+    'TENNIS': 'Match de Tennis' // 🆕 TENNIS
   }
   return labels[sport as keyof typeof labels] || 'Événement'
 }
@@ -960,6 +964,7 @@ function MatchRatingSidebar({
                 match.sport === 'F1' ? match.homeTeam : 
                 match.sport === 'MMA' ? `${match.homeTeam} vs ${match.awayTeam}` :
                 match.sport === 'RUGBY' ? `${match.homeTeam} vs ${match.awayTeam}` :
+                match.sport === 'TENNIS' ? `${match.homeTeam} vs ${match.awayTeam}` : // 🆕 TENNIS
                 `${match.homeTeam} vs ${match.awayTeam}`
               }
               variant="button"
@@ -1017,7 +1022,7 @@ function MatchInfoCard({ match }: { match: MatchData }) {
         {match.referee && match.sport !== 'F1' && (
           <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-slate-700 rounded-lg">
             <span className="text-sm text-gray-600 dark:text-gray-400">
-              {match.sport === 'MMA' ? 'Arbitre' : 'Arbitre'}
+              {match.sport === 'MMA' || match.sport === 'TENNIS' ? 'Arbitre' : 'Arbitre'}
             </span>
             <span className="font-medium text-gray-900 dark:text-white text-sm truncate max-w-[120px]">{match.referee}</span>
           </div>
@@ -1029,6 +1034,23 @@ function MatchInfoCard({ match }: { match: MatchData }) {
               {match.attendance.toLocaleString()}
             </span>
           </div>
+        )}
+        {/* 🆕 INFOS SPÉCIFIQUES TENNIS */}
+        {match.sport === 'TENNIS' && match.details && (
+          <>
+            {match.details.surface && (
+              <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-slate-700 rounded-lg">
+                <span className="text-sm text-gray-600 dark:text-gray-400">Surface</span>
+                <span className="font-medium text-gray-900 dark:text-white text-sm">{match.details.surface}</span>
+              </div>
+            )}
+            {match.details.round && (
+              <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-slate-700 rounded-lg">
+                <span className="text-sm text-gray-600 dark:text-gray-400">Tour</span>
+                <span className="font-medium text-gray-900 dark:text-white text-sm">{match.details.round}</span>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
@@ -1115,256 +1137,6 @@ function CommunityStatsWidget({ matchId }: { matchId: string }) {
 // ============================================================================
 // COMPOSANT PRINCIPAL - MATCH DETAILS PAGE
 // ============================================================================
-// 🎾 COMPOSANTS SPÉCIALISÉS TENNIS
-function TennisMatchHeader({ match }: { match: MatchData }) {
-  const tennisScore = formatTennisScore(match)
-  const winner = getTennisWinner(match)
-
-  return (
-    <div className="bg-gradient-to-r from-yellow-500/80 to-green-600/80 backdrop-blur-sm border border-gray-200/20 dark:border-slate-600/30 mx-4 mt-4 rounded-2xl p-4 md:p-6 mb-4">
-      {/* Badge tournoi */}
-      <div className="text-center mb-4">
-        <span className="inline-flex items-center space-x-2 bg-white/90 dark:bg-slate-800/90 px-4 py-2 rounded-full border border-gray-200 dark:border-slate-600 shadow-sm">
-          <span className="text-xl">🎾</span>
-          <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{tennisScore.tournament}</span>
-          <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-1 rounded-full">
-            {tennisScore.surface}
-          </span>
-        </span>
-      </div>
-      
-      {/* Joueurs face-à-face */}
-      <div className="flex items-center justify-between">
-        {/* Joueur 1 */}
-        <div className="flex-1 text-center">
-          <h3 className="font-bold text-white text-lg md:text-xl mb-2">
-            {match.homeTeam}
-          </h3>
-          <p className="text-xs md:text-sm text-gray-300 mb-3">
-            {winner === match.homeTeam ? '🏆 Vainqueur' : 'Joueur 1'}
-          </p>
-          <div className="text-3xl md:text-4xl font-black text-white">
-            {match.homeScore || 0}
-          </div>
-          <div className="text-sm text-white/80 mt-1">sets</div>
-        </div>
-        
-        {/* Séparateur VS */}
-        <div className="px-6">
-          <div className="text-center">
-            <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center border-2 border-white/30">
-              <span className="text-base font-bold text-white">VS</span>
-            </div>
-          </div>
-        </div>
-        
-        {/* Joueur 2 */}
-        <div className="flex-1 text-center">
-          <h3 className="font-bold text-white text-lg md:text-xl mb-2">
-            {match.awayTeam}
-          </h3>
-          <p className="text-xs md:text-sm text-gray-300 mb-3">
-            {winner === match.awayTeam ? '🏆 Vainqueur' : 'Joueur 2'}
-          </p>
-          <div className="text-3xl md:text-4xl font-black text-white">
-            {match.awayScore || 0}
-          </div>
-          <div className="text-sm text-white/80 mt-1">sets</div>
-        </div>
-      </div>
-      
-      {/* Score détaillé par jeux */}
-      {tennisScore.games && (
-        <div className="mt-4 text-center">
-          <div className="bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2">
-            <div className="text-sm text-white/90 font-medium">Détail: {tennisScore.games}</div>
-          </div>
-        </div>
-      )}
-      
-      {/* Infos du match */}
-      <div className="flex items-center justify-center space-x-6 mt-4 text-xs md:text-sm text-gray-300">
-        <span className="flex items-center space-x-1">
-          <MapPin className="w-4 h-4" />
-          <span>{match.venue}</span>
-        </span>
-        <span className="flex items-center space-x-1">
-          <Clock className="w-4 h-4" />
-          <span>{new Date(match.date).toLocaleDateString('fr-FR')}</span>
-        </span>
-      </div>
-    </div>
-  )
-}
-
-function TennisTabNavigation({ activeTab, setActiveTab }: { 
-  activeTab: string, 
-  setActiveTab: (tab: string) => void
-}) {
-  const tabs = [
-    { id: 'overview', label: 'Résumé', icon: Eye, color: 'emerald' },
-    { id: 'match-stats', label: 'Stats Match', icon: BarChart3, color: 'yellow' },
-    { id: 'player-details', label: 'Joueurs', icon: UserCheck, color: 'blue' }
-  ]
-
-  return (
-    <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm rounded-2xl shadow-lg overflow-hidden border border-gray-100 dark:border-slate-700 mx-4 mb-4">
-      <div className="flex overflow-x-auto scrollbar-hide">
-        <div className="flex space-x-1 p-2 min-w-full md:min-w-0 md:justify-center">
-          {tabs.map((tab) => {
-            const Icon = tab.icon
-            const isActive = activeTab === tab.id
-            
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex-shrink-0 flex flex-col items-center space-y-2 px-4 py-4 rounded-xl font-medium text-sm transition-all duration-300 min-w-[120px] ${
-                  isActive
-                    ? `bg-gradient-to-br ${
-                        tab.color === 'blue' ? 'from-blue-500 to-blue-600' :
-                        tab.color === 'yellow' ? 'from-yellow-500 to-yellow-600' :
-                        'from-emerald-500 to-emerald-600'
-                      } text-white shadow-lg scale-105`
-                    : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-slate-700'
-                }`}
-              >
-                <Icon className="w-5 h-5" />
-                <div className="font-bold text-xs">{tab.label}</div>
-              </button>
-            )
-          })}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function TennisMatchContent({ activeTab, match, matchData, session, userRating, setUserRating, comment, setComment, submitRating }: any) {
-  const tennisScore = formatTennisScore(match)
-  
-  if (activeTab === 'match-stats') {
-    return (
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-slate-700">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center space-x-2">
-          <BarChart3 className="w-6 h-6 text-yellow-600" />
-          <span>📊 Statistiques du match</span>
-        </h2>
-        
-        {/* Score détaillé */}
-        <div className="mb-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Score par set</h3>
-          <div className="bg-gradient-to-r from-yellow-50 to-green-50 dark:from-yellow-900/20 dark:to-green-900/20 rounded-xl p-4 border border-yellow-200 dark:border-yellow-700">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="text-center">
-                <div className="text-lg font-bold text-gray-900 dark:text-white">{match.homeTeam}</div>
-                <div className="text-2xl font-black text-yellow-600">{match.homeScore || 0} sets</div>
-              </div>
-              <div className="text-center">
-                <div className="text-lg font-bold text-gray-900 dark:text-white">{match.awayTeam}</div>
-                <div className="text-2xl font-black text-green-600">{match.awayScore || 0} sets</div>
-              </div>
-            </div>
-            
-            {tennisScore.games && (
-              <div className="mt-4 text-center">
-                <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Détail des jeux</div>
-                <div className="text-lg font-semibold text-gray-900 dark:text-white">
-                  {tennisScore.games}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Infos du match */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-gray-50 dark:bg-slate-700 rounded-lg p-4">
-            <h4 className="font-semibold text-gray-900 dark:text-white mb-3">🏟️ Informations</h4>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">Tournoi:</span>
-                <span className="font-medium text-gray-900 dark:text-white">{tennisScore.tournament}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">Surface:</span>
-                <span className="font-medium text-gray-900 dark:text-white">{tennisScore.surface}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">Lieu:</span>
-                <span className="font-medium text-gray-900 dark:text-white">{match.venue}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">Date:</span>
-                <span className="font-medium text-gray-900 dark:text-white">
-                  {new Date(match.date).toLocaleDateString('fr-FR')}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-gray-50 dark:bg-slate-700 rounded-lg p-4">
-            <h4 className="font-semibold text-gray-900 dark:text-white mb-3">🏆 Résultat</h4>
-            <div className="space-y-2 text-sm">
-              {getTennisWinner(match) && (
-                <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Vainqueur:</span>
-                  <span className="font-bold text-green-600 dark:text-green-400">
-                    {getTennisWinner(match)}
-                  </span>
-                </div>
-              )}
-              <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">Statut:</span>
-                <span className="font-medium text-gray-900 dark:text-white">
-                  Terminé
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (activeTab === 'player-details') {
-    return (
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-slate-700">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center space-x-2">
-          <UserCheck className="w-6 h-6 text-blue-600" />
-          <span>👤 Profils des joueurs</span>
-        </h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Joueur 1 */}
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-xl p-6 border border-blue-200 dark:border-blue-700">
-            <div className="text-center mb-4">
-              <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-3">
-                <span className="text-2xl text-white">🎾</span>
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white">{match.homeTeam}</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Joueur 1</p>
-            </div>
-          </div>
-
-          {/* Joueur 2 */}
-          <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-xl p-6 border border-green-200 dark:border-green-700">
-            <div className="text-center mb-4">
-              <div className="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-3">
-                <span className="text-2xl text-white">🎾</span>
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white">{match.awayTeam}</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Joueur 2</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // Pour l'onglet 'overview', on garde le contenu standard existant
-  return null
-}
 
 export default function MatchDetailsPage() {
   const router = useRouter()
@@ -1382,8 +1154,8 @@ export default function MatchDetailsPage() {
   const [loadingVideoSuggestions, setLoadingVideoSuggestions] = useState(false)
   const [showVideoSection, setShowVideoSection] = useState(false) // 🆕 NOUVEL ÉTAT
   
-  // Nouveau système d'onglets - 5 au lieu de 4
-  const [activeTab, setActiveTab] = useState<'overview' | 'lineups' | 'man-of-match' | 'stats' | 'timeline'>('overview')
+  // 🎾 ÉTAT SPÉCIFIQUE TENNIS - Onglet actif différent selon le sport
+  const [activeTab, setActiveTab] = useState<'overview' | 'lineups' | 'individual' | 'stats' | 'timeline'>('overview')
   
   // État pour le menu déroulant résumé (fermé par défaut)
   const [showQuickSummary, setShowQuickSummary] = useState(() => {
@@ -1586,6 +1358,77 @@ export default function MatchDetailsPage() {
   const redCards = cards.filter(c => c.detail?.includes('Red') || c.detail?.includes('rouge'))
   const substitutions = matchData.data.events.filter(e => e.type === 'SUBSTITUTION')
 
+  // 🎾 LOGIQUE SPÉCIFIQUE TENNIS - Navigation différente
+  const getTennisTabNavigation = () => {
+    return [
+      { 
+        id: 'overview', 
+        label: 'Vue d\'ensemble', 
+        icon: Eye, 
+        shortLabel: 'Résumé',
+        color: 'emerald',
+        description: 'Résumé complet'
+      },
+      { 
+        id: 'individual', 
+        label: 'Notation Joueurs', 
+        icon: UserCheck, 
+        shortLabel: 'Joueurs',
+        color: 'blue',
+        description: 'Noter les joueurs' // 🆕 AU LIEU DE "lineups"
+      },
+      { 
+        id: 'stats', 
+        label: 'Statistiques', 
+        icon: BarChart3, 
+        shortLabel: 'Stats',
+        color: 'purple',
+        description: 'Stats du match'
+      }
+      // 🆕 PAS DE TIMELINE POUR LE TENNIS
+    ]
+  }
+
+  const getRegularTabNavigation = () => {
+    return [
+      { 
+        id: 'overview', 
+        label: 'Vue d\'ensemble', 
+        icon: Eye, 
+        shortLabel: 'Résumé',
+        color: 'emerald',
+        description: 'Résumé complet'
+      },
+      { 
+        id: 'lineups', 
+        label: 'Compositions', 
+        icon: UserCheck, 
+        shortLabel: 'Équipes',
+        color: 'blue',
+        description: 'Formations & tactiques'
+      },
+      { 
+        id: 'stats', 
+        label: 'Statistiques', 
+        icon: BarChart3, 
+        shortLabel: 'Stats',
+        color: 'purple',
+        description: 'Données du match'
+      },
+      { 
+        id: 'timeline', 
+        label: 'Timeline', 
+        icon: Activity, 
+        shortLabel: 'Events',
+        color: 'green',
+        description: 'Événements'
+      }
+    ]
+  }
+
+  // 🎾 CHOISIR LA NAVIGATION SELON LE SPORT
+  const tabNavigation = match.sport === 'TENNIS' ? getTennisTabNavigation() : getRegularTabNavigation()
+
   // ============================================================================
   // RENDER PRINCIPAL
   // ============================================================================
@@ -1613,148 +1456,212 @@ export default function MatchDetailsPage() {
         </div>
       </div>
 
-      {/* Header Score amélioré */}
-      <div className="bg-gradient-to-r from-slate-700/80 to-slate-800/80 dark:from-slate-800/90 dark:to-slate-900/90 backdrop-blur-sm border border-gray-200/20 dark:border-slate-600/30 mx-4 mt-4 rounded-2xl p-4 md:p-6 mb-4">
-        {/* Badge compétition centré */}
-        <div className="text-center mb-4">
-          <span className="inline-flex items-center space-x-2 bg-white/90 dark:bg-slate-800/90 px-4 py-2 rounded-full border border-gray-200 dark:border-slate-600 shadow-sm">
-            <span className="text-xl">{getSportEmoji(match.sport)}</span>
-            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{match.competition}</span>
-          </span>
-        </div>
-        
-        {/* Score face-à-face */}
-        <div className="flex items-center justify-between">
-          {/* Équipe domicile */}
-          <div className="flex-1 text-center">
-            <div className="flex items-center justify-center space-x-3 mb-3">
-              {match.homeTeamLogo && (
-                <img src={match.homeTeamLogo} alt="" className="w-8 h-8 md:w-10 md:h-10 rounded-full shadow-sm" />
+      {/* 🎾 HEADER SCORE SPÉCIALISÉ POUR TENNIS */}
+      {match.sport === 'TENNIS' ? (
+        <div className="bg-gradient-to-r from-yellow-500/80 to-green-600/80 backdrop-blur-sm border border-gray-200/20 dark:border-slate-600/30 mx-4 mt-4 rounded-2xl p-4 md:p-6 mb-4">
+          {/* Badge tournoi */}
+          <div className="text-center mb-4">
+            <span className="inline-flex items-center space-x-2 bg-white/90 dark:bg-slate-800/90 px-4 py-2 rounded-full border border-gray-200 dark:border-slate-600 shadow-sm">
+              <span className="text-xl">🎾</span>
+              <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{match.competition}</span>
+              {match.details?.surface && (
+                <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-1 rounded-full">
+                  {match.details.surface}
+                </span>
               )}
-              <div>
-                <h3 className="font-bold text-white text-lg md:text-xl leading-tight">
-                  {match.homeTeam}
-                </h3>
-                <p className="text-xs md:text-sm text-gray-300 dark:text-gray-400 font-medium">Domicile</p>
-              </div>
-            </div>
-            <div className="text-4xl md:text-5xl font-black text-blue-400 dark:text-blue-300">
-              {match.homeScore ?? '?'}
-            </div>
-          </div>
-          
-          {/* Séparateur VS */}
-          <div className="px-4 md:px-6">
-            <div className="text-center">
-              <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-br from-gray-100/20 to-gray-200/20 dark:from-slate-600/50 dark:to-slate-700/50 rounded-full flex items-center justify-center border-2 border-white/30 dark:border-slate-500/50 shadow-lg backdrop-blur-sm">
-                <span className="text-sm md:text-base font-bold text-gray-200 dark:text-gray-300">VS</span>
-              </div>
-              <div className="text-xs md:text-sm text-gray-300 dark:text-gray-400 mt-2 font-medium">
-                {new Date(match.date).toLocaleDateString('fr-FR', { 
-                  day: '2-digit', 
-                  month: 'short' 
-                })}
-              </div>
-            </div>
-          </div>
-          
-          {/* Équipe extérieure */}
-          <div className="flex-1 text-center">
-            <div className="flex items-center justify-center space-x-3 mb-3">
-              <div className="text-right">
-                <h3 className="font-bold text-white text-lg md:text-xl leading-tight">
-                  {match.awayTeam}
-                </h3>
-                <p className="text-xs md:text-sm text-gray-300 dark:text-gray-400 font-medium">Extérieur</p>
-              </div>
-              {match.awayTeamLogo && (
-                <img src={match.awayTeamLogo} alt="" className="w-8 h-8 md:w-10 md:h-10 rounded-full shadow-sm" />
-              )}
-            </div>
-            <div className="text-4xl md:text-5xl font-black text-red-400 dark:text-red-300">
-              {match.awayScore ?? '?'}
-            </div>
-          </div>
-        </div>
-        
-        {/* Infos match en bas */}
-        <div className="flex items-center justify-center space-x-4 md:space-x-6 mt-4 text-xs md:text-sm text-gray-300 dark:text-gray-400">
-          <span className="flex items-center space-x-1">
-            <MapPin className="w-3 h-3 md:w-4 md:h-4" />
-            <span className="font-medium">{match.venue}</span>
-          </span>
-          {match.attendance && (
-            <span className="flex items-center space-x-1">
-              <Users className="w-3 h-3 md:w-4 md:h-4" />
-              <span className="font-medium">{match.attendance.toLocaleString()}</span>
             </span>
+          </div>
+          
+          {/* Joueurs face-à-face */}
+          <div className="flex items-center justify-between">
+            {/* Joueur 1 */}
+            <div className="flex-1 text-center">
+              <h3 className="font-bold text-white text-lg md:text-xl mb-2">
+                {match.homeTeam}
+              </h3>
+              <p className="text-xs md:text-sm text-gray-300 mb-3">
+                {getTennisWinner(match) === match.homeTeam ? '🏆 Vainqueur' : 'Joueur 1'}
+              </p>
+              <div className="text-3xl md:text-4xl font-black text-white">
+                {match.homeScore || 0}
+              </div>
+              <div className="text-sm text-white/80 mt-1">sets</div>
+            </div>
+            
+            {/* Séparateur VS */}
+            <div className="px-6">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center border-2 border-white/30">
+                  <span className="text-base font-bold text-white">VS</span>
+                </div>
+              </div>
+            </div>
+            
+            {/* Joueur 2 */}
+            <div className="flex-1 text-center">
+              <h3 className="font-bold text-white text-lg md:text-xl mb-2">
+                {match.awayTeam}
+              </h3>
+              <p className="text-xs md:text-sm text-gray-300 mb-3">
+                {getTennisWinner(match) === match.awayTeam ? '🏆 Vainqueur' : 'Joueur 2'}
+              </p>
+              <div className="text-3xl md:text-4xl font-black text-white">
+                {match.awayScore || 0}
+              </div>
+              <div className="text-sm text-white/80 mt-1">sets</div>
+            </div>
+          </div>
+          
+          {/* Score détaillé par jeux */}
+          {match.details?.scores?.player1?.games && match.details?.scores?.player2?.games && (
+            <div className="mt-4 text-center">
+              <div className="bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2">
+                <div className="text-sm text-white/90 font-medium">
+                  Détail: {formatTennisScore(match).games}
+                </div>
+              </div>
+            </div>
           )}
-          <span className="flex items-center space-x-1">
-            <Clock className="w-3 h-3 md:w-4 md:h-4" />
-            <span className="font-medium">
-              {new Date(match.date).toLocaleTimeString('fr-FR', { 
-                hour: '2-digit', 
-                minute: '2-digit' 
-              })}
+          
+          {/* Infos du match */}
+          <div className="flex items-center justify-center space-x-6 mt-4 text-xs md:text-sm text-gray-300">
+            <span className="flex items-center space-x-1">
+              <MapPin className="w-4 h-4" />
+              <span>{match.venue}</span>
             </span>
-          </span>
-        </div>
+            <span className="flex items-center space-x-1">
+              <Clock className="w-4 h-4" />
+              <span>{new Date(match.date).toLocaleDateString('fr-FR')}</span>
+            </span>
+          </div>
 
-        {/* 🆕 BOUTON DIRECT - Ouvre la section immédiatement */}
-        <div className="flex justify-center mt-3">
-          <button
-            onClick={() => setShowVideoSection(!showVideoSection)}
-            className="inline-flex items-center space-x-2 bg-white/90 dark:bg-slate-700/90 backdrop-blur-sm text-gray-800 dark:text-white px-4 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105 border border-white/20 dark:border-slate-600/50"
-          >
-            <Youtube className="w-4 h-4 text-red-600" />
-            <span>Résumés vidéo</span>
-            {videoSuggestions.length > 0 && (
-              <span className="bg-red-600 text-white px-2 py-0.5 rounded-full text-xs font-medium">
-                {videoSuggestions.length}
+          {/* Bouton vidéos */}
+          <div className="flex justify-center mt-3">
+            <button
+              onClick={() => setShowVideoSection(!showVideoSection)}
+              className="inline-flex items-center space-x-2 bg-white/90 dark:bg-slate-700/90 backdrop-blur-sm text-gray-800 dark:text-white px-4 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105 border border-white/20 dark:border-slate-600/50"
+            >
+              <Youtube className="w-4 h-4 text-red-600" />
+              <span>Résumés vidéo</span>
+              {videoSuggestions.length > 0 && (
+                <span className="bg-red-600 text-white px-2 py-0.5 rounded-full text-xs font-medium">
+                  {videoSuggestions.length}
+                </span>
+              )}
+            </button>
+          </div>
+        </div>
+      ) : (
+        // Header Score standard pour les autres sports
+        <div className="bg-gradient-to-r from-slate-700/80 to-slate-800/80 dark:from-slate-800/90 dark:to-slate-900/90 backdrop-blur-sm border border-gray-200/20 dark:border-slate-600/30 mx-4 mt-4 rounded-2xl p-4 md:p-6 mb-4">
+          {/* Badge compétition centré */}
+          <div className="text-center mb-4">
+            <span className="inline-flex items-center space-x-2 bg-white/90 dark:bg-slate-800/90 px-4 py-2 rounded-full border border-gray-200 dark:border-slate-600 shadow-sm">
+              <span className="text-xl">{getSportEmoji(match.sport)}</span>
+              <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{match.competition}</span>
+            </span>
+          </div>
+          
+          {/* Score face-à-face */}
+          <div className="flex items-center justify-between">
+            {/* Équipe domicile */}
+            <div className="flex-1 text-center">
+              <div className="flex items-center justify-center space-x-3 mb-3">
+                {match.homeTeamLogo && (
+                  <img src={match.homeTeamLogo} alt="" className="w-8 h-8 md:w-10 md:h-10 rounded-full shadow-sm" />
+                )}
+                <div>
+                  <h3 className="font-bold text-white text-lg md:text-xl leading-tight">
+                    {match.homeTeam}
+                  </h3>
+                  <p className="text-xs md:text-sm text-gray-300 dark:text-gray-400 font-medium">Domicile</p>
+                </div>
+              </div>
+              <div className="text-4xl md:text-5xl font-black text-blue-400 dark:text-blue-300">
+                {match.homeScore ?? '?'}
+              </div>
+            </div>
+            
+            {/* Séparateur VS */}
+            <div className="px-4 md:px-6">
+              <div className="text-center">
+                <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-br from-gray-100/20 to-gray-200/20 dark:from-slate-600/50 dark:to-slate-700/50 rounded-full flex items-center justify-center border-2 border-white/30 dark:border-slate-500/50 shadow-lg backdrop-blur-sm">
+                  <span className="text-sm md:text-base font-bold text-gray-200 dark:text-gray-300">VS</span>
+                </div>
+                <div className="text-xs md:text-sm text-gray-300 dark:text-gray-400 mt-2 font-medium">
+                  {new Date(match.date).toLocaleDateString('fr-FR', { 
+                    day: '2-digit', 
+                    month: 'short' 
+                  })}
+                </div>
+              </div>
+            </div>
+            
+            {/* Équipe extérieure */}
+            <div className="flex-1 text-center">
+              <div className="flex items-center justify-center space-x-3 mb-3">
+                <div className="text-right">
+                  <h3 className="font-bold text-white text-lg md:text-xl leading-tight">
+                    {match.awayTeam}
+                  </h3>
+                  <p className="text-xs md:text-sm text-gray-300 dark:text-gray-400 font-medium">Extérieur</p>
+                </div>
+                {match.awayTeamLogo && (
+                  <img src={match.awayTeamLogo} alt="" className="w-8 h-8 md:w-10 md:h-10 rounded-full shadow-sm" />
+                )}
+              </div>
+              <div className="text-4xl md:text-5xl font-black text-red-400 dark:text-red-300">
+                {match.awayScore ?? '?'}
+              </div>
+            </div>
+          </div>
+          
+          {/* Infos match en bas */}
+          <div className="flex items-center justify-center space-x-4 md:space-x-6 mt-4 text-xs md:text-sm text-gray-300 dark:text-gray-400">
+            <span className="flex items-center space-x-1">
+              <MapPin className="w-3 h-3 md:w-4 md:h-4" />
+              <span className="font-medium">{match.venue}</span>
+            </span>
+            {match.attendance && (
+              <span className="flex items-center space-x-1">
+                <Users className="w-3 h-3 md:w-4 md:h-4" />
+                <span className="font-medium">{match.attendance.toLocaleString()}</span>
               </span>
             )}
-          </button>
-        </div>
-      </div>
+            <span className="flex items-center space-x-1">
+              <Clock className="w-3 h-3 md:w-4 md:h-4" />
+              <span className="font-medium">
+                {new Date(match.date).toLocaleTimeString('fr-FR', { 
+                  hour: '2-digit', 
+                  minute: '2-digit' 
+                })}
+              </span>
+            </span>
+          </div>
 
-      {/* Navigation onglets existante */}
+          {/* Bouton vidéos */}
+          <div className="flex justify-center mt-3">
+            <button
+              onClick={() => setShowVideoSection(!showVideoSection)}
+              className="inline-flex items-center space-x-2 bg-white/90 dark:bg-slate-700/90 backdrop-blur-sm text-gray-800 dark:text-white px-4 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105 border border-white/20 dark:border-slate-600/50"
+            >
+              <Youtube className="w-4 h-4 text-red-600" />
+              <span>Résumés vidéo</span>
+              {videoSuggestions.length > 0 && (
+                <span className="bg-red-600 text-white px-2 py-0.5 rounded-full text-xs font-medium">
+                  {videoSuggestions.length}
+                </span>
+              )}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Navigation onglets - DYNAMIQUE selon le sport */}
       <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm rounded-2xl shadow-lg overflow-hidden border border-gray-100 dark:border-slate-700 mx-4 mb-4">
         <div className="flex overflow-x-auto scrollbar-hide">
           <div className="flex space-x-1 p-2 min-w-full md:min-w-0 md:justify-center">
-            {[
-              { 
-                id: 'overview', 
-                label: 'Vue d\'ensemble', 
-                icon: Eye, 
-                shortLabel: 'Résumé',
-                color: 'emerald',
-                description: 'Résumé complet'
-              },
-              { 
-                id: 'lineups', 
-                label: 'Compositions', 
-                icon: UserCheck, 
-                shortLabel: 'Équipes',
-                color: 'blue',
-                description: 'Formations & tactiques'
-              },
-              { 
-                id: 'stats', 
-                label: 'Statistiques', 
-                icon: BarChart3, 
-                shortLabel: 'Stats',
-                color: 'purple',
-                description: 'Données du match'
-              },
-              { 
-                id: 'timeline', 
-                label: 'Timeline', 
-                icon: Activity, 
-                shortLabel: 'Events',
-                color: 'green',
-                description: 'Événements'
-              }
-            ].map((tab) => {
+            {tabNavigation.map((tab) => {
               const Icon = tab.icon
               const isActive = activeTab === tab.id
               
@@ -1787,7 +1694,7 @@ export default function MatchDetailsPage() {
                     )}
                   </div>
                   
-                  {/* Badge avec nombre d'éléments */}
+                  {/* Badge avec nombre d'éléments - SEULEMENT pour timeline */}
                   {tab.id === 'timeline' && matchData.data.events.length > 0 && (
                     <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs font-bold">
                       {matchData.data.events.length > 9 ? '9+' : matchData.data.events.length}
@@ -1806,15 +1713,17 @@ export default function MatchDetailsPage() {
           {/* Zone de contenu principal */}
           <div className="lg:col-span-2 space-y-6 md:space-y-8">
             
-            {/* Résumé du match - Visible sur tous les onglets */}
-            <QuickSummarySection 
-              goals={goals}
-              cards={cards}
-              redCards={redCards}
-              substitutions={substitutions}
-              showQuickSummary={showQuickSummary}
-              setShowQuickSummary={setShowQuickSummary}
-            />
+            {/* Résumé du match - SEULEMENT POUR SPORTS AVEC ÉVÉNEMENTS */}
+            {match.sport !== 'TENNIS' && (
+              <QuickSummarySection 
+                goals={goals}
+                cards={cards}
+                redCards={redCards}
+                substitutions={substitutions}
+                showQuickSummary={showQuickSummary}
+                setShowQuickSummary={setShowQuickSummary}
+              />
+            )}
 
             {/* TAB 1: VUE D'ENSEMBLE */}
             {activeTab === 'overview' && (
@@ -1828,6 +1737,7 @@ export default function MatchDetailsPage() {
                       match.sport === 'F1' ? match.homeTeam : 
                       match.sport === 'MMA' ? `${match.homeTeam} vs ${match.awayTeam}` :
                       match.sport === 'RUGBY' ? `${match.homeTeam} vs ${match.awayTeam}` :
+                      match.sport === 'TENNIS' ? `${match.homeTeam} vs ${match.awayTeam}` :
                       `${match.homeTeam} vs ${match.awayTeam}`
                     }
                     currentUserId={session?.user?.id}
@@ -1856,6 +1766,7 @@ export default function MatchDetailsPage() {
                     match.sport === 'F1' ? match.homeTeam : 
                     match.sport === 'MMA' ? `${match.homeTeam} vs ${match.awayTeam}` :
                     match.sport === 'RUGBY' ? `${match.homeTeam} vs ${match.awayTeam}` :
+                    match.sport === 'TENNIS' ? `${match.homeTeam} vs ${match.awayTeam}` :
                     `${match.homeTeam} vs ${match.awayTeam}`
                   }
                   currentUserId={session?.user?.id}
@@ -1864,8 +1775,8 @@ export default function MatchDetailsPage() {
               </div>
             )}
             
-            {/* TAB 2: COMPOSITIONS & TACTIQUE */}
-            {activeTab === 'lineups' && (
+            {/* TAB 2: COMPOSITIONS / NOTATION INDIVIDUELLE TENNIS */}
+            {activeTab === 'lineups' && match.sport !== 'TENNIS' && (
               <div className="space-y-4">
                 {/* Football */}
                 {match.sport === 'FOOTBALL' && (
@@ -1936,20 +1847,118 @@ export default function MatchDetailsPage() {
                 )}
               </div>
             )}
+
+            {/* 🎾 TAB SPÉCIAL TENNIS: NOTATION INDIVIDUELLE */}
+            {activeTab === 'individual' && match.sport === 'TENNIS' && (
+              <div className="space-y-4">
+                <TennisMatchDetails
+                  matchDetails={matchData.data}
+                  playerRatings={playerRatings}
+                  onRatePlayer={ratePlayer}
+                  currentUserId={session?.user?.id}
+                />
+              </div>
+            )}
             
             {/* TAB 3: STATISTIQUES */}
             {activeTab === 'stats' && (
               <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-slate-700">
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">📊 Statistiques du match</h2>
-                <p className="text-gray-600 dark:text-gray-400">
-                  Statistiques détaillées disponibles pour les matchs avec données complètes.
-                </p>
-                {/* Ici tu peux ajouter tes composants de stats existants */}
+                {match.sport === 'TENNIS' ? (
+                  // 🎾 STATS SPÉCIFIQUES TENNIS
+                  <div className="space-y-6">
+                    {/* Score détaillé */}
+                    <div className="mb-6">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Score par set</h3>
+                      <div className="bg-gradient-to-r from-yellow-50 to-green-50 dark:from-yellow-900/20 dark:to-green-900/20 rounded-xl p-4 border border-yellow-200 dark:border-yellow-700">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="text-center">
+                            <div className="text-lg font-bold text-gray-900 dark:text-white">{match.homeTeam}</div>
+                            <div className="text-2xl font-black text-yellow-600">{match.homeScore || 0} sets</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-lg font-bold text-gray-900 dark:text-white">{match.awayTeam}</div>
+                            <div className="text-2xl font-black text-green-600">{match.awayScore || 0} sets</div>
+                          </div>
+                        </div>
+                        
+                        {match.details?.scores?.player1?.games && match.details?.scores?.player2?.games && (
+                          <div className="mt-4 text-center">
+                            <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Détail des jeux</div>
+                            <div className="text-lg font-semibold text-gray-900 dark:text-white">
+                              {formatTennisScore(match).games}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Infos du match */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="bg-gray-50 dark:bg-slate-700 rounded-lg p-4">
+                        <h4 className="font-semibold text-gray-900 dark:text-white mb-3">🏟️ Informations</h4>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-gray-600 dark:text-gray-400">Tournoi:</span>
+                            <span className="font-medium text-gray-900 dark:text-white">{match.competition}</span>
+                          </div>
+                          {match.details?.surface && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-600 dark:text-gray-400">Surface:</span>
+                              <span className="font-medium text-gray-900 dark:text-white">{match.details.surface}</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between">
+                            <span className="text-gray-600 dark:text-gray-400">Lieu:</span>
+                            <span className="font-medium text-gray-900 dark:text-white">{match.venue}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600 dark:text-gray-400">Date:</span>
+                            <span className="font-medium text-gray-900 dark:text-white">
+                              {new Date(match.date).toLocaleDateString('fr-FR')}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-gray-50 dark:bg-slate-700 rounded-lg p-4">
+                        <h4 className="font-semibold text-gray-900 dark:text-white mb-3">🏆 Résultat</h4>
+                        <div className="space-y-2 text-sm">
+                          {getTennisWinner(match) && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-600 dark:text-gray-400">Vainqueur:</span>
+                              <span className="font-bold text-green-600 dark:text-green-400">
+                                {getTennisWinner(match)}
+                              </span>
+                            </div>
+                          )}
+                          <div className="flex justify-between">
+                            <span className="text-gray-600 dark:text-gray-400">Statut:</span>
+                            <span className="font-medium text-gray-900 dark:text-white">
+                              Terminé
+                            </span>
+                          </div>
+                          {match.details?.round && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-600 dark:text-gray-400">Tour:</span>
+                              <span className="font-medium text-gray-900 dark:text-white">{match.details.round}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  // STATS GÉNÉRIQUES POUR AUTRES SPORTS
+                  <p className="text-gray-600 dark:text-gray-400">
+                    Statistiques détaillées disponibles pour les matchs avec données complètes.
+                  </p>
+                )}
               </div>
             )}
             
-            {/* TAB 4: TIMELINE */}
-            {activeTab === 'timeline' && (
+            {/* TAB 4: TIMELINE - SEULEMENT POUR NON-TENNIS */}
+            {activeTab === 'timeline' && match.sport !== 'TENNIS' && (
               <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-slate-700">
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">⚡ Timeline des événements</h2>
                 {matchData.data.events.length === 0 ? (

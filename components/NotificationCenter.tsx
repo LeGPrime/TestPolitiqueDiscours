@@ -1,4 +1,4 @@
-// components/NotificationCenter.tsx - Système de notifications avec rivalités
+// components/NotificationCenter.tsx - Version avec support rivalités
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { 
@@ -162,6 +162,9 @@ export default function NotificationCenter({ userId }: NotificationCenterProps) 
   }
 
   const handleNotificationClick = async (notification: Notification) => {
+    console.log('🔍 DEBUG: Clic sur notification:', notification)
+    console.log('🔍 DEBUG: ActionURL:', notification.actionUrl)
+    
     // Marquer comme lu si pas encore lu
     if (!notification.read) {
       await markAsRead(notification.id)
@@ -329,39 +332,61 @@ export default function NotificationCenter({ userId }: NotificationCenterProps) 
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
-                              <p className={`text-sm font-medium text-gray-900 dark:text-white ${
-                                !notification.read ? 'font-semibold' : ''
-                              }`}>
-                                {notification.title}
-                              </p>
-                              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
-                                {notification.message}
-                              </p>
-                              <div className="flex items-center space-x-3 mt-2">
-                                <span className="text-xs text-gray-500 dark:text-gray-400">
-                                  {formatTime(notification.date)}
-                                </span>
-                                {!notification.read && (
-                                  <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
-                                )}
-                              </div>
-                            </div>
-                            
-                            {/* Actions */}
-                            <div className="flex items-center space-x-1 ml-2">
-                              {notification.actionUrl && (
+                              {/* Rendre tout le contenu cliquable */}
+                              {notification.actionUrl ? (
                                 <Link
                                   href={notification.actionUrl}
                                   onClick={() => handleNotificationClick(notification)}
-                                  className="p-1.5 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-                                  title="Voir"
+                                  className="block hover:bg-gray-50 dark:hover:bg-slate-600/50 rounded-lg p-2 -m-2 transition-colors"
                                 >
-                                  <Eye className="w-4 h-4" />
+                                  <p className={`text-sm font-medium text-gray-900 dark:text-white ${
+                                    !notification.read ? 'font-semibold' : ''
+                                  }`}>
+                                    {notification.title}
+                                  </p>
+                                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
+                                    {notification.message}
+                                  </p>
+                                  <div className="flex items-center space-x-3 mt-2">
+                                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                                      {formatTime(notification.date)}
+                                    </span>
+                                    {!notification.read && (
+                                      <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
+                                    )}
+                                  </div>
                                 </Link>
+                              ) : (
+                                <div>
+                                  <p className={`text-sm font-medium text-gray-900 dark:text-white ${
+                                    !notification.read ? 'font-semibold' : ''
+                                  }`}>
+                                    {notification.title}
+                                  </p>
+                                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
+                                    {notification.message}
+                                  </p>
+                                  <div className="flex items-center space-x-3 mt-2">
+                                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                                      {formatTime(notification.date)}
+                                    </span>
+                                    {!notification.read && (
+                                      <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
+                                    )}
+                                  </div>
+                                </div>
                               )}
+                            </div>
+                            
+                            {/* Actions - Simplifiées car le contenu principal est cliquable */}
+                            <div className="flex items-center space-x-1 ml-2">
                               {!notification.read && (
                                 <button
-                                  onClick={() => markAsRead(notification.id)}
+                                  onClick={(e) => {
+                                    e.preventDefault()
+                                    e.stopPropagation()
+                                    markAsRead(notification.id)
+                                  }}
                                   className="p-1.5 text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
                                   title="Marquer comme lu"
                                 >
@@ -369,7 +394,11 @@ export default function NotificationCenter({ userId }: NotificationCenterProps) 
                                 </button>
                               )}
                               <button
-                                onClick={() => deleteNotification(notification.id)}
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                  deleteNotification(notification.id)
+                                }}
                                 className="p-1.5 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                                 title="Supprimer"
                               >
